@@ -1,64 +1,256 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { formatCurrency } from '../lib/calculations';
+import { Trade } from '../types/trade';
+import { getCandlesForTrade, ReplayData, ReplayCandle } from '../lib/replayCandles';
+import {
+  createChart,
+  CandlestickSeries,
+  ColorType,
+  LineStyle,
+  createSeriesMarkers,
+  IChartApi,
+  ISeriesApi
+} from 'lightweight-charts';
 import {
   Play,
   Pause,
   RotateCcw,
   SkipForward,
-  FastForward,
+  SkipBack,
   PlayCircle,
-  Eye
+  Clock,
+  Shield,
+  Target,
+  ArrowUpRight,
+  TrendingUp,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
-interface Candle {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
-
 export const ReplayPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tradeIdParam = searchParams.get('tradeId');
   const { accountTrades } = useTrading();
+  const { theme } = useTheme();
 
-  const [symbol, setSymbol] = useState('XAUUSD');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState<number>(1);
-  const [currentIndex, setCurrentIndex] = useState(15);
+  // Only closed trades can be replayed
+  const closedTrades = useMemo(() => {
+    return accountTrades.filter(t => t.status === 'CLOSED');
+  }, [accountTrades]);
 
-  // Generate realistic candlestick sample stream
-  const [candles, setCandles] = useState<Candle[]>(() => {
-    let price = 2500.0;
-    const list: Candle[] = [];
-    for (let i = 0; i < 40; i++) {
-      const delta = (Math.random() - 0.48) * 6;
-      const open = price;
-      const close = parseFloat((open + delta).toFixed(2));
-      const high = parseFloat((Math.max(open, close) + Math.random() * 3).toFixed(2));
-      const low = parseFloat((Math.min(open, close) - Math.random() * 3).toFixed(2));
-      list.push({
-        time: `10:${String(i * 15).padStart(2, '0')}`,
-        open,
-        high,
-        low,
-        close
-      });
-      price = close;
+  // Selected trade to replay
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(() => {
+    if (tradeIdParam) {
+      const found = closedTrades.find(t => t.id === tradeIdParam);
+      if (found) return found;
     }
-    return list;
+    return closedTrades[0] || null;
   });
 
-  // Timer loop for auto play
+  // Timeframe
+  const [timeframe, setTimeframe] = useState('15m');
+  const [replayData, setReplayData] = useState<ReplayData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Playback state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<number>(1);
+  const [currentStep, setCurrentStep] = useState<number>(0);
+
+  // Chart refs
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const markersRef = useRef<any>(null);
+
+  // When tradeId in URL changes, select that trade
+  useEffect(() => {
+    if (tradeIdParam) {
+      const found = closedTrades.find(t => t.id === tradeIdParam);
+      if (found) setSelectedTrade(found);
+    }
+  }, [tradeIdParam, closedTrades]);
+
+  // Load candle data whenever selected trade or timeframe changes
+  useEffect(() => {
+    if (!selectedTrade) return;
+    setLoading(true);
+    setIsPlaying(false);
+
+    getCandlesForTrade(selectedTrade, timeframe).then(data => {
+      setReplayData(data);
+      setCurrentStep(data.entryIndex); // start at entry
+      setLoading(false);
+    });
+  }, [selectedTrade, timeframe]);
+
+  // Initialize and mount Lightweight Chart
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    chartContainerRef.current.innerHTML = '';
+
+    const isDark = theme === 'dark';
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: isDark ? '#000000' : '#ffffff' },
+        textColor: isDark ? '#a1a1aa' : '#4b5563',
+        fontFamily: "'JetBrains Mono', 'Inter', -apple-system, sans-serif"
+      },
+      grid: {
+        vertLines: { color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+        horzLines: { color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
+      },
+      crosshair: {
+        mode: 0
+      },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+      },
+      rightPriceScale: {
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+      }
+    });
+
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#10b981',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#10b981',
+      wickDownColor: '#ef4444'
+    });
+
+    chartRef.current = chart;
+    seriesRef.current = candlestickSeries;
+
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight || 450
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      markersRef.current = null;
+    };
+  }, [theme]);
+
+  // Update chart data & price lines when replayData or currentStep changes
+  useEffect(() => {
+    if (!seriesRef.current || !replayData || replayData.candles.length === 0) return;
+
+    // Slice candles up to currentStep
+    const step = Math.min(Math.max(currentStep, 1), replayData.candles.length);
+    const visible = replayData.candles.slice(0, step);
+
+    // Format for lightweight-charts: time as UTCTimestamp
+    const formatted = visible.map(c => ({
+      time: c.time as any,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close
+    }));
+
+    seriesRef.current.setData(formatted);
+
+    // Add price lines once
+    const series = seriesRef.current;
+    
+    // Entry price line
+    series.createPriceLine({
+      price: replayData.entryPrice,
+      color: '#8b5cf6',
+      lineWidth: 2,
+      lineStyle: LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `Entry: ${replayData.entryPrice}`
+    });
+
+    // Stop Loss line
+    if (replayData.stopLoss) {
+      series.createPriceLine({
+        price: replayData.stopLoss,
+        color: '#ef4444',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `Stop Loss: ${replayData.stopLoss}`
+      });
+    }
+
+    // Take Profit line
+    if (replayData.takeProfit) {
+      series.createPriceLine({
+        price: replayData.takeProfit,
+        color: '#10b981',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `Take Profit: ${replayData.takeProfit}`
+      });
+    }
+
+    // Markers for Entry and Exit
+    const markers: any[] = [];
+    if (step >= replayData.entryIndex && replayData.entryIndex < replayData.candles.length) {
+      const entryCandle = replayData.candles[replayData.entryIndex];
+      markers.push({
+        time: entryCandle.time,
+        position: replayData.trade.direction === 'BUY' ? 'belowBar' : 'aboveBar',
+        color: '#8b5cf6',
+        shape: replayData.trade.direction === 'BUY' ? 'arrowUp' : 'arrowDown',
+        text: `ENTRY ${replayData.trade.direction} @ ${replayData.entryPrice}`
+      });
+    }
+
+    if (step >= replayData.exitIndex && replayData.exitIndex < replayData.candles.length) {
+      const exitCandle = replayData.candles[replayData.exitIndex];
+      const isWin = replayData.trade.netPnl >= 0;
+      markers.push({
+        time: exitCandle.time,
+        position: replayData.trade.direction === 'BUY' ? 'aboveBar' : 'belowBar',
+        color: isWin ? '#10b981' : '#ef4444',
+        shape: replayData.trade.direction === 'BUY' ? 'arrowDown' : 'arrowUp',
+        text: `EXIT @ ${replayData.exitPrice} (${isWin ? '+' : ''}$${replayData.trade.netPnl.toFixed(2)})`
+      });
+    }
+
+    try {
+      if (markersRef.current) {
+        markersRef.current.setMarkers(markers);
+      } else {
+        markersRef.current = createSeriesMarkers(series, markers);
+      }
+    } catch (e) {
+      // Ignore marker re-binding warning
+    }
+
+    chartRef.current?.timeScale().fitContent();
+  }, [replayData, currentStep]);
+
+  // Replay play/pause loop timer
   useEffect(() => {
     let interval: any = null;
-    if (isPlaying) {
+    if (isPlaying && replayData) {
       interval = setInterval(() => {
-        setCurrentIndex(prev => {
-          if (prev >= candles.length - 1) {
+        setCurrentStep(prev => {
+          if (prev >= replayData.candles.length) {
             setIsPlaying(false);
             return prev;
           }
@@ -67,171 +259,362 @@ export const ReplayPage: React.FC = () => {
       }, 1000 / speed);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, speed, candles.length]);
+  }, [isPlaying, speed, replayData]);
 
-  const visibleCandles = candles.slice(0, currentIndex + 1);
-  const currentCandle = visibleCandles[visibleCandles.length - 1];
+  // Keyboard shortcuts (Space = Play/Pause, Right = Step, R = Reset)
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPlaying(prev => !prev);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (replayData) setCurrentStep(prev => Math.min(prev + 1, replayData.candles.length));
+      } else if (e.code === 'KeyR') {
+        e.preventDefault();
+        if (replayData) setCurrentStep(replayData.entryIndex);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [replayData]);
 
-  // SVG dimensions
-  const width = 800;
-  const height = 340;
-  const paddingX = 40;
-  const paddingY = 30;
+  // Live floating P&L calculation during replay
+  const floatingStats = useMemo(() => {
+    if (!replayData || currentStep < replayData.entryIndex) {
+      return { pnl: 0, pips: 0, status: 'Pre-Entry Setup' };
+    }
 
-  const minPrice = Math.min(...visibleCandles.map(c => c.low)) * 0.998;
-  const maxPrice = Math.max(...visibleCandles.map(c => c.high)) * 1.002;
-  const priceRange = maxPrice - minPrice || 1;
+    const currentCandle = replayData.candles[Math.min(currentStep - 1, replayData.candles.length - 1)];
+    if (!currentCandle) return { pnl: 0, pips: 0, status: 'Pre-Entry' };
 
-  const getY = (val: number) => height - paddingY - ((val - minPrice) / priceRange) * (height - paddingY * 2);
+    if (currentStep >= replayData.exitIndex) {
+      return {
+        pnl: replayData.trade.netPnl,
+        pips: replayData.trade.pips || 0,
+        status: 'Trade Completed'
+      };
+    }
+
+    // In-trade floating price
+    const currentPrice = currentCandle.close;
+    const diff = replayData.trade.direction === 'BUY'
+      ? currentPrice - replayData.entryPrice
+      : replayData.entryPrice - currentPrice;
+
+    const sym = replayData.trade.symbol.toUpperCase();
+    let pipMultiplier = 10000;
+    if (sym.includes('JPY')) pipMultiplier = 100;
+    else if (sym.includes('XAU') || sym.includes('GOLD')) pipMultiplier = 10;
+    else if (sym.includes('BTC') || sym.includes('US30')) pipMultiplier = 1;
+
+    const floatingPips = parseFloat((diff * pipMultiplier).toFixed(1));
+    let pipValue = 10;
+    if (sym.includes('BTC')) pipValue = 1;
+    const floatingPnl = parseFloat((floatingPips * pipValue * replayData.trade.lotSize).toFixed(2));
+
+    return {
+      pnl: floatingPnl,
+      pips: floatingPips,
+      status: 'Trade In Progress'
+    };
+  }, [replayData, currentStep]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <PlayCircle className="w-6 h-6 text-primary-light" />
-            <span>Candle-by-Candle Trade Replay</span>
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
+            <PlayCircle className="w-6 h-6 text-primary" />
+            <span>Trade Replay Simulator</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Step through price bar by bar to test your setups, review execution, and analyze missed entries.
+          <p className="text-xs text-muted mt-0.5">
+            Select any trade from your journal to replay the exact price action, entry setup, and exit.
           </p>
         </div>
 
-        {/* Symbol Selector */}
-        <div className="flex items-center gap-3">
-          <select
-            value={symbol}
-            onChange={e => setSymbol(e.target.value)}
-            className="px-3.5 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-white font-bold focus:outline-none"
-          >
-            <option value="XAUUSD">XAUUSD (Gold 15m)</option>
-            <option value="EURUSD">EURUSD (Euro 15m)</option>
-            <option value="BTCUSD">BTCUSD (Bitcoin 15m)</option>
-            <option value="US30">US30 (Dow Jones 15m)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Chart Canvas */}
-      <div className="premium-card p-5 space-y-4">
-        {/* Canvas Header */}
-        <div className="flex items-center justify-between border-b border-border pb-3">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-black text-white font-mono">{symbol}</span>
-            <span className="text-xs font-mono text-slate-400">
-              Close: <strong className="text-white">${currentCandle?.close}</strong>
-            </span>
-          </div>
-
-          <div className="text-xs text-slate-400 font-mono">
-            Candle: {currentIndex + 1} / {candles.length}
-          </div>
-        </div>
-
-        {/* SVG Candlestick Chart */}
-        <div className="w-full relative bg-[#07050e] rounded-xl p-2 border border-border/60">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-80 overflow-visible">
-            {/* Horizontal Grid */}
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-              const y = paddingY + ratio * (height - paddingY * 2);
-              const p = maxPrice - ratio * priceRange;
-              return (
-                <g key={i}>
-                  <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                  <text x={width - paddingX + 8} y={y + 3} fill="#64748b" fontSize="10" className="font-mono">
-                    ${p.toFixed(2)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Candlesticks */}
-            {visibleCandles.map((c, i) => {
-              const candleWidth = Math.max((width - paddingX * 2) / candles.length - 4, 6);
-              const x = paddingX + i * ((width - paddingX * 2) / candles.length) + candleWidth / 2;
-              const isGreen = c.close >= c.open;
-              const openY = getY(c.open);
-              const closeY = getY(c.close);
-              const highY = getY(c.high);
-              const lowY = getY(c.low);
-              const bodyY = Math.min(openY, closeY);
-              const bodyHeight = Math.max(Math.abs(closeY - openY), 2);
-
-              return (
-                <g key={i} className="transition-all duration-150">
-                  {/* Wick */}
-                  <line
-                    x1={x + candleWidth / 2}
-                    y1={highY}
-                    x2={x + candleWidth / 2}
-                    y2={lowY}
-                    stroke={isGreen ? '#10b981' : '#f43f5e'}
-                    strokeWidth="1.5"
-                  />
-                  {/* Body */}
-                  <rect
-                    x={x}
-                    y={bodyY}
-                    width={candleWidth}
-                    height={bodyHeight}
-                    fill={isGreen ? '#10b981' : '#f43f5e'}
-                    rx="1"
-                  />
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-
-        {/* Player Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-          {/* Play/Pause & Step */}
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="primary"
-              icon={isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              onClick={() => setIsPlaying(!isPlaying)}
-            >
-              {isPlaying ? 'Pause (Space)' : 'Play Replay'}
-            </Button>
-
-            <button
-              onClick={() => setCurrentIndex(prev => Math.min(prev + 1, candles.length - 1))}
-              disabled={currentIndex >= candles.length - 1}
-              className="p-2 rounded-xl bg-surface-card border border-border text-slate-300 hover:text-white disabled:opacity-40"
-              title="Next Candle"
-            >
-              <SkipForward className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => {
-                setIsPlaying(false);
-                setCurrentIndex(5);
-              }}
-              className="p-2 rounded-xl bg-surface-card border border-border text-slate-300 hover:text-white"
-              title="Reset Replay"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Speed Selector */}
-          <div className="flex items-center gap-1 bg-surface-card border border-border p-1 rounded-xl">
-            {[1, 2, 5, 10].map(s => (
+        {/* Timeframe Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-muted">Timeframe:</span>
+          <div className="flex items-center gap-1 p-1 bg-surface border border-border rounded-xl shadow-sm">
+            {['1m', '5m', '15m', '1h', '4h'].map(tf => (
               <button
-                key={s}
-                onClick={() => setSpeed(s)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all ${
-                  speed === s ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg transition-all ${
+                  timeframe === tf
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                {s}x
+                {tf}
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Main Studio: Left Trade List (1/3) & Right Replay Engine (2/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side: Specific Trades Catalog */}
+        <div className="space-y-4">
+          <div className="premium-card p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                Your Logged Trades ({closedTrades.length})
+              </span>
+              <span className="text-[10px] text-muted">Select to Replay</span>
+            </div>
+
+            {closedTrades.length === 0 ? (
+              <div className="p-8 text-center text-xs text-muted border border-dashed border-border rounded-xl">
+                No closed trades available. Log trades in your journal to replay them here!
+              </div>
+            ) : (
+              <div className="space-y-2.5 max-h-[620px] overflow-y-auto pr-1">
+                {closedTrades.map(trade => {
+                  const isSelected = selectedTrade?.id === trade.id;
+                  const isWin = trade.netPnl >= 0;
+
+                  return (
+                    <div
+                      key={trade.id}
+                      onClick={() => {
+                        setSelectedTrade(trade);
+                        setSearchParams({ tradeId: trade.id });
+                      }}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary/10 border-primary shadow-sm shadow-primary/20 ring-1 ring-primary/40'
+                          : 'bg-surface border-border hover:border-primary/40 hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground text-sm">{trade.symbol}</span>
+                          <Badge variant={trade.direction === 'BUY' ? 'buy' : 'sell'} size="sm">
+                            {trade.direction}
+                          </Badge>
+                          <span className="text-[10px] font-mono text-muted">{trade.lotSize}L</span>
+                        </div>
+
+                        <div className={`font-mono font-black text-xs ${isWin ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {formatCurrency(trade.netPnl)}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-muted mb-2.5">
+                        <div>Entry: <strong className="text-foreground">{trade.entryPrice}</strong></div>
+                        <div>Exit: <strong className="text-foreground">{trade.exitPrice || '-'}</strong></div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-border/70 text-[10px] text-muted">
+                        <span>{new Date(trade.openTime).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+
+                        <Button
+                          size="sm"
+                          variant={isSelected ? 'primary' : 'outline'}
+                          className="h-6 text-[10px] px-2.5"
+                          icon={<Play className="w-3 h-3" />}
+                        >
+                          {isSelected ? 'Replaying' : 'Replay'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Lightweight Charts Replay Engine */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="premium-card p-5 space-y-4">
+            {/* Active Replay Trade Banner & Floating P&L */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+              {selectedTrade ? (
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl font-black text-foreground">{selectedTrade.symbol}</span>
+                    <Badge variant={selectedTrade.direction === 'BUY' ? 'buy' : 'sell'}>
+                      {selectedTrade.direction}
+                    </Badge>
+                    <span className="text-xs font-mono text-muted">{selectedTrade.lotSize} Lots</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border text-muted font-bold">
+                      {timeframe}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted mt-1 flex items-center gap-3">
+                    <span>Entry: <strong className="text-foreground font-mono">{selectedTrade.entryPrice}</strong></span>
+                    {selectedTrade.stopLoss && (
+                      <span>SL: <strong className="text-rose-500 font-mono">{selectedTrade.stopLoss}</strong></span>
+                    )}
+                    {selectedTrade.takeProfit && (
+                      <span>TP: <strong className="text-emerald-500 font-mono">{selectedTrade.takeProfit}</strong></span>
+                    )}
+                    <span>Target: <strong className="text-foreground font-mono">{selectedTrade.exitPrice}</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-muted">Select a trade to start simulation</div>
+              )}
+
+              {/* Dynamic Live Floating P&L Indicator */}
+              <div className="p-3 rounded-xl bg-surface border border-border shadow-sm text-right min-w-[170px]">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                  {floatingStats.status}
+                </div>
+                <div className={`text-xl font-black font-mono mt-0.5 ${
+                  floatingStats.pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                }`}>
+                  {floatingStats.pnl >= 0 ? '+' : ''}${floatingStats.pnl.toFixed(2)}
+                </div>
+                <div className="text-[10px] font-mono text-muted">
+                  Floating Pips: {floatingStats.pips}
+                </div>
+              </div>
+            </div>
+
+            {/* TradingView Lightweight Chart Container */}
+            <div className="w-full h-[450px] relative rounded-xl overflow-hidden border border-border bg-background">
+              {loading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                  <div className="text-xs font-bold text-primary flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    Fetching & synchronizing historical candles...
+                  </div>
+                </div>
+              )}
+              <div ref={chartContainerRef} className="w-full h-full" />
+            </div>
+
+            {/* Playback Controls & Scrubber */}
+            <div className="space-y-3 pt-2">
+              {/* Progress Slider */}
+              {replayData && (
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-muted">Pre-Trade</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max={replayData.candles.length}
+                    value={currentStep}
+                    onChange={e => {
+                      setIsPlaying(false);
+                      setCurrentStep(parseInt(e.target.value));
+                    }}
+                    className="flex-1 accent-primary h-1.5 bg-border rounded-lg cursor-pointer"
+                  />
+                  <span className="text-[10px] font-mono text-muted">
+                    Candle {currentStep} / {replayData.candles.length}
+                  </span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    onClick={() => setIsPlaying(!isPlaying)}
+                  >
+                    {isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+                  </Button>
+
+                  <button
+                    onClick={() => {
+                      if (replayData) setCurrentStep(prev => Math.min(prev + 1, replayData.candles.length));
+                    }}
+                    disabled={!replayData || currentStep >= (replayData?.candles.length || 0)}
+                    className="p-2 rounded-xl bg-surface border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40 shadow-sm"
+                    title="Next Candle (Right Arrow)"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (replayData) setCurrentStep(prev => Math.max(prev - 1, 1));
+                    }}
+                    disabled={currentStep <= 1}
+                    className="p-2 rounded-xl bg-surface border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-40 shadow-sm"
+                    title="Previous Candle"
+                  >
+                    <SkipBack className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsPlaying(false);
+                      if (replayData) setCurrentStep(replayData.entryIndex);
+                    }}
+                    className="p-2 rounded-xl bg-surface border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-sm"
+                    title="Reset to Entry (R)"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Speed Controls */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted font-medium">Speed:</span>
+                  <div className="flex items-center gap-1 bg-surface border border-border p-1 rounded-xl shadow-sm">
+                    {[1, 2, 5, 10].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setSpeed(s)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-all ${
+                          speed === s
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'text-muted hover:text-foreground'
+                        }`}
+                      >
+                        {s}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Trade Data Card */}
+          {selectedTrade && (
+            <div className="premium-card p-5 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+                Trade Metadata & Notes
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-muted block">Planned R:R:</span>
+                  <strong className="text-foreground font-mono">1:{selectedTrade.plannedRR || '-'}</strong>
+                </div>
+                <div>
+                  <span className="text-muted block">Realized R:R:</span>
+                  <strong className="text-primary font-mono font-bold">1:{selectedTrade.realizedRR || '-'}</strong>
+                </div>
+                <div>
+                  <span className="text-muted block">Strategy:</span>
+                  <strong className="text-foreground">{selectedTrade.strategyName || 'Discretionary'}</strong>
+                </div>
+                <div>
+                  <span className="text-muted block">Emotion:</span>
+                  <strong className="text-foreground">{selectedTrade.emotionalState || 'Disciplined'}</strong>
+                </div>
+              </div>
+
+              {selectedTrade.notes && (
+                <div className="p-3 rounded-xl bg-surface border border-border text-xs text-foreground leading-relaxed">
+                  <strong>Notes:</strong> {selectedTrade.notes}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
