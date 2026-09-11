@@ -12,14 +12,11 @@ import {
   Percent,
   TrendingUp,
   Activity,
-  Award,
   AlertTriangle,
   ArrowUpRight,
-  ArrowDownRight,
   Flame,
   Shield,
   Plus,
-  Calendar,
   Sparkles
 } from 'lucide-react';
 
@@ -41,23 +38,20 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
   // AI Guidance Status
   let aiStatus = {
     mode: 'CONTROLLED AGGRESSION',
-    badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    iconColor: 'text-emerald-400',
+    badgeColor: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
     description: 'Win rate is strong and drawdown is negligible. Market conditions favor your playbook. Continue taking Grade-A setups with standard position sizing.'
   };
 
   if (stats.winRate < 45 || stats.maxDrawdownPercent > 4.0) {
     aiStatus = {
       mode: 'STAND DOWN / DEFENSIVE',
-      badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-      iconColor: 'text-rose-400',
+      badgeColor: 'bg-rose-500/15 text-rose-500 border-rose-500/30',
       description: 'Account is experiencing drawdown or low hit-rate. Cut position sizing by 50% (max 0.5% risk) until you log 2 consecutive winning setups.'
     };
   } else if (stats.winRate < 60) {
     aiStatus = {
       mode: 'NEUTRAL EXECUTION',
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      iconColor: 'text-amber-400',
+      badgeColor: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
       description: 'Balanced performance. Be selective and wait for prime session liquidity sweeps before executing.'
     };
   }
@@ -67,19 +61,19 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
       {/* Top Header: Welcome, Period Filter, Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
             <span>Trading Dashboard</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary-light border border-primary/30">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
               {activeAccount ? activeAccount.name : 'All Accounts'}
             </span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Real-time performance metrics, equity growth, and AI behavioral guidance.
           </p>
         </div>
 
         {/* Period Selector Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-surface-card border border-border rounded-xl">
+        <div className="flex items-center gap-1.5 p-1 bg-surface-card border border-border rounded-xl shadow-sm">
           {(['today', 'week', 'month', 'year', 'all'] as const).map(p => (
             <button
               key={p}
@@ -87,7 +81,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                 period === p
                   ? 'bg-primary text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  : 'text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
               {p === 'all' ? 'All Time' : p}
@@ -108,7 +102,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           }
           trend={periodPnl >= 0 ? 'positive' : 'negative'}
           icon={<DollarSign className="w-5 h-5" />}
-          iconBg={periodPnl >= 0 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border-rose-500/30'}
+          iconBg={periodPnl >= 0 ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' : 'bg-rose-500/15 text-rose-500 border-rose-500/30'}
         />
 
         <StatCard
@@ -117,7 +111,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           subValue={`${stats.winningTrades}W - ${stats.losingTrades}L (${stats.breakEvenTrades} BE)`}
           trend={stats.winRate >= 50 ? 'positive' : 'negative'}
           icon={<Percent className="w-5 h-5" />}
-          iconBg="bg-primary/15 text-primary-light border-primary/30"
+          iconBg="bg-primary/15 text-primary border border-primary/30"
         />
 
         <StatCard
@@ -126,7 +120,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           subValue={`Avg Win: $${stats.avgWin.toFixed(0)} | Avg Loss: $${stats.avgLoss.toFixed(0)}`}
           trend={stats.profitFactor >= 1.5 ? 'positive' : 'neutral'}
           icon={<TrendingUp className="w-5 h-5" />}
-          iconBg="bg-violet-500/15 text-violet-400 border-violet-500/30"
+          iconBg="bg-violet-500/15 text-violet-500 border border-violet-500/30"
         />
 
         <StatCard
@@ -135,26 +129,26 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           subValue={`-$${stats.maxDrawdownUsd.toFixed(0)} peak-to-valley`}
           trend={stats.maxDrawdownPercent < 5 ? 'positive' : 'negative'}
           icon={<AlertTriangle className="w-5 h-5" />}
-          iconBg="bg-amber-500/15 text-amber-400 border-amber-500/30"
+          iconBg="bg-amber-500/15 text-amber-500 border border-amber-500/30"
         />
       </div>
 
       {/* AI Behavioral Recommendation Banner */}
-      <div className="p-4 md:p-5 rounded-2xl bg-surface-card border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="premium-card p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-primary-light" />
+          <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted">
                 Trader Zone AI Guidance
               </span>
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${aiStatus.badgeColor}`}>
                 {aiStatus.mode}
               </span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed max-w-3xl">
+            <p className="text-xs text-foreground leading-relaxed max-w-3xl font-medium">
               {aiStatus.description}
             </p>
           </div>
@@ -162,7 +156,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
 
         <div className="flex items-center gap-3 shrink-0">
           <Link to="/ai-2">
-            <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5 text-primary-light" />}>
+            <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5 text-primary" />}>
               Open AI 2.0
             </Button>
           </Link>
@@ -182,39 +176,39 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           <DailyPnlBarChart trades={filteredTrades} />
 
           {/* Quick Streak & Risk Summary */}
-          <div className="pt-4 border-t border-border/80 space-y-3">
+          <div className="pt-4 border-t border-border space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-amber-400" />
+              <span className="text-xs text-muted flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-amber-500" />
                 <span>Current Streak:</span>
               </span>
-              <span className="font-mono text-sm font-black text-white">
+              <span className="font-mono text-sm font-black text-foreground">
                 {stats.currentStreak.type === 'win' && (
-                  <span className="text-emerald-400">+{stats.currentStreak.count} Wins</span>
+                  <span className="text-emerald-500">+{stats.currentStreak.count} Wins</span>
                 )}
                 {stats.currentStreak.type === 'loss' && (
-                  <span className="text-rose-400">-{stats.currentStreak.count} Losses</span>
+                  <span className="text-rose-500">-{stats.currentStreak.count} Losses</span>
                 )}
                 {stats.currentStreak.type === 'none' && 'Neutral'}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs text-muted flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-emerald-500" />
                 <span>Expectancy / Trade:</span>
               </span>
-              <span className="font-mono text-sm font-bold text-slate-200">
+              <span className="font-mono text-sm font-bold text-foreground">
                 ${stats.expectancy.toFixed(2)}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-primary-light" />
+              <span className="text-xs text-muted flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-primary" />
                 <span>Total Volume Traded:</span>
               </span>
-              <span className="font-mono text-sm font-bold text-slate-200">
+              <span className="font-mono text-sm font-bold text-foreground">
                 {stats.totalLots} Lots
               </span>
             </div>
@@ -226,12 +220,12 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
       {behavioralAlerts.length > 0 && (
         <div className="premium-card p-4 border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-amber-300">
+              <div className="text-xs font-bold text-amber-600 dark:text-amber-300">
                 {behavioralAlerts[0].title}
               </div>
-              <div className="text-[11px] text-slate-300">
+              <div className="text-[11px] text-foreground">
                 {behavioralAlerts[0].description}
               </div>
             </div>
@@ -246,8 +240,8 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
       <div className="premium-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">Recent Trade Executions</h3>
-            <p className="text-xs text-slate-400">Latest activity across your active account.</p>
+            <h3 className="text-base font-bold text-foreground tracking-tight">Recent Trade Executions</h3>
+            <p className="text-xs text-muted">Latest activity across your active account.</p>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/trades">
@@ -264,7 +258,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-border text-slate-400 uppercase tracking-wider font-semibold">
+              <tr className="border-b border-border text-muted uppercase tracking-wider font-semibold">
                 <th className="pb-3">Symbol</th>
                 <th className="pb-3">Side</th>
                 <th className="pb-3">Lots</th>
@@ -277,18 +271,18 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                 <th className="pb-3 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-border">
               {accountTrades.slice(0, 5).map(t => {
                 const isWin = t.netPnl > 0;
                 const isLoss = t.netPnl < 0;
 
                 return (
-                  <tr key={t.id} className="hover:bg-white/5 transition-colors">
-                    <td className="py-3 font-bold text-white">
+                  <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    <td className="py-3 font-bold text-foreground">
                       <div className="flex items-center gap-2">
                         <span>{t.symbol}</span>
                         {t.setupTags?.[0] && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-slate-400">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-muted">
                             {t.setupTags[0]}
                           </span>
                         )}
@@ -299,23 +293,23 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                         {t.direction}
                       </Badge>
                     </td>
-                    <td className="py-3 font-mono">{t.lotSize}</td>
-                    <td className="py-3 font-mono text-slate-300">{t.entryPrice}</td>
-                    <td className="py-3 font-mono text-slate-300">{t.exitPrice || '-'}</td>
-                    <td className="py-3 font-mono text-slate-300">{t.pips ? `${t.pips > 0 ? '+' : ''}${t.pips}` : '-'}</td>
+                    <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
+                    <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>
+                    <td className="py-3 font-mono text-foreground">{t.exitPrice || '-'}</td>
+                    <td className="py-3 font-mono text-foreground">{t.pips ? `${t.pips > 0 ? '+' : ''}${t.pips}` : '-'}</td>
                     <td className="py-3 font-mono font-bold">
-                      <span className={isWin ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-400'}>
+                      <span className={isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-muted'}>
                         {formatCurrency(t.netPnl)}
                       </span>
                     </td>
-                    <td className="py-3 font-mono text-slate-300">
+                    <td className="py-3 font-mono text-foreground">
                       {t.realizedRR ? `1:${t.realizedRR}` : t.plannedRR ? `1:${t.plannedRR} (P)` : '-'}
                     </td>
                     <td className="py-3">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         t.status === 'OPEN'
-                          ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'bg-sky-500/20 text-sky-500 border border-sky-500/30'
+                          : 'bg-black/5 dark:bg-slate-800 text-muted'
                       }`}>
                         {t.status}
                       </span>
@@ -323,7 +317,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                     <td className="py-3 text-right">
                       <Link
                         to={`/trades/${t.id}`}
-                        className="text-primary-light hover:text-white font-medium hover:underline inline-flex items-center gap-1"
+                        className="text-primary hover:underline font-semibold inline-flex items-center gap-1"
                       >
                         <span>Review</span>
                         <ArrowUpRight className="w-3 h-3" />

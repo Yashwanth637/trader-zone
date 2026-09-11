@@ -3,10 +3,38 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-app: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f1f5f9;
+    --text-primary: #090d16;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border-subtle: #e2e8f0;
+    --border-glow: rgba(139, 92, 246, 0.3);
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark {
+    /* Pure Black Dark Mode as requested */
+    --bg-app: #000000;
+    --bg-surface: #0a0a0e;
+    --bg-card: #101015;
+    --bg-card-hover: #171720;
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(139, 92, 246, 0.35);
+    --card-shadow: 0 4px 25px -3px rgba(0, 0, 0, 0.85);
+  }
+
   body {
-    background-color: #0a0812;
-    color: #e2e8f0;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Sleek custom scrollbars */
@@ -15,35 +43,41 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0a0812;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.25);
-    border-radius: 4px;
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.5);
+    background: rgba(139, 92, 246, 0.6);
   }
 }
 
 @layer components {
   .premium-card {
-    background: #120f24;
-    border: 1px solid rgba(139, 92, 246, 0.15);
-    border-radius: 0.875rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .premium-card:hover {
-    border-color: rgba(139, 92, 246, 0.35);
-    box-shadow: 0 4px 20px -2px rgba(139, 92, 246, 0.12);
+    border-color: var(--border-glow);
+    box-shadow: 0 6px 30px -4px rgba(139, 92, 246, 0.15);
   }
 
   .glass-panel {
-    background: rgba(18, 15, 36, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(139, 92, 246, 0.18);
+    background: rgba(10, 10, 14, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .light .glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   .ai2-title-gradient {

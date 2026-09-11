@@ -8,12 +8,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#0a0812",
-        surface: "#120f24",
-        "surface-card": "#16132b",
-        "surface-card-hover": "#1d1938",
-        border: "rgba(139, 92, 246, 0.15)",
-        "border-glow": "rgba(139, 92, 246, 0.35)",
+        background: "var(--bg-app)",
+        surface: "var(--bg-surface)",
+        "surface-card": "var(--bg-card)",
+        "surface-card-hover": "var(--bg-card-hover)",
+        border: "var(--border-subtle)",
+        "border-glow": "var(--border-glow)",
+        foreground: "var(--text-primary)",
+        muted: "var(--text-secondary)",
         primary: {
           DEFAULT: "#8b5cf6",
           hover: "#7c3aed",
@@ -41,9 +43,9 @@ export default {
         mono: ['JetBrains Mono', 'Fira Code', 'monospace']
       },
       boxShadow: {
-        'glow-primary': '0 0 25px rgba(139, 92, 246, 0.3)',
-        'glow-success': '0 0 20px rgba(16, 185, 129, 0.25)',
-        'glow-danger': '0 0 20px rgba(244, 63, 94, 0.25)'
+        'glow-primary': '0 0 30px rgba(139, 92, 246, 0.35)',
+        'glow-success': '0 0 25px rgba(16, 185, 129, 0.25)',
+        'glow-danger': '0 0 25px rgba(244, 63, 94, 0.25)'
       }
     },
   },

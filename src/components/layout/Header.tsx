@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-20 h-16 bg-surface/80 backdrop-blur-md border-b border-border transition-all duration-300 px-4 md:px-6 flex items-center justify-between ${
+      className={`sticky top-0 z-20 h-16 bg-surface/85 backdrop-blur-md border-b border-border transition-all duration-300 px-4 md:px-6 flex items-center justify-between ${
         collapsed ? 'md:ml-16' : 'md:ml-64'
       }`}
     >
@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
-          className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5"
+          className="md:hidden p-2 rounded-xl text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -61,20 +61,20 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative">
           <button
             onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-card border border-border hover:border-primary/40 text-xs font-semibold text-white transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-card border border-border hover:border-primary/40 text-xs font-semibold text-foreground transition-colors shadow-sm"
           >
-            <Wallet className="w-3.5 h-3.5 text-primary-light" />
+            <Wallet className="w-3.5 h-3.5 text-primary" />
             <span className="max-w-[140px] md:max-w-[180px] truncate">
               {activeAccountId === 'all'
                 ? 'All Accounts'
                 : activeAccount?.name || 'Select Account'}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            <ChevronDown className="w-3.5 h-3.5 text-muted" />
           </button>
 
           {accountDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-64 bg-surface border border-border-glow rounded-xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="absolute left-0 mt-2 w-64 bg-surface border border-border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
                 Switch Trading Account
               </div>
               <button
@@ -82,12 +82,12 @@ export const Header: React.FC<HeaderProps> = ({
                   setActiveAccountId('all');
                   setAccountDropdownOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center justify-between ${
-                  activeAccountId === 'all' ? 'text-primary-light font-bold bg-primary/10' : 'text-slate-300'
+                className={`w-full text-left px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between ${
+                  activeAccountId === 'all' ? 'text-primary font-bold bg-primary/10' : 'text-foreground'
                 }`}
               >
                 <span>All Accounts Combined</span>
-                <span className="text-[10px] text-slate-400">Aggregated</span>
+                <span className="text-[10px] text-muted">Aggregated</span>
               </button>
               {accounts.map(acc => (
                 <button
@@ -96,15 +96,15 @@ export const Header: React.FC<HeaderProps> = ({
                     setActiveAccountId(acc.id);
                     setAccountDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center justify-between ${
-                    activeAccountId === acc.id ? 'text-primary-light font-bold bg-primary/10' : 'text-slate-300'
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between ${
+                    activeAccountId === acc.id ? 'text-primary font-bold bg-primary/10' : 'text-foreground'
                   }`}
                 >
                   <div className="truncate pr-2">
-                    <div>{acc.name}</div>
-                    <div className="text-[10px] text-slate-400">{acc.broker} ({acc.type})</div>
+                    <div className="font-medium">{acc.name}</div>
+                    <div className="text-[10px] text-muted">{acc.broker} ({acc.type})</div>
                   </div>
-                  <span className="font-mono text-xs text-white">
+                  <span className="font-mono text-xs text-foreground font-bold">
                     ${acc.currentBalance.toLocaleString()}
                   </span>
                 </button>
@@ -114,31 +114,41 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Live Market Session Indicator */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-card border border-border text-[11px] font-medium text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <Activity className="w-3.5 h-3.5 text-emerald-400 ml-0.5" />
-          <span>Session: <strong className="text-white">{currentSession}</strong></span>
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-card border border-border text-[11px] font-medium text-foreground">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          <Activity className="w-3.5 h-3.5 text-emerald-500 ml-0.5" />
+          <span>Session: <strong className="text-foreground font-bold">{currentSession}</strong></span>
         </div>
       </div>
 
-      {/* Right side: Quick Calculator, Add Trade, Theme Toggle, Profile */}
+      {/* Right side: Quick Calculator, Add Trade, Theme Toggle */}
       <div className="flex items-center gap-2.5">
         {/* Quick Position Calculator */}
         <button
           onClick={onOpenCalculator}
           title="Position Size Calculator"
-          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-border transition-all"
+          className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 border border-transparent hover:border-border transition-all"
         >
           <Calculator className="w-4 h-4" />
         </button>
 
-        {/* Theme Toggle */}
+        {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          title="Toggle Theme"
-          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-border transition-all"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 border border-border transition-all shadow-sm flex items-center gap-1.5"
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {theme === 'dark' ? (
+            <>
+              <Sun className="w-4 h-4 text-amber-400" />
+              <span className="text-[11px] font-semibold text-muted hidden sm:inline">Light</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-4 h-4 text-primary" />
+              <span className="text-[11px] font-semibold text-muted hidden sm:inline">Dark</span>
+            </>
+          )}
         </button>
 
         {/* Quick Add Trade Button */}
@@ -158,20 +168,20 @@ export const Header: React.FC<HeaderProps> = ({
 export const Footer: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   return (
     <footer
-      className={`py-8 px-6 border-t border-border/80 text-center text-xs text-slate-500 transition-all duration-300 ${
+      className={`py-8 px-6 border-t border-border text-center text-xs text-muted transition-all duration-300 ${
         collapsed ? 'md:ml-16' : 'md:ml-64'
       }`}
     >
       <div className="flex flex-col sm:flex-row items-center justify-between max-w-6xl mx-auto gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-white">Trader</span>
-          <span className="text-primary-light font-bold">Zone</span>
+          <span className="font-black text-foreground">Trader</span>
+          <span className="text-primary font-bold">Zone</span>
           <span>· The AI-Powered Trading Journal</span>
         </div>
         <div className="flex items-center gap-6">
-          <a href="/#/terms" className="hover:text-slate-300 transition-colors">Terms of Service</a>
-          <a href="/#/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
-          <a href="/#/disclaimer" className="hover:text-slate-300 transition-colors">Legal Disclaimer</a>
+          <a href="/#/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+          <a href="/#/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+          <a href="/#/disclaimer" className="hover:text-foreground transition-colors">Legal Disclaimer</a>
         </div>
         <div>
           <span>Personal Edition · 100% Client-Side Private</span>

@@ -7,11 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  FileText,
-  TrendingUp,
-  CheckCircle2,
-  XCircle,
-  Clock
+  FileText
 } from 'lucide-react';
 
 export const JournalPage: React.FC = () => {
@@ -78,11 +74,11 @@ export const JournalPage: React.FC = () => {
       {/* Header and Month Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <CalendarIcon className="w-6 h-6 text-primary-light" />
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
+            <CalendarIcon className="w-6 h-6 text-primary" />
             <span>Trading Journal</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Review daily performance, log reflections, and track consistency on the calendar.
           </p>
         </div>
@@ -91,19 +87,19 @@ export const JournalPage: React.FC = () => {
           <Button size="sm" variant="outline" onClick={today}>
             Current Month
           </Button>
-          <div className="flex items-center gap-1 bg-surface-card border border-border p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-surface-card border border-border p-1 rounded-xl shadow-sm">
             <button
               onClick={prevMonth}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+              className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-bold text-white px-3 font-mono">
+            <span className="text-sm font-bold text-foreground px-3 font-mono">
               {monthName} {year}
             </span>
             <button
               onClick={nextMonth}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+              className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -116,7 +112,7 @@ export const JournalPage: React.FC = () => {
         {/* Calendar Grid */}
         <div className="lg:col-span-3 premium-card p-5">
           {/* Day of Week Headers */}
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-muted uppercase tracking-wider">
             <span>Sun</span>
             <span>Mon</span>
             <span>Tue</span>
@@ -130,7 +126,7 @@ export const JournalPage: React.FC = () => {
           <div className="grid grid-cols-7 gap-2">
             {daysGrid.map((day, idx) => {
               if (day === null) {
-                return <div key={`empty-${idx}`} className="h-24 md:h-28 rounded-xl bg-surface-card/20 border border-transparent" />;
+                return <div key={`empty-${idx}`} className="h-24 md:h-28 rounded-xl bg-surface/30 border border-transparent" />;
               }
 
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -145,7 +141,7 @@ export const JournalPage: React.FC = () => {
                 <div
                   key={dateStr}
                   onClick={() => navigate(`/day-view?date=${dateStr}`)}
-                  className={`h-24 md:h-28 p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] hover:z-10 relative group ${
+                  className={`h-24 md:h-28 p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02] hover:z-10 relative group shadow-sm ${
                     isToday ? 'ring-2 ring-primary' : ''
                   } ${
                     isProfitable
@@ -153,17 +149,17 @@ export const JournalPage: React.FC = () => {
                       : isLosing
                       ? 'bg-rose-500/10 border-rose-500/30 hover:border-rose-500/60'
                       : dayData
-                      ? 'bg-surface-card border-border hover:border-border-glow'
-                      : 'bg-surface-card/40 border-border/50 hover:border-border'
+                      ? 'bg-surface border-border hover:border-border-glow'
+                      : 'bg-surface/50 border-border hover:border-border-glow'
                   }`}
                 >
                   {/* Top: Day number & note icon */}
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-mono font-bold ${isToday ? 'text-primary-light font-black' : 'text-slate-400'}`}>
+                    <span className={`text-xs font-mono font-bold ${isToday ? 'text-primary font-black' : 'text-muted'}`}>
                       {day}
                     </span>
                     {journal && (
-                      <span title="Daily reflection logged" className="text-primary-light">
+                      <span title="Daily reflection logged" className="text-primary">
                         <FileText className="w-3 h-3" />
                       </span>
                     )}
@@ -173,23 +169,23 @@ export const JournalPage: React.FC = () => {
                   {dayData ? (
                     <div className="my-auto text-center">
                       <div className={`text-xs md:text-sm font-black font-mono truncate ${
-                        isProfitable ? 'text-emerald-400' : isLosing ? 'text-rose-400' : 'text-slate-300'
+                        isProfitable ? 'text-emerald-500' : isLosing ? 'text-rose-500' : 'text-foreground'
                       }`}>
                         {formatCurrency(dayData.pnl)}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                      <div className="text-[10px] text-muted font-mono mt-0.5">
                         {dayData.wins}W - {dayData.losses}L
                       </div>
                     </div>
                   ) : (
-                    <div className="text-[10px] text-slate-600 text-center my-auto hidden md:block">
+                    <div className="text-[10px] text-muted text-center my-auto hidden md:block opacity-60">
                       No trades
                     </div>
                   )}
 
                   {/* Bottom: Trades pill */}
                   {dayData ? (
-                    <div className="text-[9px] text-center rounded bg-black/40 text-slate-300 py-0.5">
+                    <div className="text-[9px] text-center rounded bg-black/10 dark:bg-black/40 text-foreground py-0.5 font-medium">
                       {dayData.count} trade{dayData.count > 1 ? 's' : ''}
                     </div>
                   ) : (
@@ -204,53 +200,53 @@ export const JournalPage: React.FC = () => {
         {/* Monthly Summary Sidebar */}
         <div className="premium-card p-5 flex flex-col justify-between space-y-6">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="text-xs font-bold uppercase tracking-wider text-muted mb-1">
               Monthly Recap
             </div>
-            <div className="text-xl font-black text-white">
+            <div className="text-xl font-black text-foreground">
               {monthName} {year}
             </div>
           </div>
 
           {/* Big Monthly P&L */}
           <div className={`p-4 rounded-xl border text-center ${
-            monthPnl >= 0 ? 'bg-emerald-500/15 border-emerald-500/30' : 'bg-rose-500/15 border-rose-500/30'
+            monthPnl >= 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'
           }`}>
-            <span className="text-[10px] uppercase font-bold text-slate-300">Total Net P&L</span>
-            <div className={`text-2xl font-black font-mono mt-1 ${monthPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className="text-[10px] uppercase font-bold text-muted">Total Net P&L</span>
+            <div className={`text-2xl font-black font-mono mt-1 ${monthPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
               {formatCurrency(monthPnl)}
             </div>
           </div>
 
           {/* Metrics breakdown */}
           <div className="space-y-3.5 text-xs">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-slate-400">Active Trading Days:</span>
-              <span className="font-mono font-bold text-white">{activeDays} Days</span>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-muted">Active Trading Days:</span>
+              <span className="font-mono font-bold text-foreground">{activeDays} Days</span>
             </div>
 
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-slate-400">Green / Red Days:</span>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-muted">Green / Red Days:</span>
               <span className="font-mono font-bold">
-                <span className="text-emerald-400">{profitableDays}W</span> / <span className="text-rose-400">{losingDays}L</span>
+                <span className="text-emerald-500">{profitableDays}W</span> / <span className="text-rose-500">{losingDays}L</span>
               </span>
             </div>
 
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-slate-400">Day Win Rate:</span>
-              <span className="font-mono font-bold text-white">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-muted">Day Win Rate:</span>
+              <span className="font-mono font-bold text-foreground">
                 {activeDays > 0 ? `${Math.round((profitableDays / activeDays) * 100)}%` : '0%'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-slate-400">Total Month Trades:</span>
-              <span className="font-mono font-bold text-white">{totalMonthTrades}</span>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-muted">Total Month Trades:</span>
+              <span className="font-mono font-bold text-foreground">{totalMonthTrades}</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Avg Daily P&L:</span>
-              <span className="font-mono font-bold text-white">
+              <span className="text-muted">Avg Daily P&L:</span>
+              <span className="font-mono font-bold text-foreground">
                 {activeDays > 0 ? formatCurrency(monthPnl / activeDays) : '$0.00'}
               </span>
             </div>

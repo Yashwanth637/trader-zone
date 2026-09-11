@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Theme = 'dark' | 'midnight' | 'light';
+type Theme = 'dark' | 'light';
 
 interface ThemeContextType {
   theme: Theme;
@@ -11,24 +11,39 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('tz_theme');
     return (saved as Theme) || 'dark';
   });
 
-  useEffect(() => {
-    localStorage.setItem('tz_theme', theme);
+  const applyTheme = (t: Theme) => {
     const root = document.documentElement;
-    root.classList.remove('dark', 'light', 'midnight');
-    if (theme === 'light') {
+    if (t === 'light') {
+      root.classList.remove('dark');
       root.classList.add('light');
     } else {
+      root.classList.remove('light');
       root.classList.add('dark');
     }
+    // Update theme-color meta tag
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', t === 'light' ? '#f8fafc' : '#000000');
+    }
+  };
+
+  useEffect(() => {
+    applyTheme(theme);
+    localStorage.setItem('tz_theme', theme);
   }, [theme]);
 
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    applyTheme(newTheme);
+  };
+
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
