@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && cd dist && git init -b gh-pages && git add -A && git commit -m 'Deploy Trader Zone' && git remote add origin https://github.com/Yashwanth637/trader-zone.git && git push -f origin gh-pages && rm -rf .git"
   },
   "dependencies": {
     "clsx": "^2.1.1",
