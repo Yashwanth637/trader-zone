@@ -9,16 +9,21 @@ import {
   Trash2,
   Upload,
   RefreshCw,
-  Wallet
+  Wallet,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
+import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
+import { DeltaStorage } from '../lib/deltaIndiaApi';
 
 export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpenCsvImport }) => {
   const { accounts, addAccount, deleteAccount, activeAccountId, setActiveAccountId } = useTrading();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deltaModalOpen, setDeltaModalOpen] = useState(false);
 
   const [accName, setAccName] = useState('');
-  const [broker, setBroker] = useState('MetaTrader 5');
-  const [accType, setAccType] = useState<'Prop Firm' | 'Live' | 'Demo' | 'Challenge'>('Prop Firm');
+  const [broker, setBroker] = useState('Delta Exchange India');
+  const [accType, setAccType] = useState<'Prop Firm' | 'Live' | 'Demo' | 'Challenge'>('Live');
   const [balance, setBalance] = useState('100000');
   const [currency, setCurrency] = useState('USD');
 
@@ -55,14 +60,70 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Zap className="w-4 h-4 text-amber-300" />}
+            onClick={() => setDeltaModalOpen(true)}
+          >
+            Sync Delta India
+          </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
             Import Statement CSV
           </Button>
-          <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setModalOpen(true)}>
+          <Button size="sm" variant="outline" icon={<Plus className="w-4 h-4" />} onClick={() => setModalOpen(true)}>
             Connect Account
           </Button>
         </div>
       </div>
+
+      {/* Delta Exchange India Direct API Sync Card */}
+      {(() => {
+        const hasDeltaCreds = Boolean(DeltaStorage.getCredentials().apiKey);
+        const lastDeltaSync = DeltaStorage.getLastSynced();
+        return (
+          <div className="premium-card p-5 border border-primary/40 bg-gradient-to-r from-primary/10 via-surface to-surface flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                <Zap className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-wide">Delta Exchange India — Direct API Sync</h3>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                      hasDeltaCreds
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400 border border-border'
+                    }`}
+                  >
+                    {hasDeltaCreds ? 'Configured & Active' : 'Setup Available'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Direct 1-click sync for closed positions and orders. Automatically converts contract lots (/ 100) and formats dates in DD-MM-YYYY.
+                </p>
+                {lastDeltaSync && (
+                  <span className="text-[10.5px] text-slate-400 mt-1 block">
+                    Last Synced: <span className="text-slate-300 font-mono">{new Date(lastDeltaSync).toLocaleString()}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<RefreshCw className="w-4 h-4" />}
+                onClick={() => setDeltaModalOpen(true)}
+              >
+                {hasDeltaCreds ? 'Sync Trades' : 'Setup API Key'}
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Connected Accounts Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -219,6 +280,14 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Delta Exchange India Direct Sync Modal */}
+      {deltaModalOpen && (
+        <DeltaSyncModal
+          isOpen={deltaModalOpen}
+          onClose={() => setDeltaModalOpen(false)}
+        />
       )}
     </div>
   );

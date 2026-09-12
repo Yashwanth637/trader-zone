@@ -12,8 +12,10 @@ import {
   Upload,
   ArrowUpRight,
   Trash2,
-  PlayCircle
+  PlayCircle,
+  Zap
 } from 'lucide-react';
+import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 
 interface TradesPageProps {
   onOpenAddTrade: () => void;
@@ -22,6 +24,7 @@ interface TradesPageProps {
 
 export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCsvImport }) => {
   const { accountTrades, deleteTrade, closeTrade, strategies } = useTrading();
+  const [deltaModalOpen, setDeltaModalOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
@@ -72,6 +75,9 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         </div>
 
         <div className="flex items-center gap-3">
+          <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-amber-400" />} onClick={() => setDeltaModalOpen(true)}>
+            Sync Delta
+          </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
             Import CSV / Broker
           </Button>
@@ -297,6 +303,14 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Delta Exchange India Direct Sync Modal */}
+      {deltaModalOpen && (
+        <DeltaSyncModal
+          isOpen={deltaModalOpen}
+          onClose={() => setDeltaModalOpen(false)}
+        />
       )}
     </div>
   );
