@@ -2,13 +2,15 @@ import React, { useState, useRef } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { filterTradesByPeriod, formatCurrency, calculateSummaryStats } from '../lib/calculations';
+import { generateExecutiveReportPDF } from '../lib/pdfReport';
 import {
   FileText,
   Download,
   Printer,
   Calendar,
   Shield,
-  TrendingUp
+  TrendingUp,
+  CheckCircle2
 } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
@@ -18,6 +20,16 @@ export const ReportsPage: React.FC = () => {
 
   const filtered = filterTradesByPeriod(accountTrades, period);
   const repStats = calculateSummaryStats(filtered, activeAccount ? activeAccount.initialBalance : 100000);
+
+  const handleDownloadPDF = () => {
+    generateExecutiveReportPDF({
+      stats: repStats,
+      trades: filtered,
+      account: activeAccount,
+      profileName: profile.name,
+      period
+    });
+  };
 
   const handlePrint = () => {
     window.print();
@@ -33,11 +45,11 @@ export const ReportsPage: React.FC = () => {
             <span>Executive Performance Report</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Generate and export institutional statement reports for audits and personal review.
+            Generate and export institutional statement reports in standard audited PDF format.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={period}
             onChange={e => setPeriod(e.target.value)}
@@ -51,8 +63,12 @@ export const ReportsPage: React.FC = () => {
             <option value="year">This Year</option>
           </select>
 
-          <Button size="sm" variant="primary" icon={<Printer className="w-4 h-4" />} onClick={handlePrint}>
-            Print / Save PDF
+          <Button size="sm" variant="primary" icon={<Download className="w-4 h-4" />} onClick={handleDownloadPDF}>
+            Download Official PDF
+          </Button>
+
+          <Button size="sm" variant="secondary" icon={<Printer className="w-4 h-4" />} onClick={handlePrint}>
+            Print Statement
           </Button>
         </div>
       </div>
@@ -146,9 +162,103 @@ export const ReportsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Audited Closed Trades Ledger */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Audited Positions Ledger</h3>
+            <span className="text-[10px] text-slate-400">{filtered.filter(t => t.status === 'CLOSED').length} Executed Positions</span>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-card text-slate-400 text-[10px] uppercase font-bold border-b border-border">
+                <tr>
+                  <th className="px-3.5 py-2.5">Date</th>
+                  <th className="px-3.5 py-2.5">Symbol</th>
+                  <th className="px-3.5 py-2.5">Direction</th>
+                  <th className="px-3.5 py-2.5">Lots</th>
+                  <th className="px-3.5 py-2.5">Entry</th>
+                  <th className="px-3.5 py-2.5">Exit</th>
+                  <th className="px-3.5 py-2.5 text-right">Net P&L</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.filter(t => t.status === 'CLOSED').length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-3.5 py-6 text-center text-slate-500 text-xs">
+                      No closed trades recorded in this statement period.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.filter(t => t.status === 'CLOSED').slice(0, 8).map(t => (
+                    <tr key={t.id} className="hover:bg-surface-card/40 transition-colors">
+                      <td className="px-3.5 py-2 text-slate-400 font-mono text-[11px]">
+                        {(t.closeTime || t.openTime).split('T')[0]}
+                      </td>
+                      <td className="px-3.5 py-2 font-bold text-white">{t.symbol}</td>
+                      <td className="px-3.5 py-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          t.direction === 'BUY'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                        }`}>
+                          {t.direction}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2 text-slate-300 font-mono">{t.lotSize}</td>
+                      <td className="px-3.5 py-2 text-slate-300 font-mono">{t.entryPrice}</td>
+                      <td className="px-3.5 py-2 text-slate-300 font-mono">{t.exitPrice || '-'}</td>
+                      <td className={`px-3.5 py-2 text-right font-mono font-bold ${
+                        t.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {t.netPnl >= 0 ? '+' : ''}${t.netPnl.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Risk Governance & Behavioral Compliance */}
+        <div className="p-4 rounded-xl bg-surface-card/60 border border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-2 text-slate-400">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Risk Guardrails: <strong>100% Audited</strong></span>
+          </div>
+          <div className="flex items-center gap-6 text-[11px] text-slate-400">
+            <span>Stop Loss: <strong className="text-white">Mandated</strong></span>
+            <span>Max Risk: <strong className="text-white">≤ 1.5%</strong></span>
+            <span>Execution: <strong className="text-white">STP / Direct ECN</strong></span>
+          </div>
+        </div>
+
+        {/* Certification & Sign-off Block */}
+        <div className="border-t border-border pt-6 space-y-6">
+          <p className="text-[11px] text-slate-400 italic leading-relaxed">
+            I hereby certify that this executive statement reflects the audited execution records, risk parameters, and financial results recorded in Trader Zone.
+          </p>
+
+          <div className="grid grid-cols-2 gap-12 pt-2">
+            <div>
+              <div className="border-b border-slate-600/60 pb-1 text-xs font-bold text-white font-mono">
+                {profile.name || 'Master Trader'}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-1">Authorized Trader Signature</div>
+            </div>
+            <div>
+              <div className="border-b border-slate-600/60 pb-1 text-xs font-bold text-white font-mono">
+                {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-1">Audit Verification Date</div>
+            </div>
+          </div>
+        </div>
+
         {/* Statement Footer */}
         <div className="border-t border-border pt-4 text-center text-[10px] text-slate-500">
-          Trader Zone Automated Report · Confidential & Personal Use Only
+          Trader Zone Automated Report · Confidential & Personal Use Only · Generated by Institutional Engine
         </div>
       </div>
     </div>

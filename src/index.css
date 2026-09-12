@@ -7,14 +7,15 @@
     /* Pure White Light Mode */
     --bg-app: #ffffff;
     --bg-surface: #ffffff;
-    --bg-card: #f9fafb;
-    --bg-card-hover: #f3f4f6;
-    --text-primary: #000000;
-    --text-secondary: #374151;
-    --text-muted: #6b7280;
-    --border-subtle: #e5e7eb;
-    --border-glow: rgba(139, 92, 246, 0.4);
-    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-subtle: #e2e8f0;
+    --border-divider: rgba(0, 0, 0, 0.08);
+    --border-glow: rgba(139, 92, 246, 0.3);
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   }
 
   .dark {
@@ -27,6 +28,7 @@
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
     --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-divider: rgba(255, 255, 255, 0.07);
     --border-glow: rgba(139, 92, 246, 0.4);
     --card-shadow: 0 4px 25px -3px rgba(0, 0, 0, 0.85);
   }
@@ -36,6 +38,92 @@
     color: var(--text-primary);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Thin, delicate horizontal dividers throughout the entire journal */
+  hr,
+  .border-b,
+  .border-t,
+  .divide-y > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-divider);
+    border-width: 1px;
+  }
+
+  @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+    hr,
+    .border-b,
+    .border-t,
+    .divide-y > :not([hidden]) ~ :not([hidden]) {
+      border-width: 0.5px;
+    }
+  }
+
+  /* =========================================================================
+     Dynamic Light Mode Font Visibility Fix
+     Ensures all fonts, titles, metrics, inputs, and labels are 100% visible
+     and crisp without disappearing against light backgrounds.
+     ========================================================================= */
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
+  html:not(.dark) :is(
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, strong, b, td, th, label, dt, dd
+  ).text-white:not([class*="bg-primary"]):not([class*="bg-purple"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-danger"]):not([class*="bg-blue"]):not([class*="bg-amber"]):not([class*="bg-black"]) {
+    color: #0f172a !important;
+  }
+
+  html:not(.dark) :is(
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, strong, b, td, th, label
+  ).text-slate-100:not([class*="bg-primary"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-blue"]):not([class*="bg-black"]) {
+    color: #1e293b !important;
+  }
+
+  html:not(.dark) :is(
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, strong, b, td, th, label
+  ).text-slate-200:not([class*="bg-primary"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-blue"]):not([class*="bg-black"]) {
+    color: #334155 !important;
+  }
+
+  html:not(.dark) :is(
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, strong, b, td, th, label
+  ).text-slate-300:not([class*="bg-primary"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-blue"]):not([class*="bg-black"]) {
+    color: #475569 !important;
+  }
+
+  html:not(.dark) :is(
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, strong, b, td, th, label
+  ).text-slate-400:not([class*="bg-primary"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-blue"]):not([class*="bg-black"]) {
+    color: #64748b !important;
+  }
+
+  /* Form controls adaptation in light mode */
+  html:not(.dark) input,
+  html:not(.dark) select,
+  html:not(.dark) textarea {
+    color: #0f172a !important;
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  html:not(.dark) input::placeholder,
+  html:not(.dark) textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  /* Secondary button styling in light mode */
+  html:not(.dark) button.bg-surface-card {
+    color: #1e293b !important;
+    background-color: #f1f5f9;
+    border-color: #e2e8f0;
+  }
+  html:not(.dark) button.bg-surface-card:hover {
+    background-color: #e2e8f0;
   }
 
   /* Sleek custom scrollbars */
