@@ -29,7 +29,7 @@ interface RawDeltaOrder {
   displayDate: string;
   contract: string;
   rawQty: number;
-  lotSize: number; // divided by 100
+  lotSize: number; // divided by 1000
   side: 'buy' | 'sell';
   execPrice: number;
   stopPrice?: number;
@@ -41,7 +41,7 @@ interface RawDeltaOrder {
 /**
  * Specialized parser for Delta Exchange India Order History CSV.
  * - Filters out cancelled, zero-filled, and liquidation trigger rows.
- * - Divides lot size by 100 as requested.
+ * - Divides lot size by 1000 as requested.
  * - Stores dates in DD-MM-YYYY format.
  * - Accurately determines round-trip trade direction (closing buy = SELL short; closing sell = BUY long).
  */
@@ -78,8 +78,8 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
     }
 
     const rawQty = parseFloat(cols[2]) || 0;
-    // Divide lot size by 100
-    const lotSize = parseFloat((rawQty / 100).toFixed(4));
+    // Divide lot size by 1000
+    const lotSize = parseFloat((rawQty / 1000).toFixed(5));
 
     validRows.push({
       dateObj: parsedDate,

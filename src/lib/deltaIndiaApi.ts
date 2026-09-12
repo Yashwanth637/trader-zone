@@ -309,7 +309,7 @@ export function normalizeDeltaOrders(
     displayDate: string;
     symbol: string;
     rawQty: number;
-    lotSize: number; // rawQty / 100
+    lotSize: number; // rawQty / 1000
     side: 'buy' | 'sell';
     execPrice: number;
     stopPrice?: number;
@@ -337,7 +337,7 @@ export function normalizeDeltaOrders(
       displayDate: formatDDMMYYYY(dateObj),
       symbol: (o.product_symbol || 'CRYPTO').toUpperCase(),
       rawQty,
-      lotSize: parseFloat((rawQty / 100).toFixed(4)),
+      lotSize: parseFloat((rawQty / 1000).toFixed(5)),
       side: o.side.toLowerCase() === 'sell' ? 'sell' : 'buy',
       execPrice,
       stopPrice,
