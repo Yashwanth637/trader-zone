@@ -15,15 +15,44 @@ import {
 } from 'lucide-react';
 
 export const ProgressPage: React.FC = () => {
-  const { rules, toggleRule, addRule, journalEntries } = useTrading();
+  const { rules, toggleRule, addRule, journalEntries, accountTrades, activeAccount } = useTrading();
   const [newRuleModal, setNewRuleModal] = useState(false);
   const [ruleName, setRuleName] = useState('');
   const [ruleDesc, setRuleDesc] = useState('');
   const [ruleCategory, setRuleCategory] = useState<'Risk' | 'Execution' | 'Psychology' | 'Time'>('Risk');
 
-  // Calculate overall discipline score from journal entries
+  // Calculate real discipline score from actual trades and journal reviews
   let totalChecks = 0;
   let passedChecks = 0;
+
+  // 1. Audit recorded trades against active rules
+  accountTrades.forEach(t => {
+    // Stop Loss Mandate
+    const slRule = rules.find(r => r.name.toLowerCase().includes('stop loss'));
+    if (slRule?.enabled) {
+      totalChecks++;
+      if (t.stopLoss && t.stopLoss > 0) passedChecks++;
+    }
+
+    // Max Risk Limit
+    const riskRule = rules.find(r => r.name.toLowerCase().includes('risk'));
+    if (riskRule?.enabled && activeAccount) {
+      totalChecks++;
+      const maxRisk = (activeAccount.currentBalance || activeAccount.initialBalance || 100000) * 0.015;
+      if (!t.plannedRiskUsd || t.plannedRiskUsd <= maxRisk) passedChecks++;
+    }
+
+    // Prime Sessions
+    const sessionRule = rules.find(r => r.name.toLowerCase().includes('prime') || r.name.toLowerCase().includes('session'));
+    if (sessionRule?.enabled && t.openTime) {
+      totalChecks++;
+      const hour = new Date(t.openTime).getUTCHours();
+      const isPrime = (hour >= 8 && hour <= 11) || (hour >= 13 && hour <= 17);
+      if (isPrime) passedChecks++;
+    }
+  });
+
+  // 2. Audit daily review checklists
   journalEntries.forEach(j => {
     if (j.rulesFollowed) {
       Object.values(j.rulesFollowed).forEach(passed => {
@@ -33,14 +62,80 @@ export const ProgressPage: React.FC = () => {
     }
   });
 
-  const disciplineScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 85;
+  // Accurate Discipline Score (0% when no trades or reviews exist)
+  const hasData = accountTrades.length > 0 || journalEntries.length > 0;
+  const disciplineScore = hasData && totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : (accountTrades.length > 0 ? 100 : 0);
+  const scoreSubtitle = hasData ? `Audited across ${accountTrades.length} trades & reviews` : 'No trades or reviews logged yet';
 
+  // Calculate real discipline streak across consecutive trading days
+  let currentStreak = 0;
+  if (accountTrades.length > 0) {
+    const dateMap = new Map<string, typeof accountTrades>();
+    accountTrades.forEach(t => {
+      const d = (t.closeTime || t.openTime || '').split('T')[0];
+      if (d) {
+        if (!dateMap.has(d)) dateMap.set(d, []);
+        dateMap.get(d)!.push(t);
+      }
+    });
+
+    const sortedDates = Array.from(dateMap.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    for (const d of sortedDates) {
+      const dayTrades = dateMap.get(d)!;
+      const allPassed = dayTrades.every(t => !t.stopLoss || t.stopLoss > 0);
+      if (allPassed) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  const streakDisplay = `${currentStreak} Day${currentStreak === 1 ? '' : 's'}`;
+  const streakSubtitle = currentStreak > 0 ? 'Consecutive rule compliance' : (accountTrades.length > 0 ? 'Rule breach reset streak' : 'Log trades to build streak');
+
+  // Real milestone unlock evaluations
   const milestones = [
-    { id: 'm1', title: 'First Trade Logged', desc: 'Successfully entered your first trade in the journal.', unlocked: true, icon: Target },
-    { id: 'm2', title: '5-Day Discipline Streak', desc: 'Maintained 100% rule adherence for 5 trading sessions.', unlocked: true, icon: Flame },
-    { id: 'm3', title: 'Risk Master', desc: 'Zero trades executed without an immediate hard stop loss.', unlocked: true, icon: ShieldCheck },
-    { id: 'm4', title: '1:3 R:R Sniper', desc: 'Captured a full 1:3.0+ risk to reward setup.', unlocked: true, icon: Trophy },
-    { id: 'm5', title: '100 Trades Logged', desc: 'Built a statistically valid sample of execution data.', unlocked: false, icon: Zap }
+    {
+      id: 'm1',
+      title: 'First Trade Logged',
+      desc: 'Successfully entered your first trade in the journal.',
+      unlocked: accountTrades.length >= 1,
+      icon: Target
+    },
+    {
+      id: 'm2',
+      title: '5-Day Discipline Streak',
+      desc: 'Maintained 100% rule adherence for 5 trading sessions.',
+      unlocked: currentStreak >= 5,
+      icon: Flame
+    },
+    {
+      id: 'm3',
+      title: 'Risk Master',
+      desc: 'Zero trades executed without an immediate hard stop loss.',
+      unlocked: accountTrades.length >= 5 && accountTrades.every(t => !!t.stopLoss && t.stopLoss > 0),
+      icon: ShieldCheck
+    },
+    {
+      id: 'm4',
+      title: '1:3 R:R Sniper',
+      desc: 'Captured a full 1:3.0+ risk to reward setup.',
+      unlocked: accountTrades.some(t => {
+        if (!t.stopLoss || !t.takeProfit || t.netPnl <= 0) return false;
+        const risk = Math.abs(t.entryPrice - t.stopLoss);
+        const reward = Math.abs(t.takeProfit - t.entryPrice);
+        return risk > 0 && (reward / risk) >= 2.9;
+      }),
+      icon: Trophy
+    },
+    {
+      id: 'm5',
+      title: '100 Trades Logged',
+      desc: 'Built a statistically valid sample of execution data.',
+      unlocked: accountTrades.length >= 100,
+      icon: Zap
+    }
   ];
 
   const handleAddRule = (e: React.FormEvent) => {
@@ -85,7 +180,7 @@ export const ProgressPage: React.FC = () => {
           <div>
             <div className="text-[10px] text-slate-400 uppercase font-bold">Discipline Score</div>
             <div className="text-3xl font-black text-white font-mono mt-0.5">{disciplineScore}%</div>
-            <div className="text-[10px] text-teal-400 mt-0.5">Calculated from Daily Reviews</div>
+            <div className="text-[10px] text-teal-400 mt-0.5">{scoreSubtitle}</div>
           </div>
         </div>
 
@@ -95,8 +190,8 @@ export const ProgressPage: React.FC = () => {
           </div>
           <div>
             <div className="text-[10px] text-slate-400 uppercase font-bold">Current Discipline Streak</div>
-            <div className="text-3xl font-black text-amber-400 font-mono mt-0.5">5 Days</div>
-            <div className="text-[10px] text-slate-300 mt-0.5">Consecutive rule compliance</div>
+            <div className="text-3xl font-black text-amber-400 font-mono mt-0.5">{streakDisplay}</div>
+            <div className="text-[10px] text-slate-300 mt-0.5">{streakSubtitle}</div>
           </div>
         </div>
 
@@ -121,9 +216,10 @@ export const ProgressPage: React.FC = () => {
           Toggle rules on or off to adjust your daily discipline checklist.
         </p>
 
-        <div className="divide-y divide-border/60">
+        {/* Removed horizontal divider lines */}
+        <div className="space-y-2">
           {rules.map(rule => (
-            <div key={rule.id} className="py-3.5 flex items-center justify-between gap-4">
+            <div key={rule.id} className="py-2.5 flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-white">{rule.name}</span>

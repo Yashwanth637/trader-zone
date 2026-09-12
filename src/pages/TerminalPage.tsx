@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { TradingViewWidget } from '../components/charts/TradingViewWidget';
 import { QuickCalculatorModal } from '../components/common/QuickCalculatorModal';
 import { Button } from '../components/ui/Button';
+import { useTheme } from '../context/ThemeContext';
 import { Tv, Calculator, Maximize2 } from 'lucide-react';
 
 export const TerminalPage: React.FC = () => {
+  const { theme } = useTheme();
   const [symbol, setSymbol] = useState('FX:EURUSD');
   const [calcOpen, setCalcOpen] = useState(false);
 
@@ -44,7 +46,7 @@ export const TerminalPage: React.FC = () => {
 
       {/* Embedded Chart Full Height */}
       <div className="flex-1 w-full relative">
-        <TradingViewWidget symbol={symbol} />
+        <TradingViewWidget symbol={symbol} theme={theme} />
       </div>
 
       {/* Position Calculator Modal */}

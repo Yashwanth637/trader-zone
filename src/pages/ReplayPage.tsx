@@ -67,6 +67,8 @@ export const ReplayPage: React.FC = () => {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const markersRef = useRef<any>(null);
+  const priceLinesRef = useRef<any[]>([]);
+  const initialFittedRef = useRef<string | null>(null);
 
   // When tradeId in URL changes, select that trade
   useEffect(() => {
@@ -150,7 +152,72 @@ export const ReplayPage: React.FC = () => {
     };
   }, [theme]);
 
-  // Update chart data & price lines when replayData or currentStep changes
+  // Manage price lines cleanly: ONLY recreate when trade changes or chart initializes
+  useEffect(() => {
+    if (!seriesRef.current || !replayData) return;
+    const series = seriesRef.current;
+
+    // Remove any previously created price lines
+    if (priceLinesRef.current.length > 0) {
+      priceLinesRef.current.forEach(line => {
+        try {
+          series.removePriceLine(line);
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      });
+      priceLinesRef.current = [];
+    }
+
+    const newLines = [];
+
+    // Entry price line
+    const entryLine = series.createPriceLine({
+      price: replayData.entryPrice,
+      color: '#8b5cf6',
+      lineWidth: 2,
+      lineStyle: LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `Entry: ${replayData.entryPrice}`
+    });
+    newLines.push(entryLine);
+
+    // Stop Loss line
+    if (replayData.stopLoss) {
+      const slLine = series.createPriceLine({
+        price: replayData.stopLoss,
+        color: '#ef4444',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `Stop Loss: ${replayData.stopLoss}`
+      });
+      newLines.push(slLine);
+    }
+
+    // Take Profit line
+    if (replayData.takeProfit) {
+      const tpLine = series.createPriceLine({
+        price: replayData.takeProfit,
+        color: '#10b981',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `Take Profit: ${replayData.takeProfit}`
+      });
+      newLines.push(tpLine);
+    }
+
+    priceLinesRef.current = newLines;
+
+    // Fit content ONCE per trade when loaded, without resetting during replay ticks
+    if (replayData.trade.id !== initialFittedRef.current) {
+      initialFittedRef.current = replayData.trade.id;
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [replayData, theme]);
+
+  // Update chart data & markers as replay progresses - NEVER reframes or duplicates price lines!
   useEffect(() => {
     if (!seriesRef.current || !replayData || replayData.candles.length === 0) return;
 
@@ -169,44 +236,8 @@ export const ReplayPage: React.FC = () => {
 
     seriesRef.current.setData(formatted);
 
-    // Add price lines once
-    const series = seriesRef.current;
-    
-    // Entry price line
-    series.createPriceLine({
-      price: replayData.entryPrice,
-      color: '#8b5cf6',
-      lineWidth: 2,
-      lineStyle: LineStyle.Dashed,
-      axisLabelVisible: true,
-      title: `Entry: ${replayData.entryPrice}`
-    });
-
-    // Stop Loss line
-    if (replayData.stopLoss) {
-      series.createPriceLine({
-        price: replayData.stopLoss,
-        color: '#ef4444',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `Stop Loss: ${replayData.stopLoss}`
-      });
-    }
-
-    // Take Profit line
-    if (replayData.takeProfit) {
-      series.createPriceLine({
-        price: replayData.takeProfit,
-        color: '#10b981',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `Take Profit: ${replayData.takeProfit}`
-      });
-    }
-
     // Markers for Entry and Exit
+    const series = seriesRef.current;
     const markers: any[] = [];
     if (step >= replayData.entryIndex && replayData.entryIndex < replayData.candles.length) {
       const entryCandle = replayData.candles[replayData.entryIndex];
@@ -240,8 +271,6 @@ export const ReplayPage: React.FC = () => {
     } catch (e) {
       // Ignore marker re-binding warning
     }
-
-    chartRef.current?.timeScale().fitContent();
   }, [replayData, currentStep]);
 
   // Replay play/pause loop timer

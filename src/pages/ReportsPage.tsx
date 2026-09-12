@@ -110,36 +110,36 @@ export const ReportsPage: React.FC = () => {
         {/* Detailed Metrics Table */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Financial Statistics Summary</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Total Closed Trades:</span>
               <span className="font-mono text-white font-bold">{repStats.totalTrades}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Gross Profit:</span>
               <span className="font-mono text-emerald-400 font-bold">+${repStats.grossProfit.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Winning / Losing Trades:</span>
               <span className="font-mono text-white">{repStats.winningTrades}W / {repStats.losingTrades}L</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Gross Loss:</span>
               <span className="font-mono text-rose-400 font-bold">-${repStats.grossLoss.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Average Winner:</span>
               <span className="font-mono text-emerald-400 font-bold">+${repStats.avgWin.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Average Loser:</span>
               <span className="font-mono text-rose-400 font-bold">-${repStats.avgLoss.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Total Volume Traded:</span>
               <span className="font-mono text-white">{repStats.totalLots} Lots</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-border/60">
+            <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Commissions & Swaps:</span>
               <span className="font-mono text-slate-300">${repStats.totalCommission.toFixed(2)}</span>
             </div>

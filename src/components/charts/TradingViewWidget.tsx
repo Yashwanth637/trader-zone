@@ -31,15 +31,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       locale: "en",
       enable_publishing: false,
       allow_symbol_change: true,
+      withdateranges: true,
+      hide_side_toolbar: false,
       calendar: false,
       support_host: "https://www.tradingview.com",
       hide_top_toolbar: false,
       hide_legend: false,
       save_image: true,
-      studies: [
-        "STD;EMA",
-        "STD;RSI"
-      ],
+      studies: [],
       container_id: "tradingview_widget_container"
     });
 

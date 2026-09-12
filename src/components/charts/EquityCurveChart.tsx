@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Trade } from '../../types/trade';
 import { formatCurrency } from '../../lib/calculations';
 
@@ -18,7 +18,10 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
     pnl: number;
     date: string;
     tradeSymbol: string;
+    gainPct: string;
   } | null>(null);
+
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const closed = [...trades]
     .filter(t => t.status === 'CLOSED')
@@ -33,19 +36,25 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
     );
   }
 
-  // Calculate cumulative points
+  // Calculate cumulative points with full date formatting
   let current = initialBalance;
   const points: { balance: number; pnl: number; date: string; symbol: string }[] = [
-    { balance: initialBalance, pnl: 0, date: 'Start', symbol: 'Account Opened' }
+    { balance: initialBalance, pnl: 0, date: 'Account Opened', symbol: 'Base Capital' }
   ];
 
   closed.forEach(t => {
     current += t.netPnl;
+    const tradeDate = new Date(t.closeTime || t.openTime);
+    const dateFormatted = tradeDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
     points.push({
       balance: current,
       pnl: t.netPnl,
-      date: new Date(t.closeTime || t.openTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      symbol: t.symbol
+      date: dateFormatted,
+      symbol: `${t.symbol} (${t.direction})`
     });
   });
 
@@ -73,6 +82,42 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
 
   const isProfitable = current >= initialBalance;
 
+  // Track mouse across the whole chart SVG
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const mouseX = ((clientX - rect.left) / rect.width) * width;
+
+    // Find closest point by X coordinate
+    let closestIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const px = getX(i);
+      const dist = Math.abs(px - mouseX);
+      if (dist < minDist) {
+        minDist = dist;
+        closestIdx = i;
+      }
+    }
+
+    const p = points[closestIdx];
+    const gainPct = (((p.balance - initialBalance) / initialBalance) * 100).toFixed(2);
+    setHoveredPoint({
+      x: getX(closestIdx),
+      y: getY(p.balance),
+      balance: p.balance,
+      pnl: p.pnl,
+      date: p.date,
+      tradeSymbol: p.symbol,
+      gainPct
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredPoint(null);
+  };
+
   return (
     <div className="relative w-full overflow-hidden">
       <div className="flex items-center justify-between mb-4">
@@ -97,9 +142,16 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
         </div>
       </div>
 
-      {/* SVG Chart */}
-      <div className="w-full relative">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-56 md:h-64 overflow-visible">
+      {/* SVG Chart with Full Cursor Interaction */}
+      <div className="w-full relative cursor-crosshair select-none">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-56 md:h-64 overflow-visible"
+          onMouseMove={handleMouseMove}
+          onTouchMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
           <defs>
             <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
@@ -138,7 +190,20 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
           {/* Line */}
           <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-          {/* Points */}
+          {/* Vertical Crosshair Line when hovering on a date */}
+          {hoveredPoint && (
+            <line
+              x1={hoveredPoint.x}
+              y1={paddingY}
+              x2={hoveredPoint.x}
+              y2={height - paddingY}
+              stroke="rgba(139, 92, 246, 0.6)"
+              strokeDasharray="3 3"
+              strokeWidth="1.5"
+            />
+          )}
+
+          {/* Regular Points */}
           {points.map((p, i) => {
             const cx = getX(i);
             const cy = getY(p.balance);
@@ -147,50 +212,81 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
                 key={i}
                 cx={cx}
                 cy={cy}
-                r={i === points.length - 1 ? 5 : 3.5}
+                r={i === points.length - 1 ? 4.5 : 3}
                 fill={p.pnl >= 0 ? '#10b981' : '#f43f5e'}
                 stroke="#120f24"
-                strokeWidth="2"
-                className="cursor-pointer transition-all hover:r-6"
-                onMouseEnter={() =>
-                  setHoveredPoint({
-                    x: cx,
-                    y: cy,
-                    balance: p.balance,
-                    pnl: p.pnl,
-                    date: p.date,
-                    tradeSymbol: p.symbol
-                  })
-                }
-                onMouseLeave={() => setHoveredPoint(null)}
+                strokeWidth="1.5"
               />
             );
           })}
+
+          {/* Highlighted Cursor Point */}
+          {hoveredPoint && (
+            <g>
+              <circle
+                cx={hoveredPoint.x}
+                cy={hoveredPoint.y}
+                r={8}
+                fill="#8b5cf6"
+                fillOpacity="0.25"
+                className="animate-ping"
+              />
+              <circle
+                cx={hoveredPoint.x}
+                cy={hoveredPoint.y}
+                r={5.5}
+                fill="#8b5cf6"
+                stroke="#ffffff"
+                strokeWidth="2"
+              />
+            </g>
+          )}
+
+          {/* Invisible Overlay to Capture all mouse movements */}
+          <rect
+            x={paddingX}
+            y={paddingY}
+            width={width - paddingX * 2}
+            height={height - paddingY * 2}
+            fill="transparent"
+          />
         </svg>
 
-        {/* Hover Tooltip */}
+        {/* Dynamic High-Contrast Hover Tooltip */}
         {hoveredPoint && (
           <div
-            className="absolute z-20 pointer-events-none bg-surface border border-border-glow rounded-xl p-2.5 shadow-2xl text-xs -translate-x-1/2 -translate-y-full mb-3"
+            className={`absolute z-30 pointer-events-none bg-surface/95 backdrop-blur-md border border-primary/40 rounded-xl p-3 shadow-2xl text-xs -translate-y-full mb-3 min-w-[170px] ${
+              (hoveredPoint.x / width) * 100 > 75 ? '-translate-x-full' : (hoveredPoint.x / width) * 100 < 25 ? 'translate-x-0' : '-translate-x-1/2'
+            }`}
             style={{
               left: `${(hoveredPoint.x / width) * 100}%`,
-              top: `${(hoveredPoint.y / height) * 100}%`
+              top: `${Math.max((hoveredPoint.y / height) * 100, 25)}%`
             }}
           >
-            <div className="font-bold text-white">{hoveredPoint.tradeSymbol}</div>
-            <div className="text-[10px] text-slate-400">{hoveredPoint.date}</div>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <span className="text-slate-400">Balance:</span>
-              <span className="font-mono font-bold text-white">${hoveredPoint.balance.toLocaleString()}</span>
+            <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-1.5 mb-1.5">
+              <span className="font-bold text-white text-[11px] truncate max-w-[120px]">{hoveredPoint.tradeSymbol}</span>
+              <span className="text-[10px] font-mono font-medium text-slate-400">{hoveredPoint.date}</span>
             </div>
-            {hoveredPoint.pnl !== 0 && (
+            <div className="space-y-1 text-[11px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-400">Trade P&L:</span>
-                <span className={`font-mono font-bold ${hoveredPoint.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {hoveredPoint.pnl >= 0 ? '+' : ''}${hoveredPoint.pnl.toFixed(2)}
+                <span className="text-slate-400">Balance:</span>
+                <span className="font-mono font-bold text-white">{formatCurrency(hoveredPoint.balance)}</span>
+              </div>
+              {hoveredPoint.pnl !== 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-slate-400">Trade P&L:</span>
+                  <span className={`font-mono font-bold ${hoveredPoint.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {hoveredPoint.pnl >= 0 ? '+' : ''}{formatCurrency(hoveredPoint.pnl)}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-400">Overall Return:</span>
+                <span className={`font-mono font-bold ${Number(hoveredPoint.gainPct) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {Number(hoveredPoint.gainPct) >= 0 ? '+' : ''}{hoveredPoint.gainPct}%
                 </span>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

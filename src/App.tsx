@@ -28,7 +28,6 @@ import { AIPage } from './pages/AIPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { ShareCardsPage } from './pages/ShareCardsPage';
 import { MarketHoursPage } from './pages/MarketHoursPage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
 import { BrokerHubPage } from './pages/BrokerHubPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TermsPage, PrivacyPage, DisclaimerPage } from './pages/LegalPages';
@@ -93,7 +92,6 @@ const AppLayout: React.FC = () => {
           <Route path="/progress" element={<ProgressPage />} />
           <Route path="/share-cards" element={<ShareCardsPage />} />
           <Route path="/market-hours" element={<MarketHoursPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/broker-hub" element={<BrokerHubPage onOpenCsvImport={() => setCsvImportOpen(true)} />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/terms" element={<TermsPage />} />

@@ -246,16 +246,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && <span>Market Hours</span>}
         </NavLink>
 
-        {/* Leaderboard */}
-        <NavLink
-          to="/leaderboard"
-          onClick={onMobileClose}
-          className={({ isActive }) => navClass(isActive)}
-          title={collapsed ? "Leaderboard" : undefined}
-        >
-          <Trophy className="w-4 h-4 shrink-0 text-yellow-500" />
-          {!collapsed && <span>Leaderboard</span>}
-        </NavLink>
 
         {/* Broker Hub */}
         <NavLink
