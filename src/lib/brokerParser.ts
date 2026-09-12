@@ -1,7 +1,13 @@
 import { Trade, Direction, AssetClass } from '../types/trade';
 import { detectTradingSession, calculatePips } from './calculations';
+import { isDeltaIndiaCsv, parseDeltaIndiaCsv } from './deltaIndiaParser';
 
 export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
+  // Check if this is a Delta Exchange India CSV export
+  if (isDeltaIndiaCsv(csvText)) {
+    return parseDeltaIndiaCsv(csvText, accountId);
+  }
+
   const lines = csvText.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
 

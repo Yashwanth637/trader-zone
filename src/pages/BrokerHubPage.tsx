@@ -161,6 +161,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                   onChange={e => setBroker(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
                 >
+                  <option value="Delta Exchange India">Delta Exchange India</option>
                   <option value="MetaTrader 5">MetaTrader 5</option>
                   <option value="MetaTrader 4">MetaTrader 4</option>
                   <option value="Exness">Exness</option>

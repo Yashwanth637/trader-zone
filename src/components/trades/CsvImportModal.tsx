@@ -3,7 +3,8 @@ import { useTrading } from '../../context/TradingContext';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { parseBrokerCsv } from '../../lib/brokerParser';
-import { Upload, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { isDeltaIndiaCsv } from '../../lib/deltaIndiaParser';
+import { Upload, FileSpreadsheet, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react';
 
 interface CsvImportModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
   const [csvText, setCsvText] = useState('');
   const [targetAccount, setTargetAccount] = useState(activeAccountId === 'all' ? accounts[0]?.id : activeAccountId);
   const [parsedCount, setParsedCount] = useState<number | null>(null);
+  const [isDelta, setIsDelta] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,6 +27,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
     reader.onload = event => {
       const text = event.target?.result as string;
       setCsvText(text);
+      setIsDelta(isDeltaIndiaCsv(text));
       const parsed = parseBrokerCsv(text, targetAccount);
       setParsedCount(parsed.length);
     };
@@ -41,6 +44,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
         setSuccess(false);
         setCsvText('');
         setParsedCount(null);
+        setIsDelta(false);
         onClose();
       }, 1500);
     }
@@ -50,7 +54,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
     <Modal isOpen={isOpen} onClose={onClose} title="Import Broker Statement / CSV" maxWidth="lg">
       <div className="space-y-4">
         <p className="text-xs text-slate-400">
-          Upload your trade report from <strong>MetaTrader 4/5 (HTML or CSV)</strong>, Exness, Vantage, XM, or generic CSV. All trades will be parsed and added to your journal.
+          Upload statements from <strong>Delta Exchange India</strong>, <strong>MetaTrader 4/5</strong>, Exness, Vantage, XM, or generic CSV. All trades are automatically audited and normalized into your journal.
         </p>
 
         <div>
@@ -81,14 +85,30 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
             rows={4}
             value={csvText}
             onChange={e => {
-              setCsvText(e.target.value);
-              const parsed = parseBrokerCsv(e.target.value, targetAccount);
+              const val = e.target.value;
+              setCsvText(val);
+              setIsDelta(isDeltaIndiaCsv(val));
+              const parsed = parseBrokerCsv(val, targetAccount);
               setParsedCount(parsed.length);
             }}
-            placeholder="Ticket, Open Time, Type, Size, Symbol, Price..."
+            placeholder="Time, Contract, Qty, Side, Filled/Remaining, Exec.Price, Realised P&L..."
             className="w-full px-3.5 py-2 rounded-xl bg-surface-card border border-border text-white font-mono text-xs focus:border-primary focus:outline-none resize-none"
           />
         </div>
+
+        {isDelta && (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300 animate-in fade-in duration-200">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-amber-200">Delta Exchange India Order History Detected</div>
+              <div className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
+                ✓ Cancelled & zero-filled order clutter automatically filtered out<br />
+                ✓ Contract quantities divided by 100 into standard lots<br />
+                ✓ Round-trip positions paired with accurate DD-MM-YYYY timestamps
+              </div>
+            </div>
+          </div>
+        )}
 
         {parsedCount !== null && (
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center gap-2 text-xs text-primary-light">
