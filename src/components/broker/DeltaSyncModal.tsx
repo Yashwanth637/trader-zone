@@ -288,13 +288,13 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
                   onChange={e => setProxyMode(e.target.value as ProxyMode)}
                   className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-white text-xs focus:outline-none"
                 >
-                  <option value="cors-bridge">Cloudflare CORS Bridge (Recommended for Web / GitHub Pages)</option>
-                  <option value="dev-proxy">Vite Dev Proxy (/delta-api for local npm run dev)</option>
-                  <option value="direct">Direct Connection (api.india.delta.exchange)</option>
+                  <option value="direct">Direct Connection (Recommended — api.india.delta.exchange)</option>
+                  <option value="dev-proxy">Local Dev Proxy (/delta-api for npm run dev)</option>
+                  <option value="cors-bridge">Cloudflare CORS Bridge (Backup)</option>
                   <option value="custom">Custom Proxy URL</option>
                 </select>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Delta Exchange India restricts direct web browser cross-origin requests. The CORS bridge allows secure header forwarding.
+                  Delta Exchange India natively allows web browser connections (CORS enabled). Direct Connection connects directly from your Mac to Delta with zero intermediaries.
                 </p>
               </div>
 

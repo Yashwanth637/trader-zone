@@ -21,10 +21,14 @@ const STORAGE_KEYS = {
 
 export const DeltaStorage = {
   getCredentials(): DeltaCredentials {
+    const rawMode = localStorage.getItem(STORAGE_KEYS.PROXY_MODE);
+    // Delta Exchange India natively supports CORS with Access-Control-Allow-Origin: *
+    // Default to 'direct' connection for maximum reliability and exact IP matching.
+    const proxyMode: ProxyMode = (!rawMode || rawMode === 'cors-bridge') ? 'direct' : (rawMode as ProxyMode);
     return {
       apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
       apiSecret: localStorage.getItem(STORAGE_KEYS.API_SECRET) || '',
-      proxyMode: (localStorage.getItem(STORAGE_KEYS.PROXY_MODE) as ProxyMode) || 'cors-bridge',
+      proxyMode,
       customProxyUrl: localStorage.getItem(STORAGE_KEYS.CUSTOM_PROXY) || ''
     };
   },
@@ -41,6 +45,7 @@ export const DeltaStorage = {
   clearCredentials(): void {
     localStorage.removeItem(STORAGE_KEYS.API_KEY);
     localStorage.removeItem(STORAGE_KEYS.API_SECRET);
+    localStorage.removeItem(STORAGE_KEYS.PROXY_MODE);
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_PROXY);
     localStorage.removeItem(STORAGE_KEYS.LAST_SYNCED);
   },
@@ -84,8 +89,8 @@ function buildTargetUrl(path: string, queryString: string, mode: ProxyMode, cust
   switch (mode) {
     case 'dev-proxy':
       return `/delta-api${targetPath}`;
-    case 'direct':
-      return fullTarget;
+    case 'cors-bridge':
+      return `https://corsproxy.io/?url=${encodeURIComponent(fullTarget)}`;
     case 'custom':
       if (customProxyUrl) {
         if (customProxyUrl.includes('{url}')) {
@@ -95,10 +100,10 @@ function buildTargetUrl(path: string, queryString: string, mode: ProxyMode, cust
         return `${customProxyUrl}${separator}url=${encodeURIComponent(fullTarget)}`;
       }
       return fullTarget;
-    case 'cors-bridge':
+    case 'direct':
     default:
-      // High-performance CORS bridge preserving custom auth headers
-      return `https://corsproxy.io/?url=${encodeURIComponent(fullTarget)}`;
+      // Direct connection to Delta India (natively allows CORS from any origin)
+      return fullTarget;
   }
 }
 
@@ -135,7 +140,6 @@ async function deltaRequest<T>(
     'api-key': apiKey,
     'signature': signature,
     'timestamp': timestamp,
-    'User-Agent': 'trader-zone-web',
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   };
@@ -149,7 +153,16 @@ async function deltaRequest<T>(
     let errorMsg = `HTTP Error ${response.status}: ${response.statusText}`;
     try {
       const errJson = await response.json();
-      if (errJson.error?.message) {
+      if (errJson.error?.code === 'ip_not_whitelisted_for_api_key') {
+        const detectedIp = errJson.error?.context?.ip || '';
+        errorMsg = `IP Not Whitelisted: Delta detected your connection as IP: ${detectedIp || 'different'}. Please whitelist this IP in your Delta API key settings.`;
+      } else if (errJson.error?.code === 'expired_signature') {
+        errorMsg = 'Signature timestamp mismatch. Ensure your computer system time is set automatically.';
+      } else if (errJson.error?.code === 'InvalidApiKey') {
+        errorMsg = 'Invalid API Key: Please verify that you copied the complete API Key.';
+      } else if (errJson.error?.code === 'Signature Mismatch') {
+        errorMsg = 'Signature Mismatch: Please re-check your API Secret for any trailing spaces or typos.';
+      } else if (errJson.error?.message) {
         errorMsg = errJson.error.message;
       } else if (errJson.error?.code) {
         errorMsg = `Delta API: ${errJson.error.code}`;
