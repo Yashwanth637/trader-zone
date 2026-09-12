@@ -40,7 +40,7 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
 
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
-  const [proxyMode, setProxyMode] = useState<ProxyMode>('cors-bridge');
+  const [proxyMode, setProxyMode] = useState<ProxyMode>('direct');
   const [customProxyUrl, setCustomProxyUrl] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -57,7 +57,7 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
       const saved = DeltaStorage.getCredentials();
       setApiKey(saved.apiKey);
       setApiSecret(saved.apiSecret);
-      setProxyMode(saved.proxyMode);
+      setProxyMode(saved.proxyMode === 'cors-bridge' ? 'direct' : saved.proxyMode);
       setCustomProxyUrl(saved.customProxyUrl || '');
       setLastSynced(DeltaStorage.getLastSynced());
 

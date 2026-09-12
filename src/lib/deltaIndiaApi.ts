@@ -25,6 +25,9 @@ export const DeltaStorage = {
     // Delta Exchange India natively supports CORS with Access-Control-Allow-Origin: *
     // Default to 'direct' connection for maximum reliability and exact IP matching.
     const proxyMode: ProxyMode = (!rawMode || rawMode === 'cors-bridge') ? 'direct' : (rawMode as ProxyMode);
+    if (rawMode === 'cors-bridge') {
+      localStorage.setItem(STORAGE_KEYS.PROXY_MODE, 'direct');
+    }
     return {
       apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
       apiSecret: localStorage.getItem(STORAGE_KEYS.API_SECRET) || '',
@@ -134,20 +137,27 @@ async function deltaRequest<T>(
   const signatureData = `${method}${timestamp}${path}${queryString}${body}`;
   const signature = await generateDeltaSignature(apiSecret, signatureData);
 
-  const fetchUrl = buildTargetUrl(path, queryString, proxyMode, customProxyUrl);
+  const effectiveMode = (proxyMode === 'cors-bridge' || !proxyMode) ? 'direct' : proxyMode;
+  const fetchUrl = buildTargetUrl(path, queryString, effectiveMode, customProxyUrl);
 
   const headers: Record<string, string> = {
     'api-key': apiKey,
     'signature': signature,
     'timestamp': timestamp,
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
+    'Accept': 'application/json'
   };
 
-  const response = await fetch(fetchUrl, {
-    method,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(fetchUrl, {
+      method,
+      headers
+    });
+  } catch (fetchErr: any) {
+    throw new Error(
+      `Network connection failed (${fetchErr.message || 'Load failed'}). Please verify your internet connection or check your Delta IP whitelist.`
+    );
+  }
 
   if (!response.ok) {
     let errorMsg = `HTTP Error ${response.status}: ${response.statusText}`;
