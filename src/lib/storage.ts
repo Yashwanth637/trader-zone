@@ -2,6 +2,7 @@ import { Trade, TradingAccount, TradingStrategy } from '../types/trade';
 import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
+import { User } from '../types/auth';
 import {
   initialAccounts,
   initialStrategies,
@@ -13,6 +14,26 @@ import {
   initialRiskLimits,
   initialProfile
 } from './sampleData';
+
+const CURRENT_USER_KEY = 'tz_current_active_user';
+
+export function getActiveUser(): User | null {
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveUser(user: User | null): void {
+  if (user) {
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  }
+}
 
 const KEYS = {
   TRADES: 'tz_trades_v1',
@@ -26,6 +47,12 @@ const KEYS = {
   PROFILE: 'tz_profile_v1',
   RISK_LIMITS: 'tz_risk_limits_v1'
 };
+
+function getUserKey(baseKey: string): string {
+  const activeUser = getActiveUser();
+  if (!activeUser || !activeUser.id) return baseKey; // Default/Guest
+  return `${baseKey}_user_${activeUser.id}`;
+}
 
 function getItem<T>(key: string, fallback: T): T {
   try {
@@ -47,79 +74,114 @@ function setItem<T>(key: string, value: T): void {
 }
 
 export const Storage = {
+  /**
+   * Automatically migrate any unpartitioned/guest data to a new user account
+   */
+  migrateToUser(userId: string): void {
+    const scopedTradeKey = `${KEYS.TRADES}_user_${userId}`;
+    // If the user already has data, do not overwrite
+    if (localStorage.getItem(scopedTradeKey)) return;
+
+    // Check if unscoped data exists
+    const rawTrades = localStorage.getItem(KEYS.TRADES);
+    if (rawTrades) localStorage.setItem(scopedTradeKey, rawTrades);
+
+    const rawAccs = localStorage.getItem(KEYS.ACCOUNTS);
+    if (rawAccs) localStorage.setItem(`${KEYS.ACCOUNTS}_user_${userId}`, rawAccs);
+
+    const rawActive = localStorage.getItem(KEYS.ACTIVE_ACCOUNT);
+    if (rawActive) localStorage.setItem(`${KEYS.ACTIVE_ACCOUNT}_user_${userId}`, rawActive);
+
+    const rawStrat = localStorage.getItem(KEYS.STRATEGIES);
+    if (rawStrat) localStorage.setItem(`${KEYS.STRATEGIES}_user_${userId}`, rawStrat);
+
+    const rawRules = localStorage.getItem(KEYS.RULES);
+    if (rawRules) localStorage.setItem(`${KEYS.RULES}_user_${userId}`, rawRules);
+
+    const rawJournal = localStorage.getItem(KEYS.JOURNAL);
+    if (rawJournal) localStorage.setItem(`${KEYS.JOURNAL}_user_${userId}`, rawJournal);
+
+    const rawProf = localStorage.getItem(KEYS.PROFILE);
+    if (rawProf) localStorage.setItem(`${KEYS.PROFILE}_user_${userId}`, rawProf);
+
+    const rawRisk = localStorage.getItem(KEYS.RISK_LIMITS);
+    if (rawRisk) localStorage.setItem(`${KEYS.RISK_LIMITS}_user_${userId}`, rawRisk);
+  },
+
   getTrades(): Trade[] {
-    return getItem<Trade[]>(KEYS.TRADES, initialTrades);
+    return getItem<Trade[]>(getUserKey(KEYS.TRADES), initialTrades);
   },
   saveTrades(trades: Trade[]): void {
-    setItem(KEYS.TRADES, trades);
+    setItem(getUserKey(KEYS.TRADES), trades);
   },
 
   getAccounts(): TradingAccount[] {
-    return getItem<TradingAccount[]>(KEYS.ACCOUNTS, initialAccounts);
+    return getItem<TradingAccount[]>(getUserKey(KEYS.ACCOUNTS), initialAccounts);
   },
   saveAccounts(accounts: TradingAccount[]): void {
-    setItem(KEYS.ACCOUNTS, accounts);
+    setItem(getUserKey(KEYS.ACCOUNTS), accounts);
   },
 
   getActiveAccountId(): string {
-    return getItem<string>(KEYS.ACTIVE_ACCOUNT, 'acc-1');
+    return getItem<string>(getUserKey(KEYS.ACTIVE_ACCOUNT), 'acc-1');
   },
   saveActiveAccountId(id: string): void {
-    setItem(KEYS.ACTIVE_ACCOUNT, id);
+    setItem(getUserKey(KEYS.ACTIVE_ACCOUNT), id);
   },
 
   getStrategies(): TradingStrategy[] {
-    return getItem<TradingStrategy[]>(KEYS.STRATEGIES, initialStrategies);
+    return getItem<TradingStrategy[]>(getUserKey(KEYS.STRATEGIES), initialStrategies);
   },
   saveStrategies(strategies: TradingStrategy[]): void {
-    setItem(KEYS.STRATEGIES, strategies);
+    setItem(getUserKey(KEYS.STRATEGIES), strategies);
   },
 
   getRules(): TradingRule[] {
-    return getItem<TradingRule[]>(KEYS.RULES, initialRules);
+    return getItem<TradingRule[]>(getUserKey(KEYS.RULES), initialRules);
   },
   saveRules(rules: TradingRule[]): void {
-    setItem(KEYS.RULES, rules);
+    setItem(getUserKey(KEYS.RULES), rules);
   },
 
   getJournalEntries(): DailyJournalEntry[] {
-    return getItem<DailyJournalEntry[]>(KEYS.JOURNAL, initialJournalEntries);
+    return getItem<DailyJournalEntry[]>(getUserKey(KEYS.JOURNAL), initialJournalEntries);
   },
   saveJournalEntries(entries: DailyJournalEntry[]): void {
-    setItem(KEYS.JOURNAL, entries);
+    setItem(getUserKey(KEYS.JOURNAL), entries);
   },
 
   getChartVision(): ChartVisionAnalysis[] {
-    return getItem<ChartVisionAnalysis[]>(KEYS.VISION, initialChartVision);
+    return getItem<ChartVisionAnalysis[]>(getUserKey(KEYS.VISION), initialChartVision);
   },
   saveChartVision(vision: ChartVisionAnalysis[]): void {
-    setItem(KEYS.VISION, vision);
+    setItem(getUserKey(KEYS.VISION), vision);
   },
 
   getCoachMessages(): AICoachMessage[] {
-    return getItem<AICoachMessage[]>(KEYS.COACH, initialAICoachMessages);
+    return getItem<AICoachMessage[]>(getUserKey(KEYS.COACH), initialAICoachMessages);
   },
   saveCoachMessages(msgs: AICoachMessage[]): void {
-    setItem(KEYS.COACH, msgs);
+    setItem(getUserKey(KEYS.COACH), msgs);
   },
 
   getProfile(): UserProfile {
-    return getItem<UserProfile>(KEYS.PROFILE, initialProfile);
+    return getItem<UserProfile>(getUserKey(KEYS.PROFILE), initialProfile);
   },
   saveProfile(profile: UserProfile): void {
-    setItem(KEYS.PROFILE, profile);
+    setItem(getUserKey(KEYS.PROFILE), profile);
   },
 
   getRiskLimits(): RiskLimits {
-    return getItem<RiskLimits>(KEYS.RISK_LIMITS, initialRiskLimits);
+    return getItem<RiskLimits>(getUserKey(KEYS.RISK_LIMITS), initialRiskLimits);
   },
   saveRiskLimits(limits: RiskLimits): void {
-    setItem(KEYS.RISK_LIMITS, limits);
+    setItem(getUserKey(KEYS.RISK_LIMITS), limits);
   },
 
   exportBackupJson(): string {
     const backup = {
-      version: '1.0',
+      version: '2.0',
+      user: getActiveUser(),
       exportedAt: new Date().toISOString(),
       trades: this.getTrades(),
       accounts: this.getAccounts(),
@@ -152,7 +214,8 @@ export const Storage = {
   },
 
   resetToDefault(): void {
-    localStorage.clear();
+    const activeKey = getUserKey(KEYS.TRADES);
+    localStorage.removeItem(activeKey);
     this.saveTrades(initialTrades);
     this.saveAccounts(initialAccounts);
     this.saveStrategies(initialStrategies);

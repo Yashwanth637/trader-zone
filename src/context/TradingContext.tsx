@@ -6,6 +6,7 @@ import { UserProfile, RiskLimits } from '../types/settings';
 import { Storage } from '../lib/storage';
 import { calculateSummaryStats, SummaryStats, calculatePnlFromPrices } from '../lib/calculations';
 import { detectBehavioralPatterns } from '../lib/coachEngine';
+import { useAuth } from './AuthContext';
 
 interface TradingContextType {
   trades: Trade[];
@@ -64,6 +65,7 @@ interface TradingContextType {
 const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [trades, setTrades] = useState<Trade[]>(() => Storage.getTrades());
   const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
   const [activeAccountId, setActiveAccountIdState] = useState<string>(() => Storage.getActiveAccountId());
@@ -74,6 +76,20 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [coachMessages, setCoachMessages] = useState<AICoachMessage[]>(() => Storage.getCoachMessages());
   const [profile, setProfile] = useState<UserProfile>(() => Storage.getProfile());
   const [riskLimits, setRiskLimits] = useState<RiskLimits>(() => Storage.getRiskLimits());
+
+  // Reload user-specific data whenever user signs in, logs out, or switches accounts
+  useEffect(() => {
+    setTrades(Storage.getTrades());
+    setAccounts(Storage.getAccounts());
+    setActiveAccountIdState(Storage.getActiveAccountId());
+    setStrategies(Storage.getStrategies());
+    setRules(Storage.getRules());
+    setJournalEntries(Storage.getJournalEntries());
+    setChartVision(Storage.getChartVision());
+    setCoachMessages(Storage.getCoachMessages());
+    setProfile(Storage.getProfile());
+    setRiskLimits(Storage.getRiskLimits());
+  }, [user?.id]);
 
   // Auto-sync state to Storage
   useEffect(() => { Storage.saveTrades(trades); }, [trades]);

@@ -72,6 +72,12 @@ export const LandingPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/login"
+            className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-xl border border-white/10 hover:border-white/20 transition-all"
+          >
+            Sign In
+          </Link>
           <Link to="/dashboard">
             <Button variant="primary" size="sm" icon={<ArrowRight className="w-4 h-4" />}>
               Open Journal

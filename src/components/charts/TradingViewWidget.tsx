@@ -7,7 +7,7 @@ interface TradingViewWidgetProps {
 }
 
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
-  symbol = 'FX:EURUSD',
+  symbol = 'OANDA:XAUUSD',
   theme = 'dark',
   interval = '15'
 }) => {
@@ -37,6 +37,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       support_host: "https://www.tradingview.com",
       hide_top_toolbar: false,
       hide_legend: false,
+      hide_volume: true,
       save_image: true,
       studies: [],
       container_id: "tradingview_widget_container"

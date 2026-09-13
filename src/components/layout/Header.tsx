@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTrading } from '../../context/TradingContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
+import { DeviceSyncModal } from '../auth/DeviceSyncModal';
 import {
   Menu,
   Plus,
@@ -10,7 +13,11 @@ import {
   ChevronDown,
   Wallet,
   Activity,
-  Calculator
+  Calculator,
+  User as UserIcon,
+  LogOut,
+  Smartphone,
+  LogIn
 } from 'lucide-react';
 import { detectTradingSession } from '../../lib/calculations';
 
@@ -29,7 +36,12 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { accounts, activeAccountId, setActiveAccountId, activeAccount } = useTrading();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [deviceSyncOpen, setDeviceSyncOpen] = useState(false);
   const [currentSession, setCurrentSession] = useState<string>('');
 
   useEffect(() => {
@@ -160,7 +172,96 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <span className="hidden sm:inline">Add Trade</span>
         </Button>
+
+        {/* User Account / Cross-Device Sync Profile */}
+        <div className="relative pl-1 border-l border-border">
+          {user ? (
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-surface-card border border-border hover:border-primary/40 text-xs text-foreground transition-all shadow-sm"
+              title={user.email}
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white text-[10px] font-black shrink-0">
+                {user.name ? user.name.slice(0, 2).toUpperCase() : 'TZ'}
+              </div>
+              <span className="hidden sm:inline font-semibold max-w-[110px] truncate">
+                {user.name}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-muted hidden sm:inline" />
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/20 transition-all shadow-sm"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </Link>
+          )}
+
+          {userDropdownOpen && user && (
+            <div className="absolute right-0 mt-2 w-64 bg-surface border border-border rounded-xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3.5 py-2 border-b border-border">
+                <div className="text-xs font-bold text-foreground truncate">{user.name}</div>
+                <div className="text-[11px] text-muted truncate">{user.email}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Cloud Synced Account</span>
+                </div>
+              </div>
+
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    setDeviceSyncOpen(true);
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-xs text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2.5 transition-colors"
+                >
+                  <Smartphone className="w-4 h-4 text-primary" />
+                  <div>
+                    <span className="block font-medium">Link Phone / Device</span>
+                    <span className="text-[10px] text-muted">Sync with phone via 6-digit code</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    navigate('/settings');
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-xs text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2.5 transition-colors"
+                >
+                  <UserIcon className="w-4 h-4 text-muted" />
+                  <span>Profile & Preferences</span>
+                </button>
+              </div>
+
+              <div className="pt-1 border-t border-border">
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-xs text-rose-400 hover:bg-rose-500/10 flex items-center gap-2.5 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Device Sync & Pairing Modal */}
+      {deviceSyncOpen && (
+        <DeviceSyncModal
+          isOpen={deviceSyncOpen}
+          onClose={() => setDeviceSyncOpen(false)}
+        />
+      )}
     </header>
   );
 };

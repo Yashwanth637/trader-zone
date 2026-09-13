@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   BarChart3,
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onMobileClose
 }) => {
+  const { user } = useAuth();
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const location = useLocation();
 
@@ -272,17 +274,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer User Info */}
       {!collapsed && (
-        <div className="p-4 border-t border-border bg-surface-card/40">
+        <NavLink
+          to={user ? "/settings" : "/login"}
+          onClick={onMobileClose}
+          className="p-3.5 border-t border-border bg-surface-card/40 hover:bg-black/5 dark:hover:bg-white/5 transition-colors block"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-              TZ
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
+              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'TZ'}
             </div>
             <div className="overflow-hidden">
-              <div className="text-xs font-semibold text-foreground truncate">Personal Trader</div>
-              <div className="text-[10px] text-muted truncate">Add to Dock Ready</div>
+              <div className="text-xs font-semibold text-foreground truncate">
+                {user ? user.name : 'Guest Trader'}
+              </div>
+              <div className="text-[10px] text-muted truncate">
+                {user ? user.email : 'Click to Sign In / Sync'}
+              </div>
             </div>
           </div>
-        </div>
+        </NavLink>
       )}
     </div>
   );

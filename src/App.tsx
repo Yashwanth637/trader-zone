@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import { TradingProvider } from './context/TradingContext';
 
 // Layout
@@ -14,6 +15,7 @@ import { QuickCalculatorModal } from './components/common/QuickCalculatorModal';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
+import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { JournalPage } from './pages/JournalPage';
 import { DayViewPage } from './pages/DayViewPage';
@@ -35,6 +37,7 @@ import { TermsPage, PrivacyPage, DisclaimerPage } from './pages/LegalPages';
 const AppLayout: React.FC = () => {
   const location = useLocation();
   const isLanding = location.pathname === '/' || location.pathname === '/landing';
+  const isLogin = location.pathname === '/login';
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -49,6 +52,14 @@ const AppLayout: React.FC = () => {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
+      </Routes>
+    );
+  }
+
+  if (isLogin) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     );
   }
@@ -94,6 +105,7 @@ const AppLayout: React.FC = () => {
           <Route path="/market-hours" element={<MarketHoursPage />} />
           <Route path="/broker-hub" element={<BrokerHubPage onOpenCsvImport={() => setCsvImportOpen(true)} />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/disclaimer" element={<DisclaimerPage />} />
@@ -115,11 +127,13 @@ const AppLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <TradingProvider>
-        <HashRouter>
-          <AppLayout />
-        </HashRouter>
-      </TradingProvider>
+      <AuthProvider>
+        <TradingProvider>
+          <HashRouter>
+            <AppLayout />
+          </HashRouter>
+        </TradingProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 };

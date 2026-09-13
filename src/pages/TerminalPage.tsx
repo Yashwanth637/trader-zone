@@ -7,7 +7,7 @@ import { Tv, Calculator, Maximize2 } from 'lucide-react';
 
 export const TerminalPage: React.FC = () => {
   const { theme } = useTheme();
-  const [symbol, setSymbol] = useState('FX:EURUSD');
+  const [symbol, setSymbol] = useState('OANDA:XAUUSD');
   const [calcOpen, setCalcOpen] = useState(false);
 
   return (
@@ -19,8 +19,8 @@ export const TerminalPage: React.FC = () => {
             <Tv className="w-4 h-4" />
           </div>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight">Institutional Web Terminal</h1>
-            <p className="text-[11px] text-slate-400">Live multi-asset charting powered by TradingView</p>
+            <h1 className="text-lg font-black text-foreground tracking-tight">Institutional Web Terminal</h1>
+            <p className="text-[11px] text-muted">Live multi-asset charting powered by TradingView</p>
           </div>
         </div>
 
@@ -28,11 +28,11 @@ export const TerminalPage: React.FC = () => {
           <select
             value={symbol}
             onChange={e => setSymbol(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-white font-bold focus:outline-none"
+            className="px-3 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-foreground font-bold focus:outline-none"
           >
+            <option value="OANDA:XAUUSD">XAU / USD (Gold)</option>
             <option value="FX:EURUSD">EUR / USD (Forex)</option>
             <option value="FX:GBPUSD">GBP / USD (Forex)</option>
-            <option value="OANDA:XAUUSD">XAU / USD (Gold)</option>
             <option value="BINANCE:BTCUSDT">BTC / USDT (Crypto)</option>
             <option value="FOREXCOM:SPXUSD">S&P 500 Index</option>
             <option value="TVC:US30">US30 (Dow Jones)</option>
