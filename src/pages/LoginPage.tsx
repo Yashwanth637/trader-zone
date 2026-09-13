@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import {
   Sparkles,
@@ -11,30 +10,25 @@ import {
   EyeOff,
   ArrowRight,
   ShieldCheck,
-  Smartphone,
-  Laptop,
-  CheckCircle2,
+  KeyRound,
   AlertCircle,
-  QrCode,
-  User as UserIcon,
-  Globe
+  User as UserIcon
 } from 'lucide-react';
-import { DeviceSyncModal } from '../components/auth/DeviceSyncModal';
 
 export const LoginPage: React.FC = () => {
-  const { login, signup, continueAsGuest, user, registeredUsers, switchUser } = useAuth();
-  const { theme } = useTheme();
+  const { login, signup, registeredUsers, switchUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [accessKey, setAccessKey] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   // Return to requested page or dashboard after authentication
   const redirectPath = (location.state as any)?.from || '/dashboard';
@@ -42,22 +36,28 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!accessKey.trim()) {
+      setError('Access Key is required to enter Trader Zone.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isSignUp) {
-        const res = await signup(email, password, name);
+        const res = await signup(identifier, password, name, accessKey, username);
         if (res.success) {
           navigate(redirectPath);
         } else {
           setError(res.error || 'Failed to create account.');
         }
       } else {
-        const res = await login(email, password);
+        const res = await login(identifier, password, accessKey);
         if (res.success) {
           navigate(redirectPath);
         } else {
-          setError(res.error || 'Invalid email or password.');
+          setError(res.error || 'Invalid credentials or access key.');
         }
       }
     } catch (err: any) {
@@ -65,11 +65,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGuest = () => {
-    continueAsGuest();
-    navigate('/dashboard');
   };
 
   return (
@@ -87,14 +82,14 @@ export const LoginPage: React.FC = () => {
             Trader<span className="text-primary">Zone</span>
           </span>
           <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
-            Cloud Auth
+            Secure Portal
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
           {isSignUp ? 'Create Your Trader Account' : 'Sign In to Your Trading Journal'}
         </h1>
         <p className="text-xs sm:text-sm text-muted mt-1.5 max-w-md mx-auto">
-          Log in with your email to access your synchronized journal on your MacBook and phone.
+          Authorized trader access. Log in with your username or email across your MacBook and phone.
         </p>
       </div>
 
@@ -142,31 +137,64 @@ export const LoginPage: React.FC = () => {
 
         {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-primary" /> Full Name or Alias
+          {/* Access Key Input (Mandatory for both Login & Signup) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" /> Platform Access Key
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. Yashwanth Kumar"
-                className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-border text-foreground text-xs focus:outline-none focus:border-primary transition-colors"
-              />
+              <span className="text-[10px] text-muted font-medium">Required</span>
             </div>
+            <input
+              type="text"
+              required
+              value={accessKey}
+              onChange={e => setAccessKey(e.target.value)}
+              placeholder="Enter Access Key"
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-border text-foreground text-xs focus:outline-none focus:border-primary transition-colors font-mono"
+            />
+          </div>
+
+          {isSignUp && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-primary" /> Full Name or Alias
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Yashwanth Kumar"
+                  className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-border text-foreground text-xs focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-purple-400" /> Username (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="e.g. yashwanth"
+                  className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-border text-foreground text-xs focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </>
           )}
 
           <div>
             <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-primary" /> Email Address
+              <Mail className="w-3.5 h-3.5 text-primary" /> {isSignUp ? 'Email Address' : 'Username or Email Address'}
             </label>
             <input
-              type="email"
+              type={isSignUp ? 'email' : 'text'}
               required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
+              placeholder={isSignUp ? 'name@example.com' : 'yashwanth or name@example.com'}
               className="w-full px-4 py-2.5 rounded-xl bg-surface-card border border-border text-foreground text-xs focus:outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -197,7 +225,7 @@ export const LoginPage: React.FC = () => {
           <Button
             type="submit"
             variant="primary"
-            className="w-full py-2.5 text-xs font-bold justify-center"
+            className="w-full py-2.5 text-xs font-bold justify-center mt-2"
             disabled={loading}
             icon={<ArrowRight className="w-4 h-4" />}
           >
@@ -237,44 +265,12 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phone & MacBook Sync Assistance */}
-        <div className="p-3.5 rounded-2xl bg-surface-card border border-border flex items-start gap-3">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
-            <Smartphone className="w-4 h-4" />
-          </div>
-          <div className="text-[11px] text-muted leading-relaxed">
-            <span className="font-bold text-foreground block mb-0.5">Phone & MacBook Sync</span>
-            Use the same email on your phone and MacBook to access your journal on both devices.
-            <button
-              onClick={() => setSyncModalOpen(true)}
-              className="text-primary hover:underline font-semibold block mt-1"
-            >
-              Have a 6-digit sync code or QR code? Link device →
-            </button>
-          </div>
-        </div>
-
-        {/* Guest Access Option */}
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={handleGuest}
-            className="text-xs text-muted hover:text-foreground transition-colors inline-flex items-center gap-1 font-medium"
-          >
-            <span>Continue as Guest Trader (Local Demo)</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
+        {/* Security Footnote */}
+        <div className="p-3 rounded-2xl bg-surface-card border border-border flex items-center gap-2.5 text-[11px] text-muted">
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>Restricted to authorized traders holding the institutional access key.</span>
         </div>
       </div>
-
-      {/* Device Sync & Pairing Modal */}
-      {syncModalOpen && (
-        <DeviceSyncModal
-          isOpen={syncModalOpen}
-          onClose={() => setSyncModalOpen(false)}
-          onLinked={() => navigate(redirectPath)}
-        />
-      )}
     </div>
   );
 };

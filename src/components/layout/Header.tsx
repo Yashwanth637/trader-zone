@@ -4,7 +4,6 @@ import { useTrading } from '../../context/TradingContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
-import { DeviceSyncModal } from '../auth/DeviceSyncModal';
 import {
   Menu,
   Plus,
@@ -16,7 +15,6 @@ import {
   Calculator,
   User as UserIcon,
   LogOut,
-  Smartphone,
   LogIn
 } from 'lucide-react';
 import { detectTradingSession } from '../../lib/calculations';
@@ -41,7 +39,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [deviceSyncOpen, setDeviceSyncOpen] = useState(false);
   const [currentSession, setCurrentSession] = useState<string>('');
 
   useEffect(() => {
@@ -214,20 +211,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => {
                     setUserDropdownOpen(false);
-                    setDeviceSyncOpen(true);
-                  }}
-                  className="w-full text-left px-3.5 py-2 text-xs text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2.5 transition-colors"
-                >
-                  <Smartphone className="w-4 h-4 text-primary" />
-                  <div>
-                    <span className="block font-medium">Link Phone / Device</span>
-                    <span className="text-[10px] text-muted">Sync with phone via 6-digit code</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setUserDropdownOpen(false);
                     navigate('/settings');
                   }}
                   className="w-full text-left px-3.5 py-2 text-xs text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2.5 transition-colors"
@@ -254,14 +237,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
-
-      {/* Device Sync & Pairing Modal */}
-      {deviceSyncOpen && (
-        <DeviceSyncModal
-          isOpen={deviceSyncOpen}
-          onClose={() => setDeviceSyncOpen(false)}
-        />
-      )}
     </header>
   );
 };

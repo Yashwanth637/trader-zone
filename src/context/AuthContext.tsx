@@ -1,22 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, StoredUserAccount, SyncStatus } from '../types/auth';
 import { getActiveUser, setActiveUser, Storage } from '../lib/storage';
-import { hashPassword, generateDevicePairingCode, getPayloadByPairingCode, SyncPayload } from '../lib/cloudSync';
+import { validateAccessKey } from '../config/security';
+import {
+  hashPassword,
+  saveUserToCloud,
+  fetchUserFromCloud,
+  SyncPayload
+} from '../lib/cloudSync';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isGuest: boolean;
   syncStatus: SyncStatus;
   lastSynced: string | null;
   registeredUsers: User[];
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, password: string, accessKey: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string, accessKey: string, username?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  continueAsGuest: () => void;
   switchUser: (userId: string) => void;
-  syncCloud: () => Promise<{ success: boolean; pairingCode?: string; error?: string }>;
-  linkDeviceWithCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  syncCloud: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const USERS_REGISTRY_KEY = 'tz_users_registry_v1';
@@ -44,54 +47,121 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => getActiveUser());
-  const [isGuest, setIsGuest] = useState<boolean>(() => !getActiveUser());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSynced, setLastSynced] = useState<string | null>(() => localStorage.getItem(LAST_SYNCED_KEY));
-  const [registeredUsers, setRegisteredUsers] = useState<User[]>(() => 
+  const [registeredUsers, setRegisteredUsers] = useState<User[]>(() =>
     getStoredRegistry().map(a => a.user)
   );
 
   useEffect(() => {
     setActiveUser(user);
-    if (user) {
-      setIsGuest(false);
-    }
   }, [user]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !password) {
-      return { success: false, error: 'Email and password are required.' };
+  const login = async (
+    identifier: string,
+    password: string,
+    accessKey: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    // 1. Validate Access Key first
+    if (!validateAccessKey(accessKey)) {
+      return {
+        success: false,
+        error: 'Invalid Access Key. Access is strictly restricted to authorized traders.'
+      };
+    }
+
+    const cleanId = identifier.trim().toLowerCase();
+    if (!cleanId || !password) {
+      return { success: false, error: 'Username/email and password are required.' };
     }
 
     const hashed = await hashPassword(password);
     const registry = getStoredRegistry();
-    const found = registry.find(a => a.user.email.toLowerCase() === cleanEmail);
 
-    if (!found) {
-      return { success: false, error: 'No account found with this email. Please check spelling or create an account.' };
+    // 2. Check local registry first
+    const found = registry.find(
+      a => a.user.email.toLowerCase() === cleanId ||
+           (a.user.username && a.user.username.toLowerCase() === cleanId)
+    );
+
+    if (found) {
+      if (found.passwordHash !== hashed) {
+        return { success: false, error: 'Incorrect password. Please try again.' };
+      }
+
+      const updatedUser: User = {
+        ...found.user,
+        lastLoginAt: new Date().toISOString()
+      };
+      found.user = updatedUser;
+      saveRegistry(registry);
+
+      setUser(updatedUser);
+      return { success: true };
     }
 
-    if (found.passwordHash !== hashed) {
-      return { success: false, error: 'Incorrect password. Please try again.' };
+    // 3. If not in local registry (e.g. Logging in from phone for the first time), query Cloud Vault
+    setSyncStatus('syncing');
+    const cloudRes = await fetchUserFromCloud(cleanId, hashed);
+    setSyncStatus('idle');
+
+    if (cloudRes.success && cloudRes.user) {
+      const restoredUser: User = {
+        ...cloudRes.user,
+        lastLoginAt: new Date().toISOString()
+      };
+
+      // Save user to this device's registry
+      const updatedRegistry: StoredUserAccount[] = [
+        ...registry,
+        { user: restoredUser, passwordHash: hashed }
+      ];
+      saveRegistry(updatedRegistry);
+      setRegisteredUsers(updatedRegistry.map(a => a.user));
+
+      // Restore payload data onto this device
+      if (cloudRes.payload) {
+        const p = cloudRes.payload;
+        if (p.trades) Storage.saveTrades(p.trades);
+        if (p.accounts) Storage.saveAccounts(p.accounts);
+        if (p.activeAccountId) Storage.saveActiveAccountId(p.activeAccountId);
+        if (p.strategies) Storage.saveStrategies(p.strategies);
+        if (p.rules) Storage.saveRules(p.rules);
+        if (p.journalEntries) Storage.saveJournalEntries(p.journalEntries);
+        if (p.chartVision) Storage.saveChartVision(p.chartVision);
+        if (p.coachMessages) Storage.saveCoachMessages(p.coachMessages);
+        if (p.profile) Storage.saveProfile(p.profile);
+        if (p.riskLimits) Storage.saveRiskLimits(p.riskLimits);
+      }
+
+      setUser(restoredUser);
+      return { success: true };
     }
 
-    // Update last login
-    const updatedUser: User = {
-      ...found.user,
-      lastLoginAt: new Date().toISOString()
+    return {
+      success: false,
+      error: cloudRes.error || 'No account found with this username or email. Please check spelling or create an account.'
     };
-    found.user = updatedUser;
-    saveRegistry(registry);
-
-    // Set active user and load user-specific storage
-    setUser(updatedUser);
-    setIsGuest(false);
-    return { success: true };
   };
 
-  const signup = async (email: string, password: string, name?: string): Promise<{ success: boolean; error?: string }> => {
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    accessKey: string,
+    username?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    // 1. Validate Access Key
+    if (!validateAccessKey(accessKey)) {
+      return {
+        success: false,
+        error: 'Invalid Access Key. Access is strictly restricted to authorized traders.'
+      };
+    }
+
     const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username?.trim().toLowerCase() || cleanEmail.split('@')[0];
+
     if (!cleanEmail || !password) {
       return { success: false, error: 'Email and password are required.' };
     }
@@ -100,16 +170,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const registry = getStoredRegistry();
-    const exists = registry.some(a => a.user.email.toLowerCase() === cleanEmail);
+    const exists = registry.some(
+      a => a.user.email.toLowerCase() === cleanEmail ||
+           (a.user.username && a.user.username.toLowerCase() === cleanUsername)
+    );
     if (exists) {
-      return { success: false, error: 'An account with this email already exists. Please log in.' };
+      return { success: false, error: 'An account with this email or username already exists. Please log in.' };
     }
 
     const hashed = await hashPassword(password);
-    const displayName = name?.trim() || cleanEmail.split('@')[0] || 'Trader';
+    const displayName = name?.trim() || cleanUsername || 'Trader';
     const newUser: User = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       email: cleanEmail,
+      username: cleanUsername,
       name: displayName,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString()
@@ -122,23 +196,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveRegistry(updatedRegistry);
     setRegisteredUsers(updatedRegistry.map(a => a.user));
 
-    // Migrate any previous trades to this user so they don't start blank
+    // Migrate existing local trades to this user ID
     Storage.migrateToUser(newUser.id);
 
+    // Prepare initial cloud sync payload
+    const initialPayload: SyncPayload = {
+      version: 2,
+      userId: newUser.id,
+      email: newUser.email,
+      username: newUser.username,
+      timestamp: new Date().toISOString(),
+      trades: Storage.getTrades(),
+      accounts: Storage.getAccounts(),
+      activeAccountId: Storage.getActiveAccountId(),
+      strategies: Storage.getStrategies(),
+      rules: Storage.getRules(),
+      journalEntries: Storage.getJournalEntries(),
+      chartVision: Storage.getChartVision(),
+      coachMessages: Storage.getCoachMessages(),
+      profile: Storage.getProfile(),
+      riskLimits: Storage.getRiskLimits()
+    };
+
+    // Save user to cloud vault so they can log in from other devices immediately
+    saveUserToCloud(newUser, hashed, initialPayload).catch(console.error);
+
     setUser(newUser);
-    setIsGuest(false);
     return { success: true };
   };
 
   const logout = () => {
     setUser(null);
-    setIsGuest(true);
-    setActiveUser(null);
-  };
-
-  const continueAsGuest = () => {
-    setUser(null);
-    setIsGuest(true);
     setActiveUser(null);
   };
 
@@ -147,11 +235,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const target = registry.find(a => a.user.id === userId);
     if (target) {
       setUser(target.user);
-      setIsGuest(false);
     }
   };
 
-  const syncCloud = async (): Promise<{ success: boolean; pairingCode?: string; error?: string }> => {
+  const syncCloud = async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: 'You must be logged in to sync your data.' };
     }
@@ -159,10 +246,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSyncStatus('syncing');
 
     try {
+      const registry = getStoredRegistry();
+      const account = registry.find(a => a.user.id === user.id);
+      const passwordHash = account ? account.passwordHash : '';
+
       const payload: SyncPayload = {
         version: 2,
         userId: user.id,
         email: user.email,
+        username: user.username,
         timestamp: new Date().toISOString(),
         trades: Storage.getTrades(),
         accounts: Storage.getAccounts(),
@@ -176,58 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         riskLimits: Storage.getRiskLimits()
       };
 
-      const code = generateDevicePairingCode(payload);
-      const nowIso = new Date().toISOString();
-      localStorage.setItem(LAST_SYNCED_KEY, nowIso);
-      setLastSynced(nowIso);
-      setSyncStatus('synced');
-
-      return { success: true, pairingCode: code };
-    } catch (e: any) {
-      setSyncStatus('error');
-      return { success: false, error: e.message || 'Cloud sync failed.' };
-    }
-  };
-
-  const linkDeviceWithCode = async (code: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const payload = getPayloadByPairingCode(code);
-      if (!payload) {
-        return { success: false, error: 'Invalid or expired sync code. Please check the code and try again.' };
-      }
-
-      // Check if user exists or log them in
-      const registry = getStoredRegistry();
-      let targetUser = registry.find(a => a.user.email.toLowerCase() === payload.email.toLowerCase())?.user;
-
-      if (!targetUser) {
-        targetUser = {
-          id: payload.userId,
-          email: payload.email,
-          name: payload.profile?.name || payload.email.split('@')[0],
-          createdAt: payload.timestamp,
-          lastLoginAt: new Date().toISOString()
-        };
-        const updated = [...registry, { user: targetUser, passwordHash: 'paired_device' }];
-        saveRegistry(updated);
-        setRegisteredUsers(updated.map(a => a.user));
-      }
-
-      setUser(targetUser);
-      setActiveUser(targetUser);
-
-      // Restore payload data
-      if (payload.trades) Storage.saveTrades(payload.trades);
-      if (payload.accounts) Storage.saveAccounts(payload.accounts);
-      if (payload.activeAccountId) Storage.saveActiveAccountId(payload.activeAccountId);
-      if (payload.strategies) Storage.saveStrategies(payload.strategies);
-      if (payload.rules) Storage.saveRules(payload.rules);
-      if (payload.journalEntries) Storage.saveJournalEntries(payload.journalEntries);
-      if (payload.chartVision) Storage.saveChartVision(payload.chartVision);
-      if (payload.coachMessages) Storage.saveCoachMessages(payload.coachMessages);
-      if (payload.profile) Storage.saveProfile(payload.profile);
-      if (payload.riskLimits) Storage.saveRiskLimits(payload.riskLimits);
-
+      await saveUserToCloud(user, passwordHash, payload);
       const nowIso = new Date().toISOString();
       localStorage.setItem(LAST_SYNCED_KEY, nowIso);
       setLastSynced(nowIso);
@@ -235,7 +276,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { success: true };
     } catch (e: any) {
-      return { success: false, error: e.message || 'Failed to restore device sync data.' };
+      setSyncStatus('error');
+      return { success: false, error: e.message || 'Cloud sync failed.' };
     }
   };
 
@@ -244,17 +286,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isAuthenticated: !!user,
-        isGuest,
         syncStatus,
         lastSynced,
         registeredUsers,
         login,
         signup,
         logout,
-        continueAsGuest,
         switchUser,
-        syncCloud,
-        linkDeviceWithCode
+        syncCloud
       }}
     >
       {children}

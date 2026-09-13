@@ -2,11 +2,13 @@ import { Trade, TradingAccount, TradingStrategy } from '../types/trade';
 import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
+import { User } from '../types/auth';
 
 export interface SyncPayload {
   version: number;
   userId: string;
   email: string;
+  username?: string;
   timestamp: string;
   trades: Trade[];
   accounts: TradingAccount[];
@@ -18,6 +20,13 @@ export interface SyncPayload {
   coachMessages: AICoachMessage[];
   profile: UserProfile;
   riskLimits: RiskLimits;
+}
+
+export interface CloudUserRecord {
+  user: User;
+  passwordHash: string;
+  encryptedVault?: string;
+  lastUpdated: string;
 }
 
 /**
@@ -74,7 +83,6 @@ export async function encryptJournalData(jsonStr: string, secretKey: string): Pr
   combined.set(iv, 0);
   combined.set(new Uint8Array(encrypted), iv.length);
 
-  // Return base64
   return btoa(String.fromCharCode(...combined));
 }
 
@@ -100,40 +108,141 @@ export async function decryptJournalData(base64Str: string, secretKey: string): 
   return new TextDecoder().decode(decrypted);
 }
 
-const CLOUD_SYNC_ENDPOINT = 'https://api.jsonbin.io/v3/b'; // Fallback sync or edge relay
-
-/**
- * Sync relay storage keys
- */
+// Storage keys
 const CLOUD_KEYS = {
-  SYNC_CODE_PREFIX: 'tz_sync_code_',
-  LAST_CLOUD_SYNC: 'tz_last_cloud_sync'
+  ENDPOINT: 'tz_cloud_sync_endpoint',
+  LOCAL_CLOUD_CACHE: 'tz_cloud_user_cache_'
 };
 
 /**
- * Save cloud sync backup locally and generate a 6-digit sync pairing code
+ * Get configured cloud database endpoint or null
  */
-export function generateDevicePairingCode(payload: SyncPayload): string {
-  // Generate a random 6-character alphanumeric code e.g. TZ-849201
-  const num = Math.floor(100000 + Math.random() * 900000);
-  const code = `TZ-${num}`;
-  
-  // Save in localStorage for peer devices
-  localStorage.setItem(`${CLOUD_KEYS.SYNC_CODE_PREFIX}${code}`, JSON.stringify(payload));
-  // Expire after 24 hours in real use
-  return code;
+export function getCloudEndpoint(): string | null {
+  return localStorage.getItem(CLOUD_KEYS.ENDPOINT) || null;
+}
+
+export function setCloudEndpoint(url: string | null): void {
+  if (!url) {
+    localStorage.removeItem(CLOUD_KEYS.ENDPOINT);
+  } else {
+    localStorage.setItem(CLOUD_KEYS.ENDPOINT, url.trim());
+  }
 }
 
 /**
- * Retrieve payload by pairing code
+ * Normalize username or email identifier for key lookup
  */
-export function getPayloadByPairingCode(code: string): SyncPayload | null {
-  const cleaned = code.trim().toUpperCase();
-  const raw = localStorage.getItem(`${CLOUD_KEYS.SYNC_CODE_PREFIX}${cleaned}`);
-  if (!raw) return null;
+export function normalizeIdentifier(identifier: string): string {
+  return identifier.trim().toLowerCase().replace(/[^a-z0-9_@.-]/g, '_');
+}
+
+/**
+ * Synchronize user account and journal state to the cloud vault
+ */
+export async function saveUserToCloud(
+  user: User,
+  passwordHash: string,
+  payload: SyncPayload
+): Promise<{ success: boolean; error?: string }> {
+  const key = normalizeIdentifier(user.email);
+  const usernameKey = user.username ? normalizeIdentifier(user.username) : null;
+  const now = new Date().toISOString();
+
+  const record: CloudUserRecord = {
+    user,
+    passwordHash,
+    encryptedVault: JSON.stringify(payload),
+    lastUpdated: now
+  };
+
+  // 1. Always save in local persistent cloud cache
   try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+    localStorage.setItem(`${CLOUD_KEYS.LOCAL_CLOUD_CACHE}${key}`, JSON.stringify(record));
+    if (usernameKey) {
+      localStorage.setItem(`${CLOUD_KEYS.LOCAL_CLOUD_CACHE}${usernameKey}`, JSON.stringify(record));
+    }
+  } catch (e) {
+    console.warn('Local cloud cache write error:', e);
   }
+
+  // 2. Push to remote cloud endpoint if configured
+  const endpoint = getCloudEndpoint();
+  if (endpoint) {
+    try {
+      const url = `${endpoint.replace(/\/$/, '')}/accounts/${encodeURIComponent(key)}.json`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+      if (!res.ok) {
+        throw new Error(`Cloud server returned ${res.status}`);
+      }
+    } catch (e: any) {
+      console.warn('Cloud sync push warning:', e);
+      // Non-fatal if offline
+    }
+  }
+
+  return { success: true };
+}
+
+/**
+ * Fetch and authenticate user account from cloud vault
+ */
+export async function fetchUserFromCloud(
+  identifier: string,
+  passwordHash: string
+): Promise<{ success: boolean; user?: User; payload?: SyncPayload; error?: string }> {
+  const key = normalizeIdentifier(identifier);
+
+  // 1. Try remote cloud endpoint if configured
+  const endpoint = getCloudEndpoint();
+  if (endpoint) {
+    try {
+      const url = `${endpoint.replace(/\/$/, '')}/accounts/${encodeURIComponent(key)}.json`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const record: CloudUserRecord = await res.json();
+        if (record && record.user && record.passwordHash) {
+          if (record.passwordHash !== passwordHash) {
+            return { success: false, error: 'Incorrect password for this account.' };
+          }
+          let payload: SyncPayload | undefined = undefined;
+          if (record.encryptedVault) {
+            try {
+              payload = JSON.parse(record.encryptedVault);
+            } catch {
+              // ignore
+            }
+          }
+          return { success: true, user: record.user, payload };
+        }
+      }
+    } catch (e) {
+      console.warn('Remote cloud fetch error, falling back to local registry:', e);
+    }
+  }
+
+  // 2. Check local device cache
+  const cachedRaw = localStorage.getItem(`${CLOUD_KEYS.LOCAL_CLOUD_CACHE}${key}`);
+  if (cachedRaw) {
+    try {
+      const record: CloudUserRecord = JSON.parse(cachedRaw);
+      if (record.passwordHash !== passwordHash) {
+        return { success: false, error: 'Incorrect password.' };
+      }
+      let payload: SyncPayload | undefined = undefined;
+      if (record.encryptedVault) {
+        try {
+          payload = JSON.parse(record.encryptedVault);
+        } catch {}
+      }
+      return { success: true, user: record.user, payload };
+    } catch {
+      // ignore
+    }
+  }
+
+  return { success: false, error: 'Account not found. Please create an account or verify spelling.' };
 }

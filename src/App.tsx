@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { TradingProvider } from './context/TradingContext';
 
 // Layout
@@ -35,6 +35,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TermsPage, PrivacyPage, DisclaimerPage } from './pages/LegalPages';
 
 const AppLayout: React.FC = () => {
+  const { user } = useAuth();
   const location = useLocation();
   const isLanding = location.pathname === '/' || location.pathname === '/landing';
   const isLogin = location.pathname === '/login';
@@ -62,6 +63,11 @@ const AppLayout: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
       </Routes>
     );
+  }
+
+  // Strict Access Guard: If not authenticated, redirect directly to /login
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return (
