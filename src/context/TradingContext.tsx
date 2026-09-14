@@ -84,7 +84,26 @@ const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [trades, setTrades] = useState<Trade[]>(() => Storage.getTrades());
+  const [trades, setTrades] = useState<Trade[]>(() => {
+    const rawTrades = Storage.getTrades();
+    let updated = false;
+    const normalized = rawTrades.map(t => {
+      // If Delta trade has lotSize >= 10, it was likely saved under legacy / 100 instead of / 1000
+      const isDelta = t.notes?.toLowerCase().includes('delta');
+      if (isDelta && t.lotSize >= 10) {
+        updated = true;
+        return {
+          ...t,
+          lotSize: parseFloat((t.lotSize / 10).toFixed(5))
+        };
+      }
+      return t;
+    });
+    if (updated) {
+      Storage.saveTrades(normalized);
+    }
+    return normalized;
+  });
   const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
   const [activeAccountId, setActiveAccountIdState] = useState<string>(() => Storage.getActiveAccountId());
   const [strategies, setStrategies] = useState<TradingStrategy[]>(() => Storage.getStrategies());

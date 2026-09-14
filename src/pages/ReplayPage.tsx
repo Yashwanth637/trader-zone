@@ -101,7 +101,7 @@ export const ReplayPage: React.FC = () => {
       layout: {
         background: { type: ColorType.Solid, color: isDark ? '#000000' : '#ffffff' },
         textColor: isDark ? '#a1a1aa' : '#4b5563',
-        fontFamily: "'JetBrains Mono', 'Inter', -apple-system, sans-serif"
+        fontFamily: "'Arial', 'Helvetica', sans-serif"
       },
       grid: {
         vertLines: { color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },

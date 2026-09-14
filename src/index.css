@@ -40,6 +40,17 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
+  /* All numeric figures, metrics, badges, tables, and mono elements across the app use Arial */
+  .font-mono,
+  [class*="font-mono"],
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: 'Arial', 'Helvetica', sans-serif !important;
+    font-feature-settings: "tnum" on, "lnum" on;
+  }
+
   /* Thin, delicate horizontal dividers throughout the entire journal */
   hr,
   .border-b,

@@ -46,7 +46,8 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
         ticket = cols[0] || ticket;
         openTime = cols[1] ? new Date(cols[1]).toISOString() : openTime;
         direction = cols[2]?.toLowerCase().includes('sell') ? 'SELL' : 'BUY';
-        lotSize = parseFloat(cols[3]) || 1.0;
+        const rawSize = parseFloat(cols[3]) || 1.0;
+        lotSize = rawSize >= 100 ? parseFloat((rawSize / 1000).toFixed(5)) : rawSize;
         symbol = (cols[4] || 'EURUSD').toUpperCase();
         entryPrice = parseFloat(cols[5]) || 0;
         stopLoss = parseFloat(cols[6]) || undefined;
@@ -61,7 +62,8 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
         openTime = cols[0] ? new Date(cols[0]).toISOString() : openTime;
         symbol = (cols[1] || 'EURUSD').toUpperCase();
         direction = cols[2]?.toLowerCase().includes('sell') || cols[2]?.toLowerCase().includes('short') ? 'SELL' : 'BUY';
-        lotSize = parseFloat(cols[3]) || 1.0;
+        const rawSize = parseFloat(cols[3]) || 1.0;
+        lotSize = rawSize >= 100 ? parseFloat((rawSize / 1000).toFixed(5)) : rawSize;
         entryPrice = parseFloat(cols[4]) || 0;
         exitPrice = cols[5] ? parseFloat(cols[5]) : undefined;
         netPnl = cols[6] ? parseFloat(cols[6]) : 0;

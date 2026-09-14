@@ -53,16 +53,32 @@ export const ShareCardsPage: React.FC = () => {
   const currentThemeClasses = isLight ? themes[cardTheme].light : themes[cardTheme].dark;
 
   /**
-   * Generates a high-resolution canvas with 3x retina scaling for crisp social sharing
+   * Generates a high-resolution canvas with 3x retina scaling for crisp social sharing.
+   * For JPEG, applies an explicit background color to prevent transparent corners from turning solid black.
    */
-  const renderCardToCanvas = async (): Promise<HTMLCanvasElement | null> => {
+  const renderCardToCanvas = async (format?: 'png' | 'jpeg'): Promise<HTMLCanvasElement | null> => {
     if (!cardRef.current) return null;
+
+    // For JPEG export, transparent corners of rounded elements turn black without a background.
+    // For PNG, keeping null preserves natural transparent boundary or smooth background.
+    const bgColor = format === 'jpeg'
+      ? (isLight ? '#ffffff' : '#0b0b0e')
+      : null;
+
     return await html2canvas(cardRef.current, {
       scale: 3, // 3x HD resolution (e.g. 1080x1080px for standard 1:1)
       useCORS: true,
       allowTaint: true,
-      backgroundColor: null,
-      logging: false
+      backgroundColor: bgColor,
+      logging: false,
+      imageTimeout: 0,
+      onclone: (clonedDoc) => {
+        const clonedCard = clonedDoc.querySelector('[data-share-card="true"]');
+        if (clonedCard instanceof HTMLElement) {
+          clonedCard.style.transition = 'none';
+          clonedCard.style.transform = 'none';
+        }
+      }
     });
   };
 
@@ -70,7 +86,7 @@ export const ShareCardsPage: React.FC = () => {
     setDownloading(true);
     setStatusMessage(null);
     try {
-      const canvas = await renderCardToCanvas();
+      const canvas = await renderCardToCanvas(format);
       if (!canvas) return;
 
       const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
@@ -96,7 +112,7 @@ export const ShareCardsPage: React.FC = () => {
     setSharing(true);
     setStatusMessage(null);
     try {
-      const canvas = await renderCardToCanvas();
+      const canvas = await renderCardToCanvas('png');
       if (!canvas) return;
 
       const blob = await new Promise<Blob | null>((resolve) => {
@@ -288,7 +304,8 @@ export const ShareCardsPage: React.FC = () => {
           {trade ? (
             <div
               ref={cardRef}
-              className={`p-8 rounded-3xl border transition-all flex flex-col justify-between relative overflow-hidden ${currentThemeClasses} ${
+              data-share-card="true"
+              className={`p-7 sm:p-8 rounded-3xl border transition-all flex flex-col justify-between relative overflow-hidden ${currentThemeClasses} ${
                 aspect === 'square' ? 'w-[360px] h-[360px]' : aspect === 'story' ? 'w-[300px] h-[520px]' : 'w-[480px] h-[270px]'
               }`}
             >
@@ -296,7 +313,7 @@ export const ShareCardsPage: React.FC = () => {
               <div className="flex items-center justify-between z-10">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${
-                    isLight ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/10 backdrop-blur-md text-primary-light'
+                    isLight ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/[0.12] border border-white/10 text-primary-light'
                   }`}>
                     <Sparkles className="w-4 h-4" />
                   </div>
@@ -305,8 +322,8 @@ export const ShareCardsPage: React.FC = () => {
                     <span className="text-primary">Zone</span>
                   </span>
                 </div>
-                <div className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full ${
-                  isLight ? 'bg-slate-100 border border-slate-200 text-slate-700' : 'bg-white/10 backdrop-blur-md text-slate-300'
+                <div className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
+                  isLight ? 'bg-slate-100 border border-slate-200 text-slate-700' : 'bg-white/[0.10] border border-white/10 text-slate-300'
                 }`}>
                   {trade.session} Session
                 </div>
@@ -314,23 +331,23 @@ export const ShareCardsPage: React.FC = () => {
 
               {/* Card Center: Asset & Big P&L */}
               <div className="my-auto z-10">
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <div className="flex items-center gap-2 mb-2">
                   <span className={`text-xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     {trade.symbol}
                   </span>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                  <span className={`inline-flex items-center justify-center leading-none h-5 px-2 rounded-md font-black text-[10px] shrink-0 select-none ${
                     trade.direction === 'BUY'
-                      ? isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-500/30 text-emerald-300'
-                      : isLight ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-rose-500/30 text-rose-300'
+                      ? isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
+                      : isLight ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
                   }`}>
                     {trade.direction}
                   </span>
-                  <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {trade.lotSize} Lots
                   </span>
                 </div>
 
-                <div className={`text-4xl sm:text-5xl font-black tracking-tight ${
+                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tight my-1 ${
                   isWin
                     ? isLight ? 'text-emerald-600' : 'text-emerald-400'
                     : isLight ? 'text-rose-600' : 'text-rose-400'
@@ -338,27 +355,30 @@ export const ShareCardsPage: React.FC = () => {
                   {formatCurrency(trade.netPnl)}
                 </div>
 
-                <div className={`flex items-center gap-4 mt-2.5 text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  <span>Pips: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>{trade.pips || 0}</strong></span>
+                <div className={`flex items-center gap-3.5 mt-2.5 text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <span>Pips: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{trade.pips || 0}</strong></span>
                   {trade.realizedRR && (
-                    <span>R:R: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>1:{trade.realizedRR}</strong></span>
+                    <span>R:R: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>1:{trade.realizedRR}</strong></span>
                   )}
                   {trade.returnPercentage !== undefined && (
-                    <span>Return: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>{trade.returnPercentage >= 0 ? '+' : ''}{trade.returnPercentage.toFixed(2)}%</strong></span>
+                    <span>Return: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{trade.returnPercentage >= 0 ? '+' : ''}{trade.returnPercentage.toFixed(2)}%</strong></span>
                   )}
                 </div>
               </div>
 
-              {/* Card Footer */}
-              <div className={`flex items-center justify-between border-t pt-3 z-10 ${
-                isLight ? 'border-slate-200' : 'border-white/10'
-              }`}>
-                <div className="text-[10px]">
-                  <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Strategy: </span>
-                  <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white'}>{trade.strategyName || 'Price Action'}</strong>
-                </div>
-                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-slate-400'}`}>
-                  traderzone.live
+              {/* Card Divider & Footer */}
+              <div className="mt-auto z-10 w-full">
+                <div className={`w-full h-[1px] mb-2.5 ${isLight ? 'bg-slate-200/90' : 'bg-white/10'}`} />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] flex items-center gap-1 min-w-0 flex-1 truncate">
+                    <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Strategy:</span>
+                    <strong className={`truncate font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {trade.strategyName || 'Price Action'}
+                    </strong>
+                  </div>
+                  <div className={`text-[10px] font-semibold shrink-0 ${isLight ? 'text-slate-400' : 'text-slate-400'}`}>
+                    traderzone.live
+                  </div>
                 </div>
               </div>
             </div>
