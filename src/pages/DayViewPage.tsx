@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { calculateDayViewData, generateMonthCalendar, DayPerformanceCardData } from '../lib/dayViewAnalytics';
-import { formatCurrency, formatAdaptivePnl } from '../lib/calculations';
+import { formatCurrency, formatAdaptivePnl, formatSignedPnl } from '../lib/calculations';
 import {
   ChevronDown,
   ChevronRight,
@@ -219,7 +219,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-xs font-mono font-bold ${isPos ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            Net P&L {isPos ? `+$${dayData.netPnl.toFixed(2)}` : `-$${Math.abs(dayData.netPnl).toFixed(2)}`}
+                            Net P&L {formatSignedPnl(dayData.netPnl)}
                           </span>
                         </div>
                       </div>
@@ -234,22 +234,22 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                           navigate('/replay');
                         }
                       }}
-                      className="px-3 py-1.5 rounded-lg border border-border/80 hover:border-border text-xs font-semibold text-foreground flex items-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border/80 hover:border-primary/50 text-xs font-semibold text-foreground transition-all shadow-sm"
                     >
-                      <Play className="w-3 h-3 fill-current text-primary" />
+                      <Play className="w-3 h-3 fill-primary text-primary" />
                       <span>Replay</span>
                     </button>
                   </div>
 
-                  {/* Collapsible Content */}
+                  {/* Expandable Accordion Body */}
                   {isExpanded && (
-                    <div className="p-6 space-y-6">
+                    <div className="p-6 pt-2 border-t border-border/40 space-y-6">
                       
                       {/* 1. Intraday Cumulative P&L Area / Line Chart */}
                       <IntradayPnlChart progression={dayData.intradayProgression} isProfitable={isPos} />
 
-                      {/* 2. Key Daily Metrics Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-4 gap-x-2 pt-2 border-t border-border/40">
+                      {/* 2. Seven Daily Statistics Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 pt-2">
                         {/* Total Trades */}
                         <div>
                           <div className="text-[11px] text-muted font-medium">Total Trades</div>
@@ -270,7 +270,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         <div>
                           <div className="text-[11px] text-muted font-medium">Gross P&L</div>
                           <div className={`text-xl font-mono font-bold mt-0.5 ${dayData.grossPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {dayData.grossPnl >= 0 ? '+' : ''}${dayData.grossPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatSignedPnl(dayData.grossPnl)}
                           </div>
                         </div>
 
@@ -302,7 +302,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         <div>
                           <div className="text-[11px] text-muted font-medium">Commissions</div>
                           <div className="text-xl font-mono font-bold text-foreground mt-0.5">
-                            ${dayData.commissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(dayData.commissions)}
                           </div>
                         </div>
                       </div>
@@ -353,7 +353,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                                   {/* Net PnL */}
                                   <td className="py-3 font-mono font-bold">
                                     <span className={trade.isWin ? 'text-emerald-500' : 'text-rose-500'}>
-                                      {trade.isWin ? `+$${trade.netPnl.toFixed(2)}` : `-$${Math.abs(trade.netPnl).toFixed(2)}`}
+                                      {formatSignedPnl(trade.netPnl)}
                                     </span>
                                   </td>
 
@@ -449,7 +449,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         ? 'border-2 border-violet-500 text-violet-300 font-black shadow-md shadow-violet-500/20 bg-violet-500/10'
                         : ''
                     }`}
-                    title={cell.hasTrades ? `${cell.dateKey}: ${cell.netPnl >= 0 ? `+$${cell.netPnl.toFixed(2)}` : `-$${Math.abs(cell.netPnl).toFixed(2)}`}` : undefined}
+                    title={cell.hasTrades ? `${cell.dateKey}: ${formatSignedPnl(cell.netPnl)}` : undefined}
                   >
                     {cell.dayNum}
                   </div>

@@ -1,38 +1,66 @@
 import { Trade, Direction, TradingSession } from '../types/trade';
+import { getCurrencySymbol, getExchangeRateForCurrency } from './currencyService';
 
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
-  const symbolMap: Record<string, string> = {
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-    INR: '₹',
-    JPY: '¥',
-    AUD: 'A$',
-    CAD: 'C$'
-  };
-  const sym = symbolMap[currency] || '$';
-  const isNeg = amount < 0;
-  const abs = Math.abs(amount).toLocaleString('en-US', {
+// Module-level active currency store (synchronized with TradingContext)
+let activeAppCurrency = 'USD';
+let activeAppExchangeRate = 1.0;
+
+export function setActiveCurrency(currency: string, rate: number = 1.0) {
+  activeAppCurrency = currency || 'USD';
+  activeAppExchangeRate = rate > 0 ? rate : 1.0;
+}
+
+export function getActiveCurrency(): { currency: string; rate: number } {
+  return { currency: activeAppCurrency, rate: activeAppExchangeRate };
+}
+
+export function convertCurrency(
+  usdAmount: number,
+  currency?: string,
+  rate?: number
+): number {
+  const targetCurr = currency || activeAppCurrency;
+  const finalRate = rate !== undefined
+    ? rate
+    : (targetCurr === activeAppCurrency ? activeAppExchangeRate : getExchangeRateForCurrency(targetCurr));
+  return usdAmount * finalRate;
+}
+
+export function formatCurrency(
+  amount: number,
+  currency?: string,
+  exchangeRate?: number
+): string {
+  const targetCurr = currency || activeAppCurrency;
+  const rate = exchangeRate !== undefined
+    ? exchangeRate
+    : (targetCurr === activeAppCurrency ? activeAppExchangeRate : getExchangeRateForCurrency(targetCurr));
+  const converted = amount * rate;
+  const sym = getCurrencySymbol(targetCurr);
+  const isNeg = converted < 0;
+  const abs = Math.abs(converted).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
   return `${isNeg ? '-' : ''}${sym}${abs}`;
 }
 
-export function formatAdaptivePnl(amount: number, currency: string = 'USD'): string {
-  if (Math.abs(amount) < 0.0001) return '$0.00';
-  const symbolMap: Record<string, string> = {
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-    INR: '₹',
-    JPY: '¥',
-    AUD: 'A$',
-    CAD: 'C$'
-  };
-  const sym = symbolMap[currency] || '$';
-  const isNeg = amount < 0;
-  const abs = Math.abs(amount);
+export function formatAdaptivePnl(
+  amount: number,
+  currency?: string,
+  exchangeRate?: number
+): string {
+  const targetCurr = currency || activeAppCurrency;
+  const rate = exchangeRate !== undefined
+    ? exchangeRate
+    : (targetCurr === activeAppCurrency ? activeAppExchangeRate : getExchangeRateForCurrency(targetCurr));
+  const converted = amount * rate;
+  const sym = getCurrencySymbol(targetCurr);
+
+  if (Math.abs(converted) < 0.0001) return `${sym}0.00`;
+
+  const isNeg = converted < 0;
+  const abs = Math.abs(converted);
 
   if (abs < 10) {
     return `${isNeg ? '-' : ''}${sym}${abs.toFixed(2)}`;
@@ -41,6 +69,27 @@ export function formatAdaptivePnl(amount: number, currency: string = 'USD'): str
   } else {
     return `${isNeg ? '-' : ''}${sym}${Math.round(abs).toLocaleString('en-US')}`;
   }
+}
+
+export function formatSignedPnl(
+  amount: number,
+  currency?: string,
+  exchangeRate?: number
+): string {
+  const targetCurr = currency || activeAppCurrency;
+  const rate = exchangeRate !== undefined
+    ? exchangeRate
+    : (targetCurr === activeAppCurrency ? activeAppExchangeRate : getExchangeRateForCurrency(targetCurr));
+  const converted = amount * rate;
+  const sym = getCurrencySymbol(targetCurr);
+
+  if (Math.abs(converted) < 0.0001) return `${sym}0.00`;
+  const isNeg = converted < 0;
+  const abs = Math.abs(converted).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `${isNeg ? '-' : '+'}${sym}${abs}`;
 }
 
 export function detectTradingSession(isoTime: string): TradingSession {

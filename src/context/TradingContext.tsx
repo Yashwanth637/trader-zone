@@ -4,9 +4,16 @@ import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage, BehavioralAlert } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
 import { Storage } from '../lib/storage';
-import { calculateSummaryStats, SummaryStats, calculatePnlFromPrices } from '../lib/calculations';
+import { calculateSummaryStats, SummaryStats, calculatePnlFromPrices, setActiveCurrency } from '../lib/calculations';
 import { detectBehavioralPatterns } from '../lib/coachEngine';
 import { useAuth } from './AuthContext';
+import {
+  fetchLiveExchangeRates,
+  getStoredExchangeRates,
+  getExchangeRateForCurrency,
+  getCurrencySymbol,
+  DEFAULT_EXCHANGE_RATES
+} from '../lib/currencyService';
 
 interface TradingContextType {
   trades: Trade[];
@@ -25,6 +32,17 @@ interface TradingContextType {
   // Filtered trades by active account
   accountTrades: Trade[];
   stats: SummaryStats;
+
+  // Live Currency & Conversion
+  currency: string;
+  currencySymbol: string;
+  exchangeRate: number;
+  exchangeRates: Record<string, number>;
+  isFetchingRates: boolean;
+  ratesLastUpdated: string;
+  ratesSource: string;
+  refreshExchangeRates: (targetCurrency?: string) => Promise<void>;
+  convertAmount: (usdAmount: number) => number;
 
   // Actions
   setActiveAccountId: (id: string) => void;
@@ -76,6 +94,71 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [coachMessages, setCoachMessages] = useState<AICoachMessage[]>(() => Storage.getCoachMessages());
   const [profile, setProfile] = useState<UserProfile>(() => Storage.getProfile());
   const [riskLimits, setRiskLimits] = useState<RiskLimits>(() => Storage.getRiskLimits());
+
+  // Live Currency & Exchange Rates State
+  const currency = profile.currency || 'USD';
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(() => {
+    return getStoredExchangeRates()?.rates || DEFAULT_EXCHANGE_RATES;
+  });
+  const [ratesLastUpdated, setRatesLastUpdated] = useState<string>(() => {
+    return getStoredExchangeRates()?.lastUpdated || 'Today';
+  });
+  const [ratesSource, setRatesSource] = useState<string>(() => {
+    return getStoredExchangeRates()?.source || 'ExchangeRate-API (Live)';
+  });
+  const [isFetchingRates, setIsFetchingRates] = useState<boolean>(false);
+
+  const exchangeRate = useMemo(() => {
+    return getExchangeRateForCurrency(currency, exchangeRates);
+  }, [currency, exchangeRates]);
+
+  const currencySymbol = useMemo(() => {
+    return getCurrencySymbol(currency);
+  }, [currency]);
+
+  // Keep calculations module synchronized with active currency and exchange rate
+  useEffect(() => {
+    setActiveCurrency(currency, exchangeRate);
+  }, [currency, exchangeRate]);
+
+  const refreshExchangeRates = async (targetCurrency?: string) => {
+    setIsFetchingRates(true);
+    try {
+      const data = await fetchLiveExchangeRates(true);
+      setExchangeRates(data.rates);
+      setRatesLastUpdated(data.lastUpdated);
+      setRatesSource(data.source);
+      const curr = targetCurrency || currency;
+      const rate = getExchangeRateForCurrency(curr, data.rates);
+      setActiveCurrency(curr, rate);
+    } catch (err) {
+      console.warn('Failed to refresh live exchange rates', err);
+    } finally {
+      setIsFetchingRates(false);
+    }
+  };
+
+  // Initial check on mount: fetch if no fresh rates for today
+  useEffect(() => {
+    fetchLiveExchangeRates(false)
+      .then(data => {
+        setExchangeRates(data.rates);
+        setRatesLastUpdated(data.lastUpdated);
+        setRatesSource(data.source);
+      })
+      .catch(console.warn);
+  }, []);
+
+  // When user switches currency in profile, refresh today's rate if not already USD
+  useEffect(() => {
+    if (profile.currency && profile.currency !== 'USD') {
+      refreshExchangeRates(profile.currency);
+    }
+  }, [profile.currency]);
+
+  const convertAmount = (usdAmount: number): number => {
+    return (Number(usdAmount) || 0) * exchangeRate;
+  };
 
   // Reload user-specific data whenever user signs in, logs out, or switches accounts
   useEffect(() => {
@@ -344,6 +427,15 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         behavioralAlerts,
         accountTrades,
         stats,
+        currency,
+        currencySymbol,
+        exchangeRate,
+        exchangeRates,
+        isFetchingRates,
+        ratesLastUpdated,
+        ratesSource,
+        refreshExchangeRates,
+        convertAmount,
         setActiveAccountId,
         addTrade,
         updateTrade,

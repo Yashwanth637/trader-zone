@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
-import { formatCurrency } from '../lib/calculations';
+import { formatCurrency, formatSignedPnl } from '../lib/calculations';
 import {
   Share2,
   Download,
@@ -177,7 +177,7 @@ export const ShareCardsPage: React.FC = () => {
             >
               {accountTrades.map(t => (
                 <option key={t.id} value={t.id}>
-                  {t.symbol} {t.direction} ({t.netPnl >= 0 ? '+' : ''}${t.netPnl.toFixed(2)})
+                  {t.symbol} {t.direction} ({formatSignedPnl(t.netPnl)})
                 </option>
               ))}
             </select>

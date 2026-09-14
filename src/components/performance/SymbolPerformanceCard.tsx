@@ -1,6 +1,6 @@
 import React from 'react';
 import { SymbolPerformanceData } from '../../lib/performanceAnalytics';
-import { formatAdaptivePnl } from '../../lib/calculations';
+import { formatAdaptivePnl, formatCurrency, formatSignedPnl } from '../../lib/calculations';
 import { Target, TrendingUp, TrendingDown, Layers } from 'lucide-react';
 
 interface SymbolPerformanceCardProps {
@@ -90,8 +90,8 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
           </div>
           <div className="text-sm font-mono font-bold text-emerald-500 mt-0.5">
             {bestSymbol && bestSymbol.netPnl > 0
-              ? `+$${bestSymbol.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : '$0.00'}
+              ? `+${formatCurrency(bestSymbol.netPnl)}`
+              : formatCurrency(0)}
           </div>
         </div>
 
@@ -120,8 +120,8 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
           </div>
           <div className="text-sm font-mono font-bold text-rose-500 mt-0.5">
             {worstSymbol
-              ? `-$${Math.abs(worstSymbol.netPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : '$0.00'}
+              ? formatCurrency(worstSymbol.netPnl)
+              : formatCurrency(0)}
           </div>
         </div>
       </div>
@@ -182,7 +182,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
           {/* Scale Ticks */}
           <div className="flex items-center justify-between text-[10px] font-mono text-muted pt-3 pl-20 border-t border-border/40">
             <span>{formatAdaptivePnl(-scaleLimit)}</span>
-            <span>$0.00</span>
+            <span>{formatAdaptivePnl(0)}</span>
             <span>+{formatAdaptivePnl(scaleLimit * 0.5)}</span>
             <span>+{formatAdaptivePnl(scaleLimit)}</span>
           </div>
@@ -262,7 +262,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
                   <div className={`text-sm font-mono font-bold ${
                     isPos ? 'text-emerald-500' : 'text-rose-500'
                   }`}>
-                    {isPos ? `+$${item.netPnl.toFixed(2)}` : `-$${Math.abs(item.netPnl).toFixed(2)}`}
+                    {formatSignedPnl(item.netPnl)}
                   </div>
                   <div className="text-xs text-muted font-mono mt-0.5">
                     {item.totalTrades} {item.totalTrades === 1 ? 'trade' : 'trades'}

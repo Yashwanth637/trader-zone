@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trade } from '../../types/trade';
-import { formatCurrency } from '../../lib/calculations';
+import { formatCurrency, formatAdaptivePnl } from '../../lib/calculations';
 
 interface EquityCurveProps {
   trades: Trade[];
@@ -167,7 +167,7 @@ export const EquityCurveChart: React.FC<EquityCurveProps> = ({
               <g key={idx}>
                 <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                 <text x={paddingX - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#64748b" className="font-mono">
-                  ${Math.round(val).toLocaleString()}
+                  {formatAdaptivePnl(val)}
                 </text>
               </g>
             );

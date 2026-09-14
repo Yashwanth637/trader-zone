@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { formatCurrency } from '../lib/calculations';
+import { formatCurrency, formatSignedPnl } from '../lib/calculations';
 import { Trade } from '../types/trade';
 import { getCandlesForTrade, ReplayData, ReplayCandle } from '../lib/replayCandles';
 import {
@@ -258,7 +258,7 @@ export const ReplayPage: React.FC = () => {
         position: replayData.trade.direction === 'BUY' ? 'aboveBar' : 'belowBar',
         color: isWin ? '#10b981' : '#ef4444',
         shape: replayData.trade.direction === 'BUY' ? 'arrowDown' : 'arrowUp',
-        text: `EXIT @ ${replayData.exitPrice} (${isWin ? '+' : ''}$${replayData.trade.netPnl.toFixed(2)})`
+        text: `EXIT @ ${replayData.exitPrice} (${formatSignedPnl(replayData.trade.netPnl)})`
       });
     }
 
@@ -499,7 +499,7 @@ export const ReplayPage: React.FC = () => {
                 <div className={`text-xl font-black font-mono mt-0.5 ${
                   floatingStats.pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'
                 }`}>
-                  {floatingStats.pnl >= 0 ? '+' : ''}${floatingStats.pnl.toFixed(2)}
+                  {formatSignedPnl(floatingStats.pnl)}
                 </div>
                 <div className="text-[10px] font-mono text-muted">
                   Floating Pips: {floatingStats.pips}

@@ -137,14 +137,14 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-xs text-foreground font-bold whitespace-nowrap">
-                        {formatCurrency(acc.currentBalance, acc.currency)}
+                        {formatCurrency(acc.currentBalance)}
                       </div>
                       {Math.abs(pnlDiff) >= 0.01 ? (
                         <div className={`text-[10px] font-semibold whitespace-nowrap ${pnlDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          {pnlDiff >= 0 ? '+' : ''}{formatCurrency(pnlDiff, acc.currency)}
+                          {pnlDiff >= 0 ? '+' : ''}{formatCurrency(pnlDiff)}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-muted">Initial: {formatCurrency(acc.initialBalance, acc.currency)}</div>
+                        <div className="text-[10px] text-muted">Initial: {formatCurrency(acc.initialBalance)}</div>
                       )}
                     </div>
                   </button>

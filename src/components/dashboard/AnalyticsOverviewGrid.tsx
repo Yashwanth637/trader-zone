@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trade } from '../../types/trade';
-import { formatAdaptivePnl } from '../../lib/calculations';
+import { formatAdaptivePnl, formatSignedPnl } from '../../lib/calculations';
 import {
   calculateSymbolBreakdowns,
   calculateWeekdayStats,
@@ -343,7 +343,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         isPos ? 'text-emerald-500' : 'text-rose-500'
                       }`}
                     >
-                      {isPos ? `+$${item.netPnl.toFixed(2)}` : `-$${Math.abs(item.netPnl).toFixed(2)}`}
+                      {formatSignedPnl(item.netPnl)}
                     </span>
                   </div>
                 );
@@ -408,7 +408,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             {/* Scale Ticks at bottom */}
             <div className="flex items-center justify-between text-[10px] font-mono text-muted pt-4 pl-10 border-t border-border/40 mt-3">
               <span>{formatAdaptivePnl(-dayScaleLimit)}</span>
-              <span>$0.00</span>
+              <span>{formatAdaptivePnl(0)}</span>
               <span>+{formatAdaptivePnl(dayScaleLimit)}</span>
             </div>
           </div>

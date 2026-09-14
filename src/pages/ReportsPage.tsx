@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
-import { filterTradesByPeriod, formatCurrency, calculateSummaryStats } from '../lib/calculations';
+import { filterTradesByPeriod, formatCurrency, calculateSummaryStats, formatSignedPnl } from '../lib/calculations';
 import { generateExecutiveReportPDF } from '../lib/pdfReport';
 import {
   FileText,
@@ -133,7 +133,7 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Gross Profit:</span>
-              <span className="font-mono text-emerald-400 font-bold">+${repStats.grossProfit.toFixed(2)}</span>
+              <span className="font-mono text-emerald-400 font-bold">+{formatCurrency(repStats.grossProfit)}</span>
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Winning / Losing Trades:</span>
@@ -141,15 +141,15 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Gross Loss:</span>
-              <span className="font-mono text-rose-400 font-bold">-${repStats.grossLoss.toFixed(2)}</span>
+              <span className="font-mono text-rose-400 font-bold">-{formatCurrency(repStats.grossLoss)}</span>
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Average Winner:</span>
-              <span className="font-mono text-emerald-400 font-bold">+${repStats.avgWin.toFixed(2)}</span>
+              <span className="font-mono text-emerald-400 font-bold">+{formatCurrency(repStats.avgWin)}</span>
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Average Loser:</span>
-              <span className="font-mono text-rose-400 font-bold">-${repStats.avgLoss.toFixed(2)}</span>
+              <span className="font-mono text-rose-400 font-bold">-{formatCurrency(repStats.avgLoss)}</span>
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Total Volume Traded:</span>
@@ -157,7 +157,7 @@ export const ReportsPage: React.FC = () => {
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-400">Commissions & Swaps:</span>
-              <span className="font-mono text-slate-300">${repStats.totalCommission.toFixed(2)}</span>
+              <span className="font-mono text-slate-300">{formatCurrency(repStats.totalCommission)}</span>
             </div>
           </div>
         </div>
@@ -211,7 +211,7 @@ export const ReportsPage: React.FC = () => {
                       <td className={`px-3.5 py-2 text-right font-mono font-bold ${
                         t.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
                       }`}>
-                        {t.netPnl >= 0 ? '+' : ''}${t.netPnl.toFixed(2)}
+                        {formatSignedPnl(t.netPnl)}
                       </td>
                     </tr>
                   ))

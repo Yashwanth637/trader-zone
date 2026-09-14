@@ -135,7 +135,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         <StatCard
           label="Profit Factor"
           value={stats.profitFactor.toFixed(2)}
-          subValue={`Avg Win: $${stats.avgWin.toFixed(0)} | Avg Loss: $${stats.avgLoss.toFixed(0)}`}
+          subValue={`Avg Win: ${formatCurrency(stats.avgWin)} | Avg Loss: ${formatCurrency(stats.avgLoss)}`}
           trend={stats.profitFactor >= 1.5 ? 'positive' : 'neutral'}
           icon={<TrendingUp className="w-5 h-5" />}
           iconBg="bg-violet-500/15 text-violet-500 border border-violet-500/30"
@@ -144,7 +144,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         <StatCard
           label="Max Drawdown"
           value={`${stats.maxDrawdownPercent.toFixed(1)}%`}
-          subValue={`-$${stats.maxDrawdownUsd.toFixed(0)} peak-to-valley`}
+          subValue={`-${formatCurrency(stats.maxDrawdownUsd)} peak-to-valley`}
           trend={stats.maxDrawdownPercent < 5 ? 'positive' : 'negative'}
           icon={<AlertTriangle className="w-5 h-5" />}
           iconBg="bg-amber-500/15 text-amber-500 border border-amber-500/30"

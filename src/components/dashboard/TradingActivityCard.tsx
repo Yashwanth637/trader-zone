@@ -77,7 +77,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
                   displayDots.map((d, dIdx) => (
                     <span
                       key={dIdx}
-                      title={`${d.date}: ${d.pnl >= 0 ? '+' : ''}$${d.pnl.toLocaleString()}`}
+                      title={`${d.date}: ${d.pnl >= 0 ? '+' : ''}${formatAdaptivePnl(d.pnl)}`}
                       className={`w-2.5 h-2.5 rounded-full transition-transform hover:scale-125 cursor-pointer ${
                         d.status === 'win' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-rose-500 shadow-sm shadow-rose-500/30'
                       }`}
@@ -171,7 +171,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
             BEST DAY
           </div>
           <div className="text-lg font-mono font-black text-emerald-500 mt-1">
-            {bestDay ? `+${formatAdaptivePnl(bestDay.pnl)}` : '$0.00'}
+            {bestDay ? `+${formatAdaptivePnl(bestDay.pnl)}` : formatAdaptivePnl(0)}
           </div>
           <div className="text-xs text-muted mt-1 font-medium">
             {bestDay ? `${bestDay.date} · ${bestDay.tradeCount} trades` : 'No wins yet'}
@@ -184,7 +184,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
             WORST DAY
           </div>
           <div className="text-lg font-mono font-black text-rose-500 mt-1">
-            {worstDay ? formatAdaptivePnl(worstDay.pnl) : '$0.00'}
+            {worstDay ? formatAdaptivePnl(worstDay.pnl) : formatAdaptivePnl(0)}
           </div>
           <div className="text-xs text-muted mt-1 font-medium">
             {worstDay ? `${worstDay.date} · ${worstDay.tradeCount} trades` : 'No losses yet'}

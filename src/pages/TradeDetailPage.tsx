@@ -164,7 +164,7 @@ export const TradeDetailPage: React.FC = () => {
             {trade.realizedRR ? `1:${trade.realizedRR}` : '-'}
           </div>
           <div className="text-[10px] text-muted mt-0.5">
-            Fees: ${((trade.commission || 0) + (trade.swap || 0)).toFixed(2)}
+            Fees: {formatCurrency((trade.commission || 0) + (trade.swap || 0))}
           </div>
         </div>
       </div>

@@ -13,7 +13,8 @@ import {
   Key,
   Sun,
   Moon,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -24,7 +25,13 @@ export const SettingsPage: React.FC = () => {
     updateRiskLimits,
     exportData,
     importData,
-    resetAllData
+    resetAllData,
+    exchangeRate,
+    isFetchingRates,
+    ratesLastUpdated,
+    ratesSource,
+    refreshExchangeRates,
+    currencySymbol
   } = useTrading();
 
   const { theme, setTheme } = useTheme();
@@ -155,19 +162,63 @@ export const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Default Currency</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-foreground">Default Currency</label>
+                {currency !== 'USD' && (
+                  <button
+                    type="button"
+                    onClick={() => refreshExchangeRates(currency)}
+                    disabled={isFetchingRates}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 transition-opacity disabled:opacity-50"
+                    title="Refresh today's live rate from internet"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isFetchingRates ? 'animate-spin' : ''}`} />
+                    <span>{isFetchingRates ? 'Fetching...' : 'Refresh Rate'}</span>
+                  </button>
+                )}
+              </div>
               <select
                 value={currency}
-                onChange={e => setCurrency(e.target.value as any)}
+                onChange={e => {
+                  const newCurr = e.target.value as any;
+                  setCurrency(newCurr);
+                  updateProfile({ currency: newCurr });
+                  refreshExchangeRates(newCurr);
+                }}
                 className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
               >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="INR">INR (₹)</option>
-                <option value="JPY">JPY (¥)</option>
-                <option value="AUD">AUD (A$)</option>
+                <option value="USD">USD ($) · US Dollar</option>
+                <option value="INR">INR (₹) · Indian Rupee</option>
+                <option value="EUR">EUR (€) · Euro</option>
+                <option value="GBP">GBP (£) · British Pound</option>
+                <option value="JPY">JPY (¥) · Japanese Yen</option>
+                <option value="AUD">AUD (A$) · Australian Dollar</option>
+                <option value="CAD">CAD (C$) · Canadian Dollar</option>
               </select>
+
+              {/* Live Exchange Rate Status Badge */}
+              {currency !== 'USD' ? (
+                <div className="mt-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between text-xs">
+                  <div className="space-y-0.5">
+                    <div className="font-mono font-bold text-foreground flex items-center gap-1.5">
+                      <span>1 USD</span>
+                      <span className="text-muted">=</span>
+                      <span className="text-primary">{currencySymbol}{exchangeRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {currency}</span>
+                    </div>
+                    <div className="text-[10px] text-muted flex items-center gap-1">
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${isFetchingRates ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
+                      <span>{ratesSource} · {ratesLastUpdated}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-medium text-muted bg-surface px-2 py-1 rounded-lg border border-border/60">
+                    Live Internet Rate
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-1.5 text-[11px] text-muted">
+                  Base reference currency for all trade logs and calculations.
+                </div>
+              )}
             </div>
 
             <div>

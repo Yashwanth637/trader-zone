@@ -162,13 +162,13 @@ export const AnalyticsPage: React.FC = () => {
             <div className="premium-card p-4">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Largest Winner</div>
               <div className="text-lg font-black text-emerald-400 font-mono mt-1">
-                +${stats.largestWin.toFixed(2)}
+                +{formatCurrency(stats.largestWin)}
               </div>
             </div>
             <div className="premium-card p-4">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Largest Loser</div>
               <div className="text-lg font-black text-rose-400 font-mono mt-1">
-                -${stats.largestLoss.toFixed(2)}
+                -{formatCurrency(Math.abs(stats.largestLoss))}
               </div>
             </div>
             <div className="premium-card p-4">
@@ -180,7 +180,7 @@ export const AnalyticsPage: React.FC = () => {
             <div className="premium-card p-4">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Total Commissions</div>
               <div className="text-lg font-black text-slate-300 font-mono mt-1">
-                ${stats.totalCommission.toFixed(2)}
+                {formatCurrency(stats.totalCommission)}
               </div>
             </div>
           </div>

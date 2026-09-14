@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
+import { formatCurrency } from '../lib/calculations';
 import { Modal } from '../components/ui/Modal';
 import {
   Layers,
@@ -176,13 +177,13 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-bold">Current Balance</span>
                   <div className="text-xl font-black text-white font-mono mt-0.5">
-                    ${acc.currentBalance.toLocaleString()} {acc.currency}
+                    {formatCurrency(acc.currentBalance)}
                   </div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-bold">Initial Balance</span>
                   <div className="text-xl font-black text-slate-400 font-mono mt-0.5">
-                    ${acc.initialBalance.toLocaleString()}
+                    {formatCurrency(acc.initialBalance)}
                   </div>
                 </div>
               </div>

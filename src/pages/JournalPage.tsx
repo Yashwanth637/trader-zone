@@ -247,7 +247,7 @@ export const JournalPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-muted">Avg Daily P&L:</span>
               <span className="font-mono font-bold text-foreground">
-                {activeDays > 0 ? formatCurrency(monthPnl / activeDays) : '$0.00'}
+                {activeDays > 0 ? formatCurrency(monthPnl / activeDays) : formatCurrency(0)}
               </span>
             </div>
           </div>

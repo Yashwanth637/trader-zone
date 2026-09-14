@@ -1,5 +1,6 @@
 import React from 'react';
 import { ProfitDistributionData } from '../../lib/performanceAnalytics';
+import { formatCurrency, formatSignedPnl } from '../../lib/calculations';
 import { Target, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 
 interface ProfitDistributionCardProps {
@@ -61,7 +62,7 @@ export const ProfitDistributionCard: React.FC<ProfitDistributionCardProps> = ({ 
 
         <div className="text-right">
           <div className={`text-xl font-mono font-black tracking-tight ${isPnlPos ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {isPnlPos ? '+' : ''}${netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatSignedPnl(netPnl)}
           </div>
           <div className="text-xs text-muted font-medium">Net P&L</div>
         </div>
@@ -107,7 +108,7 @@ export const ProfitDistributionCard: React.FC<ProfitDistributionCardProps> = ({ 
             <span>Biggest Win</span>
           </div>
           <div className="text-lg font-mono font-bold text-emerald-500 mt-1">
-            +${biggestWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            +{formatCurrency(biggestWin)}
           </div>
         </div>
 
@@ -118,7 +119,7 @@ export const ProfitDistributionCard: React.FC<ProfitDistributionCardProps> = ({ 
             <span>Biggest Loss</span>
           </div>
           <div className="text-lg font-mono font-bold text-rose-500 mt-1">
-            -${Math.abs(biggestLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            -{formatCurrency(Math.abs(biggestLoss))}
           </div>
         </div>
 
@@ -129,7 +130,7 @@ export const ProfitDistributionCard: React.FC<ProfitDistributionCardProps> = ({ 
             <span>Avg Win</span>
           </div>
           <div className="text-lg font-mono font-bold text-emerald-500 mt-1">
-            +${avgWin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            +{formatCurrency(avgWin)}
           </div>
         </div>
 
@@ -140,7 +141,7 @@ export const ProfitDistributionCard: React.FC<ProfitDistributionCardProps> = ({ 
             <span>Avg Loss</span>
           </div>
           <div className="text-lg font-mono font-bold text-rose-500 mt-1">
-            -${avgLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            -{formatCurrency(Math.abs(avgLoss))}
           </div>
         </div>
       </div>
