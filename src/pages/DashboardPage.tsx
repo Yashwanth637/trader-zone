@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { StatCard } from '../components/ui/StatCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { EquityCurveChart } from '../components/charts/EquityCurveChart';
-import { DailyPnlBarChart } from '../components/charts/DailyPnlBarChart';
 import { filterTradesByPeriod, formatCurrency } from '../lib/calculations';
+import {
+  calculateTradeScores,
+  calculateTradingActivity
+} from '../lib/scoreCalculations';
+import { TradeScoreCard } from '../components/dashboard/TradeScoreCard';
+import { TradingActivityCard } from '../components/dashboard/TradingActivityCard';
+import { AnalyticsOverviewGrid } from '../components/dashboard/AnalyticsOverviewGrid';
+import { CoreMetricsRow } from '../components/dashboard/CoreMetricsRow';
+import { TraderszoneAICard } from '../components/dashboard/TraderszoneAICard';
 import {
   DollarSign,
   Percent,
@@ -34,6 +41,17 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
   const closedPeriodTrades = filteredTrades.filter(t => t.status === 'CLOSED');
   const winCount = closedPeriodTrades.filter(t => t.netPnl > 0).length;
   const periodWinRate = closedPeriodTrades.length > 0 ? (winCount / closedPeriodTrades.length) * 100 : 0;
+
+  // Image 1 & 4 dynamic calculations
+  const scoreData = useMemo(
+    () => calculateTradeScores(accountTrades.length > 0 ? accountTrades : filteredTrades, stats),
+    [accountTrades, filteredTrades, stats]
+  );
+
+  const activityData = useMemo(
+    () => calculateTradingActivity(accountTrades.length > 0 ? accountTrades : filteredTrades),
+    [accountTrades, filteredTrades]
+  );
 
   // AI Guidance Status
   let aiStatus = {
@@ -163,58 +181,20 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         </div>
       </div>
 
-      {/* Main Visuals: Equity Curve (2/3) & Daily Bar Chart / Streak (1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 premium-card p-5">
-          <EquityCurveChart
-            trades={filteredTrades}
-            initialBalance={activeAccount ? activeAccount.initialBalance : 100000}
-          />
-        </div>
-
-        <div className="premium-card p-5 flex flex-col justify-between space-y-4">
-          <DailyPnlBarChart trades={filteredTrades} />
-
-          {/* Quick Streak & Risk Summary */}
-          <div className="pt-4 border-t border-border space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-amber-500" />
-                <span>Current Streak:</span>
-              </span>
-              <span className="font-mono text-sm font-black text-foreground">
-                {stats.currentStreak.type === 'win' && (
-                  <span className="text-emerald-500">+{stats.currentStreak.count} Wins</span>
-                )}
-                {stats.currentStreak.type === 'loss' && (
-                  <span className="text-rose-500">-{stats.currentStreak.count} Losses</span>
-                )}
-                {stats.currentStreak.type === 'none' && 'Neutral'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-emerald-500" />
-                <span>Expectancy / Trade:</span>
-              </span>
-              <span className="font-mono text-sm font-bold text-foreground">
-                ${stats.expectancy.toFixed(2)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-primary" />
-                <span>Total Volume Traded:</span>
-              </span>
-              <span className="font-mono text-sm font-bold text-foreground">
-                {stats.totalLots} Lots
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* 1. [IMAGE 1] Trade Score & Trading Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <TradeScoreCard scoreData={scoreData} />
+        <TradingActivityCard activityData={activityData} />
       </div>
+
+      {/* 2. [IMAGE 2] Analytics Overview Grid */}
+      <AnalyticsOverviewGrid trades={filteredTrades.length > 0 ? filteredTrades : accountTrades} />
+
+      {/* 3. [IMAGE 3] Core Metrics Row */}
+      <CoreMetricsRow stats={stats} trades={filteredTrades.length > 0 ? filteredTrades : accountTrades} />
+
+      {/* 4. [IMAGE 4] Traderszone AI Card */}
+      <TraderszoneAICard scoreData={scoreData} />
 
       {/* Behavioral Alerts Banner if any */}
       {behavioralAlerts.length > 0 && (
