@@ -40,6 +40,17 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
+  /* Match all numbers, code, and mono-styled elements to the main Inter text font */
+  .font-mono,
+  [class*="font-mono"],
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-feature-settings: "tnum" on, "lnum" on;
+  }
+
   /* Thin, delicate horizontal dividers throughout the entire journal */
   hr,
   .border-b,

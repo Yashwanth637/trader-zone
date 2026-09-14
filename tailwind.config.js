@@ -40,7 +40,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+        mono: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
       },
       boxShadow: {
         'glow-primary': '0 0 30px rgba(139, 92, 246, 0.35)',

@@ -107,10 +107,25 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     Storage.saveActiveAccountId(id);
   };
 
+  const computedAccounts = useMemo(() => {
+    return accounts.map(acc => {
+      // Find all trades for this account
+      // (If a trade doesn't have an accountId or if there is only 1 account, associate with it)
+      const accTrades = trades.filter(
+        t => t.accountId === acc.id || (!t.accountId && (acc.isDefault || accounts.length === 1))
+      );
+      const netPnl = accTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
+      return {
+        ...acc,
+        currentBalance: Number(((acc.initialBalance || 0) + netPnl).toFixed(2))
+      };
+    });
+  }, [accounts, trades]);
+
   const activeAccount = useMemo(() => {
     if (activeAccountId === 'all') return undefined;
-    return accounts.find(a => a.id === activeAccountId) || accounts[0];
-  }, [accounts, activeAccountId]);
+    return computedAccounts.find(a => a.id === activeAccountId) || computedAccounts[0];
+  }, [computedAccounts, activeAccountId]);
 
   const accountTrades = useMemo(() => {
     if (activeAccountId === 'all') return trades;
@@ -316,7 +331,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <TradingContext.Provider
       value={{
         trades,
-        accounts,
+        accounts: computedAccounts,
         activeAccountId,
         activeAccount,
         strategies,
