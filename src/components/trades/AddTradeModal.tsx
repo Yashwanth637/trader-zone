@@ -3,7 +3,7 @@ import { useTrading } from '../../context/TradingContext';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Direction, TradeStatus, AssetClass, EmotionalState, MistakeTag } from '../../types/trade';
-import { calculatePnlFromPrices, calculatePips } from '../../lib/calculations';
+import { calculatePnlFromPrices, calculatePips, formatSignedPnl, formatCurrency } from '../../lib/calculations';
 
 interface AddTradeModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ export const AddTradeModal: React.FC<AddTradeModalProps> = ({ isOpen, onClose })
   const [takeProfit, setTakeProfit] = useState('2520.00');
   const [openTime, setOpenTime] = useState(new Date().toISOString().slice(0, 16));
   const [closeTime, setCloseTime] = useState(new Date().toISOString().slice(0, 16));
-  const [commission, setCommission] = useState('7.00');
+  const [commission, setCommission] = useState('0.00');
   const [swap, setSwap] = useState('0.00');
   const [strategyId, setStrategyId] = useState('');
   const [emotionalState, setEmotionalState] = useState<EmotionalState>('Disciplined');
@@ -236,6 +236,38 @@ export const AddTradeModal: React.FC<AddTradeModalProps> = ({ isOpen, onClose })
           </div>
         </div>
 
+        {/* Fees: Commission & Swap */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Commission ($) <span className="text-muted font-normal">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={commission}
+              onChange={e => setCommission(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl bg-surface-card border border-border text-white text-sm focus:border-primary focus:outline-none font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Swap / Financing ($) <span className="text-muted font-normal">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={swap}
+              onChange={e => setSwap(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl bg-surface-card border border-border text-white text-sm focus:border-primary focus:outline-none font-mono"
+            />
+          </div>
+        </div>
+
         {/* Live Calculation Preview Banner */}
         {status === 'CLOSED' && (
           <div className={`p-4 rounded-xl border flex items-center justify-between ${
@@ -246,8 +278,15 @@ export const AddTradeModal: React.FC<AddTradeModalProps> = ({ isOpen, onClose })
             <div>
               <div className="text-[10px] uppercase tracking-wider font-semibold opacity-80">Calculated Net P&L</div>
               <div className="text-xl font-black font-mono">
-                {pnlCalc.netPnl >= 0 ? '+' : ''}${pnlCalc.netPnl.toFixed(2)}
+                {formatSignedPnl(pnlCalc.netPnl)}
               </div>
+              {(parsedComm > 0 || parsedSwap !== 0) && (
+                <div className="text-[10.5px] opacity-75 mt-0.5 font-mono">
+                  Gross: {formatSignedPnl(pnlCalc.grossPnl)}
+                  {parsedComm > 0 && ` | Comm: -${formatCurrency(parsedComm)}`}
+                  {parsedSwap !== 0 && ` | Swap: ${formatSignedPnl(parsedSwap)}`}
+                </div>
+              )}
             </div>
             <div className="text-right text-xs">
               <div>Pips: <strong className="font-mono">{pnlCalc.pips}</strong></div>
