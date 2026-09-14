@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { EquityCurveChart } from '../components/charts/EquityCurveChart';
 import { DrawdownChart } from '../components/charts/DrawdownChart';
 import { HeatmapChart } from '../components/charts/HeatmapChart';
 import { formatCurrency } from '../lib/calculations';
+import {
+  calculateProfitDistribution,
+  calculateHourlyPerformance,
+  calculateSymbolPerformance
+} from '../lib/performanceAnalytics';
+import { ProfitDistributionCard } from '../components/performance/ProfitDistributionCard';
+import { PerformanceByTimeCard } from '../components/performance/PerformanceByTimeCard';
+import { SymbolPerformanceCard } from '../components/performance/SymbolPerformanceCard';
 import {
   TrendingUp,
   Clock,
@@ -20,6 +28,11 @@ export const AnalyticsPage: React.FC = () => {
   const [tab, setTab] = useState<'overview' | 'sessions' | 'symbols' | 'direction'>('overview');
 
   const closed = accountTrades.filter(t => t.status === 'CLOSED');
+
+  // Dynamic Image 1 & Image 2 performance data
+  const profitDistData = useMemo(() => calculateProfitDistribution(accountTrades), [accountTrades]);
+  const hourlyData = useMemo(() => calculateHourlyPerformance(accountTrades), [accountTrades]);
+  const symbolData = useMemo(() => calculateSymbolPerformance(accountTrades), [accountTrades]);
 
   // Breakdown by Session
   const sessionStats: Record<string, { pnl: number; count: number; wins: number }> = {
@@ -110,7 +123,16 @@ export const AnalyticsPage: React.FC = () => {
       {/* Tab Content */}
       {tab === 'overview' && (
         <div className="space-y-6">
-          {/* Top Equity Curve */}
+          {/* Image 1: Profit Distribution & Performance by Time */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <ProfitDistributionCard data={profitDistData} />
+            <PerformanceByTimeCard data={hourlyData} />
+          </div>
+
+          {/* Image 2: Symbol Performance */}
+          <SymbolPerformanceCard data={symbolData} />
+
+          {/* Top Equity Curve (Account Balance Curve) */}
           <div className="premium-card p-5">
             <EquityCurveChart
               trades={accountTrades}
