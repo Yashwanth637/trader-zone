@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { HourlyPerformanceData } from '../../lib/performanceAnalytics';
+import { formatAdaptivePnl } from '../../lib/calculations';
 import { Clock, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 
 interface PerformanceByTimeCardProps {
@@ -20,13 +21,17 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
 
   // Compute max positive and max negative PnL for scaling
   const pnls = hourlyStats.map(h => h.netPnl);
-  const maxPos = Math.max(1000, ...pnls.filter(p => p > 0), 1000);
-  const maxNeg = Math.min(-500, ...pnls.filter(p => p < 0), -500);
+  const posPnls = pnls.filter(p => p > 0);
+  const negPnls = pnls.filter(p => p < 0);
+  const rawMaxPos = posPnls.length > 0 ? Math.max(...posPnls) : 0;
+  const rawMaxNeg = negPnls.length > 0 ? Math.min(...negPnls) : 0;
 
-  // Dynamic scale limits (round up nicely)
-  const yUpper = Math.ceil(maxPos / 25000) * 25000 || 25000;
-  const yLower = Math.floor(maxNeg / 25000) * 25000 || -25000;
-  const totalYRange = yUpper - yLower;
+  // Dynamic adaptive scale limits with 25% headroom margin
+  const maxMag = Math.max(0.1, rawMaxPos, Math.abs(rawMaxNeg));
+  const margin = maxMag * 0.25;
+  const yUpper = rawMaxPos > 0 ? rawMaxPos + margin : margin;
+  const yLower = rawMaxNeg < 0 ? rawMaxNeg - margin : -margin;
+  const totalYRange = (yUpper - yLower) || 1;
 
   const getY = (val: number) => {
     return padTop + ((yUpper - val) / totalYRange) * (svgH - padTop - padBottom);
@@ -35,7 +40,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
   const zeroY = getY(0);
 
   // Y-axis ticks
-  const yTicks = [yUpper, yUpper * 0.66, yUpper * 0.33, 0, yLower].sort((a, b) => b - a);
+  const yTicks = [yUpper, yUpper * 0.5, 0, yLower * 0.5, yLower].sort((a, b) => b - a);
 
   // X coordinate calculation for bars
   const barCount = hourlyStats.length;
@@ -88,7 +93,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
                   textAnchor="end"
                   className="text-[9.5px] font-mono fill-muted"
                 >
-                  ${Math.round(val).toLocaleString()}
+                  {formatAdaptivePnl(val)}
                 </text>
               </g>
             );
@@ -98,8 +103,9 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
           {hourlyStats.map((item, idx) => {
             const isPos = item.netPnl >= 0;
             const barX = padLeft + (idx + 0.5) * slotW - barW / 2;
-            const barY = isPos ? getY(item.netPnl) : zeroY;
-            const barHeight = Math.max(2, Math.abs(getY(item.netPnl) - zeroY));
+            const pnlY = getY(item.netPnl);
+            const barY = isPos ? pnlY : zeroY;
+            const barHeight = item.netPnl !== 0 ? Math.max(4, Math.abs(pnlY - zeroY)) : 0;
 
             return (
               <g key={item.hourStr}>
@@ -136,11 +142,11 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
         {hoveredHour && (
           <div className="absolute top-2 right-4 px-3 py-1.5 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl text-xs text-white z-20 pointer-events-none">
             <div className="font-bold text-slate-300">{hoveredHour.hourStr}</div>
-            <div className="font-mono text-emerald-400">
-              Net P&L: {hoveredHour.netPnl >= 0 ? '+' : ''}${hoveredHour.netPnl.toLocaleString()}
+            <div className={`font-mono ${hoveredHour.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              Net P&L: {hoveredHour.netPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.netPnl)}
             </div>
             <div className="text-[10px] text-slate-400">
-              {hoveredHour.tradeCount} trades · {hoveredHour.avgPnl >= 0 ? '+' : ''}${hoveredHour.avgPnl.toLocaleString()} avg
+              {hoveredHour.tradeCount} trades · {hoveredHour.avgPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.avgPnl)} avg
             </div>
           </div>
         )}
@@ -158,7 +164,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
             {bestHour ? bestHour.hourStr : '--:--'}
           </div>
           <div className="text-xs text-muted mt-0.5 font-medium">
-            {bestHour ? `+$${Math.round(bestHour.avgPnl).toLocaleString()} avg` : 'No data'}
+            {bestHour ? `+${formatAdaptivePnl(bestHour.avgPnl)} avg` : 'No data'}
           </div>
         </div>
 
@@ -172,7 +178,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
             {worstHour ? worstHour.hourStr : '--:--'}
           </div>
           <div className="text-xs text-muted mt-0.5 font-medium">
-            {worstHour ? `-$${Math.abs(Math.round(worstHour.avgPnl)).toLocaleString()} avg` : 'No losses'}
+            {worstHour ? `${formatAdaptivePnl(worstHour.avgPnl)} avg` : 'No losses'}
           </div>
         </div>
 

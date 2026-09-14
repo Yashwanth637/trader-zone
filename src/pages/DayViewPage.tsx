@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { calculateDayViewData, generateMonthCalendar, DayPerformanceCardData } from '../lib/dayViewAnalytics';
-import { formatCurrency } from '../lib/calculations';
+import { formatCurrency, formatAdaptivePnl } from '../lib/calculations';
 import {
   ChevronDown,
   ChevronRight,
@@ -219,7 +219,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-xs font-mono font-bold ${isPos ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            Net P&L {isPos ? '+' : ''}${dayData.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            Net P&L {isPos ? `+$${dayData.netPnl.toFixed(2)}` : `-$${Math.abs(dayData.netPnl).toFixed(2)}`}
                           </span>
                         </div>
                       </div>
@@ -353,7 +353,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                                   {/* Net PnL */}
                                   <td className="py-3 font-mono font-bold">
                                     <span className={trade.isWin ? 'text-emerald-500' : 'text-rose-500'}>
-                                      {trade.isWin ? '+' : ''}${trade.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      {trade.isWin ? `+$${trade.netPnl.toFixed(2)}` : `-$${Math.abs(trade.netPnl).toFixed(2)}`}
                                     </span>
                                   </td>
 
@@ -449,7 +449,7 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
                         ? 'border-2 border-violet-500 text-violet-300 font-black shadow-md shadow-violet-500/20 bg-violet-500/10'
                         : ''
                     }`}
-                    title={cell.hasTrades ? `${cell.dateKey}: ${cell.netPnl >= 0 ? '+' : ''}$${cell.netPnl}` : undefined}
+                    title={cell.hasTrades ? `${cell.dateKey}: ${cell.netPnl >= 0 ? `+$${cell.netPnl.toFixed(2)}` : `-$${Math.abs(cell.netPnl).toFixed(2)}`}` : undefined}
                   >
                     {cell.dayNum}
                   </div>
@@ -473,19 +473,29 @@ const IntradayPnlChart: React.FC<{
 }> = ({ progression, isProfitable }) => {
   if (progression.length === 0) return null;
 
+  // Prepend market open $0 point so the intraday curve always displays the progression from 0
+  const points = progression[0]?.time === 'Open'
+    ? progression
+    : [{ time: 'Open', pnl: 0 }, ...progression];
+
   // Chart dimensions
   const svgW = 600;
   const svgH = 140;
-  const padLeft = 55;
+  const padLeft = 65;
   const padRight = 25;
-  const padTop = 15;
-  const padBottom = 25;
+  const padTop = 18;
+  const padBottom = 28;
 
-  const points = progression;
   const pnls = points.map(p => p.pnl);
-  const minPnl = Math.min(0, Math.min(...pnls));
-  const maxPnl = Math.max(0, Math.max(...pnls));
-  const range = (maxPnl - minPnl) || 1;
+  const rawMin = Math.min(...pnls);
+  const rawMax = Math.max(...pnls);
+  const rawRange = rawMax - rawMin;
+
+  // Dynamic adaptive margin so the curve is prominent even for cent changes (e.g. $0.24 or $0.36)
+  const margin = Math.max(0.1, rawRange * 0.25);
+  const chartMin = rawMin - margin;
+  const chartMax = rawMax + margin;
+  const range = (chartMax - chartMin) || 1;
 
   const getX = (idx: number) => {
     if (points.length <= 1) return padLeft + (svgW - padLeft - padRight) / 2;
@@ -493,8 +503,10 @@ const IntradayPnlChart: React.FC<{
   };
 
   const getY = (val: number) => {
-    return svgH - padBottom - ((val - minPnl) / range) * (svgH - padTop - padBottom);
+    return svgH - padBottom - ((val - chartMin) / range) * (svgH - padTop - padBottom);
   };
+
+  const zeroY = getY(0);
 
   const pathD = points.reduce((acc, p, i) => {
     const x = getX(i);
@@ -507,7 +519,7 @@ const IntradayPnlChart: React.FC<{
   const strokeColor = isProfitable ? '#10b981' : '#ef4444';
   const gradId = `intradayGrad-${isProfitable ? 'win' : 'loss'}`;
 
-  const yTicks = [maxPnl, (maxPnl + minPnl) / 2, minPnl].filter((v, i, a) => a.indexOf(v) === i);
+  const yTicks = [chartMax, (chartMax + chartMin) / 2, chartMin];
 
   return (
     <div className="w-full relative py-1">
@@ -517,8 +529,8 @@ const IntradayPnlChart: React.FC<{
       >
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -541,22 +553,24 @@ const IntradayPnlChart: React.FC<{
                 x={padLeft - 8}
                 y={y + 3.5}
                 textAnchor="end"
-                className="text-[9px] font-mono fill-muted"
+                className="text-[9.5px] font-mono fill-muted"
               >
-                ${Math.round(val).toLocaleString()}
+                {formatAdaptivePnl(val)}
               </text>
             </g>
           );
         })}
 
-        {/* Baseline line at bottom */}
+        {/* Zero baseline */}
         <line
           x1={padLeft}
-          y1={svgH - padBottom}
+          y1={zeroY}
           x2={svgW - padRight}
-          y2={svgH - padBottom}
+          y2={zeroY}
           stroke="currentColor"
-          strokeOpacity="0.12"
+          strokeOpacity="0.2"
+          strokeWidth="1"
+          strokeDasharray="3 3"
           className="text-foreground"
         />
 
@@ -568,22 +582,31 @@ const IntradayPnlChart: React.FC<{
           d={pathD}
           fill="none"
           stroke={strokeColor}
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* X-axis time markers */}
+        {/* Point nodes and labels */}
         {points.map((p, idx) => (
-          <text
-            key={idx}
-            x={getX(idx)}
-            y={svgH - padBottom + 14}
-            textAnchor="middle"
-            className="text-[9px] font-mono fill-muted"
-          >
-            {p.time}
-          </text>
+          <g key={idx}>
+            <circle
+              cx={getX(idx)}
+              cy={getY(p.pnl)}
+              r="4"
+              fill={strokeColor}
+              stroke="#ffffff"
+              strokeWidth="1.5"
+            />
+            <text
+              x={getX(idx)}
+              y={svgH - padBottom + 16}
+              textAnchor="middle"
+              className="text-[9px] font-mono fill-muted"
+            >
+              {p.time}
+            </text>
+          </g>
         ))}
       </svg>
     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TradingActivityStats } from '../../lib/scoreCalculations';
+import { formatAdaptivePnl } from '../../lib/calculations';
 
 interface TradingActivityCardProps {
   activityData: TradingActivityStats;
@@ -128,7 +129,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
 
         <div>
           <div className={`text-xl font-mono font-bold ${isPnlPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {isPnlPositive ? '+' : ''}${Math.round(totalPnl).toLocaleString()}
+            {isPnlPositive && totalPnl > 0 ? `+${formatAdaptivePnl(totalPnl)}` : formatAdaptivePnl(totalPnl)}
           </div>
           <div className="text-[11px] text-muted font-medium mt-0.5">Total P&L</div>
         </div>
@@ -170,7 +171,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
             BEST DAY
           </div>
           <div className="text-lg font-mono font-black text-emerald-500 mt-1">
-            {bestDay ? `+$${Math.round(bestDay.pnl).toLocaleString()}` : '$0'}
+            {bestDay ? `+${formatAdaptivePnl(bestDay.pnl)}` : '$0.00'}
           </div>
           <div className="text-xs text-muted mt-1 font-medium">
             {bestDay ? `${bestDay.date} · ${bestDay.tradeCount} trades` : 'No wins yet'}
@@ -183,7 +184,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
             WORST DAY
           </div>
           <div className="text-lg font-mono font-black text-rose-500 mt-1">
-            {worstDay ? `-$${Math.abs(Math.round(worstDay.pnl)).toLocaleString()}` : '$0'}
+            {worstDay ? formatAdaptivePnl(worstDay.pnl) : '$0.00'}
           </div>
           <div className="text-xs text-muted mt-1 font-medium">
             {worstDay ? `${worstDay.date} · ${worstDay.tradeCount} trades` : 'No losses yet'}
@@ -195,7 +196,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
       <div className="text-center pt-2 text-xs text-muted">
         Avg P&L / Day:{' '}
         <span className={`font-mono font-bold text-sm ml-1 ${isAvgPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-          {isAvgPositive ? '+' : ''}${Math.round(avgPnlPerDay).toLocaleString()}
+          {isAvgPositive && avgPnlPerDay > 0 ? `+${formatAdaptivePnl(avgPnlPerDay)}` : formatAdaptivePnl(avgPnlPerDay)}
         </span>
       </div>
     </div>

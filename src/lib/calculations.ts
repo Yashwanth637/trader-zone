@@ -19,6 +19,30 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
   return `${isNeg ? '-' : ''}${sym}${abs}`;
 }
 
+export function formatAdaptivePnl(amount: number, currency: string = 'USD'): string {
+  if (Math.abs(amount) < 0.0001) return '$0.00';
+  const symbolMap: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    INR: '₹',
+    JPY: '¥',
+    AUD: 'A$',
+    CAD: 'C$'
+  };
+  const sym = symbolMap[currency] || '$';
+  const isNeg = amount < 0;
+  const abs = Math.abs(amount);
+
+  if (abs < 10) {
+    return `${isNeg ? '-' : ''}${sym}${abs.toFixed(2)}`;
+  } else if (abs < 100) {
+    return `${isNeg ? '-' : ''}${sym}${abs.toFixed(1)}`;
+  } else {
+    return `${isNeg ? '-' : ''}${sym}${Math.round(abs).toLocaleString('en-US')}`;
+  }
+}
+
 export function detectTradingSession(isoTime: string): TradingSession {
   const date = new Date(isoTime);
   const hour = date.getUTCHours();

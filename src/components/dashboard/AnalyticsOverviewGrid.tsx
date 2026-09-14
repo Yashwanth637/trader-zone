@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trade } from '../../types/trade';
+import { formatAdaptivePnl } from '../../lib/calculations';
 import {
   calculateSymbolBreakdowns,
   calculateWeekdayStats,
@@ -53,21 +54,34 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   const padTop = 20;
   const padBottom = 35;
 
-  const pnls = equityPoints.map(p => p.pnl);
-  const minPnl = pnls.length > 0 ? Math.min(0, Math.min(...pnls)) : 0;
-  const maxPnl = pnls.length > 0 ? Math.max(1000, Math.max(...pnls)) : 1000;
+  // Prepend $0 baseline if points don't start at 0
+  const pointsWithStart = equityPoints.length > 0 && equityPoints[0].pnl !== 0
+    ? [{ date: 'Start', shortDate: 'Start', pnl: 0 }, ...equityPoints]
+    : equityPoints;
+
+  const pnls = pointsWithStart.map(p => p.pnl);
+  const rawMin = pnls.length > 0 ? Math.min(0, Math.min(...pnls)) : 0;
+  const rawMax = pnls.length > 0 ? Math.max(0, Math.max(...pnls)) : 0;
+  const rawRange = rawMax - rawMin;
+
+  // Adaptive headroom/footroom
+  const margin = Math.max(0.1, rawRange * 0.25);
+  const minPnl = rawMin - margin;
+  const maxPnl = rawMax + margin;
   const pnlRange = (maxPnl - minPnl) || 1;
 
   const getEqX = (index: number) => {
-    if (equityPoints.length <= 1) return padLeft + (eqW - padLeft - padRight) / 2;
-    return padLeft + (index / (equityPoints.length - 1)) * (eqW - padLeft - padRight);
+    if (pointsWithStart.length <= 1) return padLeft + (eqW - padLeft - padRight) / 2;
+    return padLeft + (index / (pointsWithStart.length - 1)) * (eqW - padLeft - padRight);
   };
 
   const getEqY = (val: number) => {
     return eqH - padBottom - ((val - minPnl) / pnlRange) * (eqH - padTop - padBottom);
   };
 
-  const eqPathD = equityPoints.reduce((acc, p, i) => {
+  const zeroEqY = getEqY(0);
+
+  const eqPathD = pointsWithStart.reduce((acc, p, i) => {
     const x = getEqX(i);
     const y = getEqY(p.pnl);
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
@@ -76,11 +90,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   // Y-axis tick intervals
   const yTicks = [
     maxPnl,
-    maxPnl * 0.66,
-    maxPnl * 0.33,
+    maxPnl * 0.5,
     0,
-    minPnl < -500 ? minPnl : -maxPnl * 0.33
-  ].sort((a, b) => b - a);
+    minPnl * 0.5,
+    minPnl
+  ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a);
 
   // X-axis sample dates (up to 8 points)
   const sampledXIndices: number[] = [];
@@ -125,16 +139,16 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   // Top-Right: P&L by Symbol Calculations
   // ----------------------------------------------------
   const maxAbsPnlSymbol = pnlBySymbol.length > 0
-    ? Math.max(...pnlBySymbol.map(s => Math.abs(s.netPnl)), 100)
-    : 100;
+    ? Math.max(...pnlBySymbol.map(s => Math.abs(s.netPnl)), 0.1)
+    : 1;
 
   // ----------------------------------------------------
   // Bottom-Left: P&L by Day Calculations (Bidirectional)
   // ----------------------------------------------------
   const dayPnls = weekdayStats.map(w => w.netPnl);
-  const maxDayPnl = Math.max(...dayPnls.map(p => Math.abs(p)), 1000);
-  // Dynamic scale limits (e.g. $75000 or rounded)
-  const dayScaleLimit = Math.ceil(maxDayPnl / 10000) * 10000 || 25000;
+  const maxDayPnl = Math.max(...dayPnls.map(p => Math.abs(p)), 0.1);
+  // Adaptive scale limits with 15% headroom
+  const dayScaleLimit = maxDayPnl * 1.15;
 
   return (
     <div className="space-y-4">
@@ -185,7 +199,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         textAnchor="end"
                         className="text-[10px] font-mono fill-muted"
                       >
-                        ${Math.round(tickVal).toLocaleString()}
+                        {formatAdaptivePnl(tickVal)}
                       </text>
                     </g>
                   );
@@ -280,7 +294,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         Trade: {hoveredPoint.date}
                       </text>
                       <text x="10" y="32" className="text-[11px] font-bold font-mono fill-white">
-                        P&L : {hoveredPoint.pnl >= 0 ? '+' : ''}${hoveredPoint.pnl.toLocaleString()}
+                        P&L : {hoveredPoint.pnl >= 0 ? `+${formatAdaptivePnl(hoveredPoint.pnl)}` : formatAdaptivePnl(hoveredPoint.pnl)}
                       </text>
                     </g>
                   </g>
@@ -329,7 +343,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         isPos ? 'text-emerald-500' : 'text-rose-500'
                       }`}
                     >
-                      {isPos ? '+' : ''}${item.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {isPos ? `+$${item.netPnl.toFixed(2)}` : `-$${Math.abs(item.netPnl).toFixed(2)}`}
                     </span>
                   </div>
                 );
@@ -349,7 +363,8 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             <div className="space-y-3.5">
               {weekdayStats.map(w => {
                 const isPos = w.netPnl >= 0;
-                const widthPct = Math.min(100, (Math.abs(w.netPnl) / (dayScaleLimit || 1)) * 100);
+                const rawPct = (Math.abs(w.netPnl) / (dayScaleLimit || 1)) * 100;
+                const widthPct = w.netPnl !== 0 ? Math.max(6, Math.min(100, rawPct)) : 0;
 
                 return (
                   <div key={w.shortName} className="flex items-center text-xs">
@@ -369,7 +384,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                           <div
                             style={{ width: `${widthPct}%` }}
                             className="h-4 bg-rose-500/90 rounded-l-sm transition-all duration-500"
-                            title={`${w.shortName}: -$${Math.abs(w.netPnl).toLocaleString()}`}
+                            title={`${w.shortName}: ${formatAdaptivePnl(w.netPnl)}`}
                           />
                         )}
                       </div>
@@ -380,7 +395,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                           <div
                             style={{ width: `${widthPct}%` }}
                             className="h-4 bg-emerald-500 rounded-r-sm transition-all duration-500"
-                            title={`${w.shortName}: +$${w.netPnl.toLocaleString()}`}
+                            title={`${w.shortName}: +${formatAdaptivePnl(w.netPnl)}`}
                           />
                         )}
                       </div>
@@ -392,9 +407,9 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
 
             {/* Scale Ticks at bottom */}
             <div className="flex items-center justify-between text-[10px] font-mono text-muted pt-4 pl-10 border-t border-border/40 mt-3">
-              <span>$-{Math.round(dayScaleLimit).toLocaleString()}</span>
-              <span>$0</span>
-              <span>${Math.round(dayScaleLimit).toLocaleString()}</span>
+              <span>{formatAdaptivePnl(-dayScaleLimit)}</span>
+              <span>$0.00</span>
+              <span>+{formatAdaptivePnl(dayScaleLimit)}</span>
             </div>
           </div>
         </div>

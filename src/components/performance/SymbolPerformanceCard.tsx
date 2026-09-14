@@ -1,5 +1,6 @@
 import React from 'react';
 import { SymbolPerformanceData } from '../../lib/performanceAnalytics';
+import { formatAdaptivePnl } from '../../lib/calculations';
 import { Target, TrendingUp, TrendingDown, Layers } from 'lucide-react';
 
 interface SymbolPerformanceCardProps {
@@ -47,10 +48,10 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
     };
   });
 
-  // Calculate P&L Horizontal Bars scale
+  // Calculate P&L Horizontal Bars scale with 25% margin
   const pnls = symbols.map(s => s.netPnl);
-  const maxAbsPnl = Math.max(1000, ...pnls.map(p => Math.abs(p)));
-  const scaleLimit = Math.ceil(maxAbsPnl / 11000) * 11000 || 22000;
+  const maxAbsPnl = Math.max(0.1, ...pnls.map(p => Math.abs(p)));
+  const scaleLimit = maxAbsPnl * 1.25;
 
   return (
     <div className="premium-card p-6 md:p-8 space-y-8">
@@ -136,7 +137,8 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
           <div className="space-y-3.5 pt-2">
             {symbols.map(item => {
               const isPos = item.netPnl >= 0;
-              const widthPct = Math.min(100, (Math.abs(item.netPnl) / scaleLimit) * 100);
+              const rawPct = (Math.abs(item.netPnl) / (scaleLimit || 1)) * 100;
+              const widthPct = item.netPnl !== 0 ? Math.max(6, Math.min(100, rawPct)) : 0;
 
               return (
                 <div key={item.symbol} className="flex items-center text-xs">
@@ -156,7 +158,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
                         <div
                           style={{ width: `${widthPct}%` }}
                           className="h-5 bg-rose-500 rounded-l-md transition-all duration-500"
-                          title={`${item.symbol}: -$${Math.abs(item.netPnl).toLocaleString()}`}
+                          title={`${item.symbol}: ${formatAdaptivePnl(item.netPnl)}`}
                         />
                       )}
                     </div>
@@ -167,7 +169,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
                         <div
                           style={{ width: `${widthPct}%` }}
                           className="h-5 bg-emerald-500 rounded-r-md transition-all duration-500"
-                          title={`${item.symbol}: +$${item.netPnl.toLocaleString()}`}
+                          title={`${item.symbol}: +${formatAdaptivePnl(item.netPnl)}`}
                         />
                       )}
                     </div>
@@ -179,10 +181,10 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
 
           {/* Scale Ticks */}
           <div className="flex items-center justify-between text-[10px] font-mono text-muted pt-3 pl-20 border-t border-border/40">
-            <span>-${scaleLimit.toLocaleString()}</span>
+            <span>{formatAdaptivePnl(-scaleLimit)}</span>
             <span>$0.00</span>
-            <span>+${(scaleLimit * 0.5).toLocaleString()}</span>
-            <span>+${scaleLimit.toLocaleString()}</span>
+            <span>+{formatAdaptivePnl(scaleLimit * 0.5)}</span>
+            <span>+{formatAdaptivePnl(scaleLimit)}</span>
           </div>
         </div>
 
@@ -260,7 +262,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
                   <div className={`text-sm font-mono font-bold ${
                     isPos ? 'text-emerald-500' : 'text-rose-500'
                   }`}>
-                    {isPos ? '+' : ''}${item.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {isPos ? `+$${item.netPnl.toFixed(2)}` : `-$${Math.abs(item.netPnl).toFixed(2)}`}
                   </div>
                   <div className="text-xs text-muted font-mono mt-0.5">
                     {item.totalTrades} {item.totalTrades === 1 ? 'trade' : 'trades'}
