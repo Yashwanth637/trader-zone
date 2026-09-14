@@ -27,6 +27,15 @@ export const AnalyticsPage: React.FC = () => {
   const { accountTrades, activeAccount, stats } = useTrading();
   const [tab, setTab] = useState<'overview' | 'sessions' | 'symbols' | 'direction'>('overview');
 
+  // Enforce page top positioning whenever Performance page is opened
+  useMemo(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (typeof document !== 'undefined') {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
   const closed = accountTrades.filter(t => t.status === 'CLOSED');
 
   // Dynamic Image 1 & Image 2 performance data

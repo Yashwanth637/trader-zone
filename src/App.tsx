@@ -34,6 +34,16 @@ import { BrokerHubPage } from './pages/BrokerHubPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TermsPage, PrivacyPage, DisclaimerPage } from './pages/LegalPages';
 
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+  return null;
+};
+
 const AppLayout: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
@@ -72,6 +82,7 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <ScrollToTop />
       {/* Sidebar */}
       <Sidebar
         collapsed={collapsed}

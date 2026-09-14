@@ -1,326 +1,591 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
+import { calculateDayViewData, generateMonthCalendar, DayPerformanceCardData } from '../lib/dayViewAnalytics';
 import { formatCurrency } from '../lib/calculations';
-import { EmotionalState } from '../types/trade';
 import {
-  Calendar,
-  ArrowLeft,
-  Smile,
-  Shield,
-  CheckCircle,
-  FileText,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Play,
+  Calendar as CalendarIcon,
   TrendingUp,
-  Plus,
-  Zap
+  TrendingDown,
+  Plus
 } from 'lucide-react';
 
 export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAddTrade }) => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { accountTrades, rules, getJournalEntryForDate, saveJournalEntry, activeAccountId } = useTrading();
+  const [searchParams] = useSearchParams();
+  const { accountTrades } = useTrading();
 
-  const dateParam = searchParams.get('date') || new Date().toISOString().split('T')[0];
-
-  const dayTrades = accountTrades.filter(t => {
-    const d = (t.closeTime || t.openTime).split('T')[0];
-    return d === dateParam;
-  });
-
-  const dayPnl = dayTrades.reduce((sum, t) => sum + t.netPnl, 0);
-  const winCount = dayTrades.filter(t => t.netPnl > 0).length;
-  const dayWinRate = dayTrades.length > 0 ? Math.round((winCount / dayTrades.length) * 100) : 0;
-
-  // Existing journal entry state
-  const existingEntry = getJournalEntryForDate(dateParam);
-
-  const [notes, setNotes] = useState(existingEntry?.reflectionNotes || '');
-  const [preMarketPlan, setPreMarketPlan] = useState(existingEntry?.preMarketPlan || '');
-  const [mood, setMood] = useState<EmotionalState>(existingEntry?.mood || 'Disciplined');
-  const [rating, setRating] = useState<number>(existingEntry?.rating || 4);
-  const [rulesChecked, setRulesChecked] = useState<Record<string, boolean>>(
-    existingEntry?.rulesFollowed || {}
-  );
-  const [autoSaved, setAutoSaved] = useState(false);
-
-  // Sync state when date changes
+  // Scroll to top on mount
   useEffect(() => {
-    const entry = getJournalEntryForDate(dateParam);
-    if (entry) {
-      setNotes(entry.reflectionNotes);
-      setPreMarketPlan(entry.preMarketPlan || '');
-      setMood(entry.mood);
-      setRating(entry.rating);
-      setRulesChecked(entry.rulesFollowed || {});
-    } else {
-      setNotes('');
-      setPreMarketPlan('');
-      setMood('Disciplined');
-      setRating(4);
-      setRulesChecked({});
-    }
-  }, [dateParam]);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
-  // Automatic saving on any change
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      saveJournalEntry({
-        date: dateParam,
-        accountId: activeAccountId === 'all' ? 'acc-1' : activeAccountId,
-        reflectionNotes: notes,
-        preMarketPlan,
-        mood,
-        rating,
-        rulesFollowed: rulesChecked
-      });
-      setAutoSaved(true);
-      const hideTimer = setTimeout(() => setAutoSaved(false), 1500);
-      return () => clearTimeout(hideTimer);
-    }, 500);
+  // Compute all day performance data
+  const { daysMap, allDateKeys } = useMemo(() => calculateDayViewData(accountTrades), [accountTrades]);
 
-    return () => clearTimeout(timer);
-  }, [notes, preMarketPlan, mood, rating, rulesChecked, dateParam, activeAccountId]);
+  // Initial active date
+  const defaultDateKey = useMemo(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate && daysMap[urlDate]) return urlDate;
+    if (allDateKeys.length > 0) return allDateKeys[0];
+    return new Date().toISOString().split('T')[0];
+  }, [searchParams, daysMap, allDateKeys]);
 
-  const toggleRuleCheck = (ruleId: string) => {
-    setRulesChecked(prev => ({
-      ...prev,
-      [ruleId]: !prev[ruleId]
-    }));
+  const [selectedDate, setSelectedDate] = useState<string>(defaultDateKey);
+
+  // Calendar Year & Month state
+  const defaultYearMonth = useMemo(() => {
+    const d = new Date(defaultDateKey + 'T00:00:00');
+    return isNaN(d.getTime())
+      ? { year: new Date().getFullYear(), month: new Date().getMonth() }
+      : { year: d.getFullYear(), month: d.getMonth() };
+  }, [defaultDateKey]);
+
+  const [calYear, setCalYear] = useState<number>(defaultYearMonth.year);
+  const [calMonth, setCalMonth] = useState<number>(defaultYearMonth.month); // 0-11
+
+  // Accordion expansion state: set of dateKeys
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(() => new Set([defaultDateKey]));
+
+  // Ensure selectedDate is expanded when user clicks calendar
+  const handleSelectDate = (dateKey: string) => {
+    setSelectedDate(dateKey);
+    setExpandedDates(prev => {
+      const next = new Set(prev);
+      next.add(dateKey);
+      return next;
+    });
+
+    // Smooth scroll to selected day card
+    setTimeout(() => {
+      const el = document.getElementById(`day-card-${dateKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
-  const formattedDate = new Date(dateParam + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const toggleExpand = (dateKey: string) => {
+    setExpandedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) {
+        next.delete(dateKey);
+      } else {
+        next.add(dateKey);
+      }
+      return next;
+    });
+  };
+
+  const handleExpandAll = () => {
+    setExpandedDates(new Set(allDateKeys));
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedDates(new Set());
+  };
+
+  // Calendar navigation
+  const prevMonth = () => {
+    if (calMonth === 0) {
+      setCalYear(y => y - 1);
+      setCalMonth(11);
+    } else {
+      setCalMonth(m => m - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (calMonth === 11) {
+      setCalYear(y => y + 1);
+      setCalMonth(0);
+    } else {
+      setCalMonth(m => m + 1);
+    }
+  };
+
+  // Month name formatting
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const calendarCells = useMemo(() => {
+    return generateMonthCalendar(calYear, calMonth, daysMap);
+  }, [calYear, calMonth, daysMap]);
+
+  // Days to display on left: either all dates, or filtered to calendar month
+  const visibleDayKeys = useMemo(() => {
+    if (allDateKeys.length === 0) return [];
+    // Prioritize days in current calendar month, or if none, show all available days
+    const inCurrentCal = allDateKeys.filter(k => {
+      const [y, m] = k.split('-').map(Number);
+      return y === calYear && m === calMonth + 1;
+    });
+    return inCurrentCal.length > 0 ? inCurrentCal : allDateKeys;
+  }, [allDateKeys, calYear, calMonth]);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate('/journal')}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Calendar</span>
-        </button>
-
-        <div className="flex items-center gap-3">
-          {autoSaved ? (
-            <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5" /> Auto-saved
-            </span>
-          ) : (
-            <span className="text-[11px] text-muted flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-500" /> Auto-saving enabled
-            </span>
-          )}
-
-          <input
-            type="date"
-            value={dateParam}
-            onChange={e => navigate(`/day-view?date=${e.target.value}`)}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-foreground focus:outline-none shadow-sm"
-          />
-        </div>
-      </div>
-
-      {/* Day Overview Banner */}
-      <div className={`p-6 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm ${
-        dayPnl >= 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'
-      }`}>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs uppercase font-bold text-muted">Daily Performance & Review</span>
-          <h1 className="text-2xl font-black text-foreground mt-0.5">{formattedDate}</h1>
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted">
-            <span>Trades Executed: <strong className="text-foreground">{dayTrades.length}</strong></span>
-            <span>Win Rate: <strong className="text-foreground">{dayWinRate}%</strong></span>
-          </div>
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
+            <span>Day View</span>
+          </h1>
+          <p className="text-xs text-muted mt-0.5">
+            Review your trading performance day by day
+          </p>
         </div>
 
-        <div className="text-right">
-          <div className="text-xs text-muted font-bold uppercase">Net Day P&L</div>
-          <div className={`text-3xl font-black font-mono ${dayPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {formatCurrency(dayPnl)}
-          </div>
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleCollapseAll}
+            className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+          >
+            Collapse all
+          </button>
+          <button
+            onClick={handleExpandAll}
+            className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+          >
+            Expand all
+          </button>
         </div>
       </div>
 
-      {/* Main Journal Form */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Notes & Reflections */}
-        <div className="md:col-span-2 space-y-5">
-          <div className="premium-card p-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <FileText className="w-4 h-4 text-primary" />
-              <span>Pre-Market Game Plan</span>
-            </div>
-            <textarea
-              rows={3}
-              value={preMarketPlan}
-              onChange={e => setPreMarketPlan(e.target.value)}
-              placeholder="What high impact news is scheduled today? What key levels or session liquidity will you monitor?"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none resize-none leading-relaxed"
-            />
-          </div>
-
-          <div className="premium-card p-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <FileText className="w-4 h-4 text-primary" />
-              <span>Post-Market Review & Lessons</span>
-            </div>
-            <textarea
-              rows={6}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="How well did you execute your setups? Did you follow your stops? What emotions did you experience? What will you improve tomorrow?"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none resize-none leading-relaxed"
-            />
-          </div>
-        </div>
-
-        {/* Right Col: Psychology & Rule Checklist */}
-        <div className="space-y-5">
-          {/* Psychology & Mood */}
-          <div className="premium-card p-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <Smile className="w-4 h-4 text-amber-500" />
-              <span>Psychological Check-In</span>
-            </div>
-
-            <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">Primary Mindset / Emotion</label>
-              <select
-                value={mood}
-                onChange={e => setMood(e.target.value as EmotionalState)}
-                className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-xs text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="Disciplined">Disciplined</option>
-                <option value="Calm">Calm & Patient</option>
-                <option value="Confident">Confident</option>
-                <option value="FOMO">FOMO (Chasing)</option>
-                <option value="Revenge">Revenge Mindset</option>
-                <option value="Fearful">Fearful / Hesitant</option>
-                <option value="Impatient">Impatient</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">Execution Discipline (1-5 Stars)</label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all ${
-                      rating >= star
-                        ? 'bg-amber-500/20 text-amber-500 border-amber-500/50 shadow-sm'
-                        : 'bg-surface text-muted border-border'
-                    }`}
-                  >
-                    ★ {star}
-                  </button>
-                ))}
+      {/* Main Grid: Left Day Cards (8 cols) & Right Calendar Navigator (4 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* =========================================================
+            LEFT COLUMN: Collapsible Day Cards (lg:col-span-8)
+           ========================================================= */}
+        <div className="lg:col-span-8 space-y-6">
+          {visibleDayKeys.length === 0 ? (
+            <div className="premium-card p-8 text-center flex flex-col items-center justify-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <CalendarIcon className="w-6 h-6 text-primary" />
               </div>
+              <h3 className="text-base font-bold text-foreground">No Trades Logged for this Period</h3>
+              <p className="text-xs text-muted max-w-sm">
+                There are no recorded trade executions for {monthNames[calMonth]} {calYear}. Switch months or log new trades to see daily breakdowns.
+              </p>
+              <button
+                onClick={onOpenAddTrade}
+                className="mt-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-md shadow-primary/25 hover:bg-primary-hover flex items-center gap-2"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Trade</span>
+              </button>
             </div>
-          </div>
+          ) : (
+            visibleDayKeys.map(dateKey => {
+              const dayData = daysMap[dateKey];
+              if (!dayData) return null;
+              const isExpanded = expandedDates.has(dateKey);
+              const isPos = dayData.netPnl >= 0;
 
-          {/* Daily Rules Checklist */}
-          <div className="premium-card p-5 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-bold text-foreground mb-2">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              <span>Rule Compliance Checklist</span>
-            </div>
-
-            {rules.map(rule => {
-              const checked = !!rulesChecked[rule.id];
               return (
                 <div
-                  key={rule.id}
-                  onClick={() => toggleRuleCheck(rule.id)}
-                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                    checked
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-foreground font-semibold'
-                      : 'bg-surface border-border text-muted hover:border-border-glow'
-                  }`}
+                  key={dateKey}
+                  id={`day-card-${dateKey}`}
+                  className="premium-card overflow-hidden transition-all duration-300"
                 >
-                  <span className="text-xs pr-2">{rule.name}</span>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {}}
-                    className="rounded text-primary focus:ring-0"
-                  />
+                  {/* Card Header (Accordion toggle + Date title + Net PnL + Replay) */}
+                  <div className="p-5 flex items-center justify-between gap-4 border-b border-border/60">
+                    <div
+                      onClick={() => toggleExpand(dateKey)}
+                      className="flex items-center gap-3 cursor-pointer select-none group"
+                    >
+                      <button
+                        type="button"
+                        className="w-6 h-6 rounded-md bg-black/5 dark:bg-white/5 flex items-center justify-center text-muted group-hover:text-foreground transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      <div>
+                        <div className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                          {dayData.dateTitle}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-xs font-mono font-bold ${isPos ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            Net P&L {isPos ? '+' : ''}${dayData.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Replay Button */}
+                    <button
+                      onClick={() => {
+                        if (dayData.trades[0]) {
+                          navigate(`/replay?tradeId=${dayData.trades[0].id}`);
+                        } else {
+                          navigate('/replay');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-border/80 hover:border-border text-xs font-semibold text-foreground flex items-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+                    >
+                      <Play className="w-3 h-3 fill-current text-primary" />
+                      <span>Replay</span>
+                    </button>
+                  </div>
+
+                  {/* Collapsible Content */}
+                  {isExpanded && (
+                    <div className="p-6 space-y-6">
+                      
+                      {/* 1. Intraday Cumulative P&L Area / Line Chart */}
+                      <IntradayPnlChart progression={dayData.intradayProgression} isProfitable={isPos} />
+
+                      {/* 2. Key Daily Metrics Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-4 gap-x-2 pt-2 border-t border-border/40">
+                        {/* Total Trades */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Total Trades</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            {dayData.totalTrades}
+                          </div>
+                        </div>
+
+                        {/* Win Rate */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Win Rate</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            {dayData.winRate.toFixed(1)}%
+                          </div>
+                        </div>
+
+                        {/* Gross P&L */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Gross P&L</div>
+                          <div className={`text-xl font-mono font-bold mt-0.5 ${dayData.grossPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {dayData.grossPnl >= 0 ? '+' : ''}${dayData.grossPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+
+                        {/* Winners / Losers */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Winners / Losers</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            {dayData.winnersCount} / {dayData.losersCount}
+                          </div>
+                        </div>
+
+                        {/* Volume */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Volume</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            {dayData.volume.toFixed(2)}
+                          </div>
+                        </div>
+
+                        {/* Profit Factor */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Profit Factor</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            {dayData.profitFactor.toFixed(2)}
+                          </div>
+                        </div>
+
+                        {/* Commissions */}
+                        <div>
+                          <div className="text-[11px] text-muted font-medium">Commissions</div>
+                          <div className="text-xl font-mono font-bold text-foreground mt-0.5">
+                            ${dayData.commissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Executions Table */}
+                      <div className="pt-2 border-t border-border/40">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="border-b border-border/60 text-muted font-medium">
+                                <th className="pb-2.5 font-semibold">Open Time</th>
+                                <th className="pb-2.5 font-semibold">Symbol</th>
+                                <th className="pb-2.5 font-semibold">Side</th>
+                                <th className="pb-2.5 font-semibold">Quantity</th>
+                                <th className="pb-2.5 font-semibold">Net P&L</th>
+                                <th className="pb-2.5 text-right font-semibold">Replay</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/30">
+                              {dayData.trades.map(trade => (
+                                <tr key={trade.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                  {/* Open Time */}
+                                  <td className="py-3 font-mono text-muted">
+                                    {trade.openTimeFormatted}
+                                  </td>
+
+                                  {/* Symbol */}
+                                  <td className="py-3 font-bold text-foreground">
+                                    {trade.symbol}
+                                  </td>
+
+                                  {/* Side Badge */}
+                                  <td className="py-3">
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold lowercase ${
+                                      trade.side === 'long'
+                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                    }`}>
+                                      {trade.side}
+                                    </span>
+                                  </td>
+
+                                  {/* Quantity */}
+                                  <td className="py-3 font-mono text-foreground">
+                                    {trade.quantity}
+                                  </td>
+
+                                  {/* Net PnL */}
+                                  <td className="py-3 font-mono font-bold">
+                                    <span className={trade.isWin ? 'text-emerald-500' : 'text-rose-500'}>
+                                      {trade.isWin ? '+' : ''}${trade.netPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </td>
+
+                                  {/* Replay Link */}
+                                  <td className="py-3 text-right">
+                                    <button
+                                      onClick={() => navigate(`/replay?tradeId=${trade.id}`)}
+                                      className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                                      title="Replay this trade"
+                                    >
+                                      <Play className="w-3.5 h-3.5 fill-current" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
                 </div>
               );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Trades Closed On This Day */}
-      <div className="premium-card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-foreground">Trades Executed on this Day ({dayTrades.length})</h3>
-          <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={onOpenAddTrade}>
-            Add Trade to Day
-          </Button>
+            })
+          )}
         </div>
 
-        {dayTrades.length === 0 ? (
-          <div className="p-8 text-center text-xs text-muted border border-dashed border-border rounded-xl">
-            No trades recorded on {formattedDate}.
+        {/* =========================================================
+            RIGHT COLUMN: Interactive Calendar Navigator (lg:col-span-4)
+           ========================================================= */}
+        <div className="lg:col-span-4 sticky top-6">
+          <div className="premium-card p-5 space-y-4">
+            {/* Month & Year Navigation Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-foreground">
+                {monthNames[calMonth]} {calYear}
+              </h2>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={prevMonth}
+                  className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={nextMonth}
+                  className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-muted">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                <div key={d} className="py-1">{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar Days Matrix */}
+            <div className="grid grid-cols-7 gap-1 text-center text-xs">
+              {calendarCells.map((cell, idx) => {
+                const isSelected = cell.dateKey === selectedDate;
+                const isWin = cell.status === 'win';
+                const isLoss = cell.status === 'loss';
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      if (cell.isCurrentMonth && cell.hasTrades) {
+                        handleSelectDate(cell.dateKey);
+                      }
+                    }}
+                    className={`h-9 flex items-center justify-center rounded-lg transition-all select-none font-mono ${
+                      !cell.isCurrentMonth
+                        ? 'text-muted/30 pointer-events-none'
+                        : cell.hasTrades
+                          ? 'cursor-pointer font-bold'
+                          : 'text-muted/70 hover:text-foreground'
+                    } ${
+                      // Style matching image 1:
+                      // Green box for win day (like 2 in image)
+                      isWin && !isSelected ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30' : ''
+                    } ${
+                      // Red box for loss day
+                      isLoss && !isSelected ? 'bg-rose-950/60 text-rose-400 border border-rose-500/30' : ''
+                    } ${
+                      // Selected date: prominent purple border ring (like 4 in image!)
+                      isSelected
+                        ? 'border-2 border-violet-500 text-violet-300 font-black shadow-md shadow-violet-500/20 bg-violet-500/10'
+                        : ''
+                    }`}
+                    title={cell.hasTrades ? `${cell.dateKey}: ${cell.netPnl >= 0 ? '+' : ''}$${cell.netPnl}` : undefined}
+                  >
+                    {cell.dayNum}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted uppercase font-semibold">
-                  <th className="pb-2">Symbol</th>
-                  <th className="pb-2">Side</th>
-                  <th className="pb-2">Lots</th>
-                  <th className="pb-2">Entry</th>
-                  <th className="pb-2">Exit</th>
-                  <th className="pb-2">Pips</th>
-                  <th className="pb-2">Net P&L</th>
-                  <th className="pb-2">Strategy</th>
-                  <th className="pb-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {dayTrades.map(t => (
-                  <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-2.5 font-bold text-foreground">{t.symbol}</td>
-                    <td className="py-2.5">
-                      <Badge variant={t.direction === 'BUY' ? 'buy' : 'sell'} size="sm">
-                        {t.direction}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 font-mono text-foreground">{t.lotSize}</td>
-                    <td className="py-2.5 font-mono text-foreground">{t.entryPrice}</td>
-                    <td className="py-2.5 font-mono text-foreground">{t.exitPrice || '-'}</td>
-                    <td className="py-2.5 font-mono text-foreground">{t.pips}</td>
-                    <td className={`py-2.5 font-mono font-bold ${t.netPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {formatCurrency(t.netPnl)}
-                    </td>
-                    <td className="py-2.5 text-muted">{t.strategyName || 'Discretionary'}</td>
-                    <td className="py-2.5 text-right">
-                      <Link to={`/trades/${t.id}`} className="text-primary hover:underline font-semibold">
-                        Review Trade →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </div>
+
       </div>
+    </div>
+  );
+};
+
+/**
+ * Intraday Cumulative P&L Area / Line Chart
+ */
+const IntradayPnlChart: React.FC<{
+  progression: { time: string; pnl: number }[];
+  isProfitable: boolean;
+}> = ({ progression, isProfitable }) => {
+  if (progression.length === 0) return null;
+
+  // Chart dimensions
+  const svgW = 600;
+  const svgH = 140;
+  const padLeft = 55;
+  const padRight = 25;
+  const padTop = 15;
+  const padBottom = 25;
+
+  const points = progression;
+  const pnls = points.map(p => p.pnl);
+  const minPnl = Math.min(0, Math.min(...pnls));
+  const maxPnl = Math.max(0, Math.max(...pnls));
+  const range = (maxPnl - minPnl) || 1;
+
+  const getX = (idx: number) => {
+    if (points.length <= 1) return padLeft + (svgW - padLeft - padRight) / 2;
+    return padLeft + (idx / (points.length - 1)) * (svgW - padLeft - padRight);
+  };
+
+  const getY = (val: number) => {
+    return svgH - padBottom - ((val - minPnl) / range) * (svgH - padTop - padBottom);
+  };
+
+  const pathD = points.reduce((acc, p, i) => {
+    const x = getX(i);
+    const y = getY(p.pnl);
+    return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
+  }, '');
+
+  const areaD = `${pathD} L ${getX(points.length - 1)} ${svgH - padBottom} L ${getX(0)} ${svgH - padBottom} Z`;
+
+  const strokeColor = isProfitable ? '#10b981' : '#ef4444';
+  const gradId = `intradayGrad-${isProfitable ? 'win' : 'loss'}`;
+
+  const yTicks = [maxPnl, (maxPnl + minPnl) / 2, minPnl].filter((v, i, a) => a.indexOf(v) === i);
+
+  return (
+    <div className="w-full relative py-1">
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        className="w-full h-36 select-none overflow-visible"
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Horizontal grid lines */}
+        {yTicks.map((val, idx) => {
+          const y = getY(val);
+          return (
+            <g key={idx}>
+              <line
+                x1={padLeft}
+                y1={y}
+                x2={svgW - padRight}
+                y2={y}
+                stroke="currentColor"
+                strokeOpacity="0.08"
+                strokeDasharray="2 2"
+                className="text-foreground"
+              />
+              <text
+                x={padLeft - 8}
+                y={y + 3.5}
+                textAnchor="end"
+                className="text-[9px] font-mono fill-muted"
+              >
+                ${Math.round(val).toLocaleString()}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Baseline line at bottom */}
+        <line
+          x1={padLeft}
+          y1={svgH - padBottom}
+          x2={svgW - padRight}
+          y2={svgH - padBottom}
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          className="text-foreground"
+        />
+
+        {/* Area gradient fill */}
+        <path d={areaD} fill={`url(#${gradId})`} />
+
+        {/* Progression line */}
+        <path
+          d={pathD}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* X-axis time markers */}
+        {points.map((p, idx) => (
+          <text
+            key={idx}
+            x={getX(idx)}
+            y={svgH - padBottom + 14}
+            textAnchor="middle"
+            className="text-[9px] font-mono fill-muted"
+          >
+            {p.time}
+          </text>
+        ))}
+      </svg>
     </div>
   );
 };

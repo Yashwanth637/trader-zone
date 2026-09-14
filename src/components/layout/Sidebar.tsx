@@ -42,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isAnalyticsActive = [
     '/analytics',
     '/reports',
+    '/day-view',
     '/strategies',
     '/replay',
     '/share-cards'
@@ -138,6 +139,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <FileText className="w-3.5 h-3.5 shrink-0" />
                 <span>Reports</span>
+              </NavLink>
+              <NavLink
+                to="/day-view"
+                onClick={onMobileClose}
+                className={({ isActive }) => navClass(isActive)}
+              >
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span>Day View</span>
               </NavLink>
               <NavLink
                 to="/strategies"
