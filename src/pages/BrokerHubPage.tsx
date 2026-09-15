@@ -102,7 +102,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Direct 1-click sync for closed positions and orders. Automatically converts contract lots (/ 1000) and formats dates in DD-MM-YYYY.
+                  Direct 1-click sync for closed positions and orders. Automatically formats dates in DD-MM-YYYY.
                 </p>
                 {lastDeltaSync && (
                   <span className="text-[10.5px] text-slate-400 mt-1 block">

@@ -88,13 +88,13 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const rawTrades = Storage.getTrades();
     let updated = false;
     const normalized = rawTrades.map(t => {
-      // If Delta trade has lotSize >= 10, it was likely saved under legacy / 100 instead of / 1000
-      const isDelta = t.notes?.toLowerCase().includes('delta');
-      if (isDelta && t.lotSize >= 10) {
+      // If an imported trade currently has lotSize >= 10 (e.g. 50 from CSV), convert to true lot size (0.05)
+      const isImported = t.id?.startsWith('imported') || t.notes?.toLowerCase().includes('delta') || t.ticket?.startsWith('CSV');
+      if (isImported && t.lotSize >= 10) {
         updated = true;
         return {
           ...t,
-          lotSize: parseFloat((t.lotSize / 10).toFixed(5))
+          lotSize: parseFloat((t.lotSize / 1000).toFixed(5))
         };
       }
       return t;

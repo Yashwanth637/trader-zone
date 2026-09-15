@@ -352,7 +352,7 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
           <ul className="list-disc list-inside space-y-0.5 text-[10.5px]">
             <li>Set Permissions to <strong>Read Data / Order History</strong> (Do not enable trading or withdrawals).</li>
             <li>If prompted for IP Whitelist, enter your current internet IP address.</li>
-            <li>Lot sizes are automatically normalized (/ 1000) and dates formatted as DD-MM-YYYY.</li>
+            <li>Dates are automatically formatted in DD-MM-YYYY.</li>
           </ul>
         </div>
 

@@ -428,7 +428,7 @@ export const LandingPage: React.FC = () => {
                 </h3>
               </div>
               <span className="text-xs px-2.5 py-1 rounded-lg bg-surface-card border border-border text-muted font-mono hidden sm:inline">
-                Format: DD-MM-YYYY · Lots / 1000
+                Format: DD-MM-YYYY
               </span>
             </div>
 
