@@ -45,8 +45,27 @@ export const DrawdownAnalysisCard: React.FC<DrawdownAnalysisCardProps> = ({ data
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  // Scale limit (headroom on max drawdown)
-  const maxScaleLimit = Math.max(maxDrawdownUsd * 1.15, 1000);
+  // Adaptive headroom on max drawdown to ensure curve always has prominent dips & contours
+  const calculateDynamicScaleLimit = (maxDd: number): number => {
+    if (maxDd <= 0) return 50;
+    const raw = maxDd * 1.25; // 25% headroom
+    if (raw <= 10) return 10;
+    if (raw <= 25) return 25;
+    if (raw <= 50) return 50;
+    if (raw <= 100) return 100;
+    if (raw <= 250) return 250;
+    if (raw <= 500) return 500;
+    if (raw <= 1000) return 1000;
+    if (raw <= 2500) return 2500;
+    if (raw <= 5000) return 5000;
+    if (raw <= 10000) return 10000;
+    if (raw <= 25000) return 25000;
+    if (raw <= 50000) return 50000;
+    if (raw <= 100000) return 100000;
+    return Math.ceil(raw / 25000) * 25000;
+  };
+
+  const maxScaleLimit = calculateDynamicScaleLimit(maxDrawdownUsd);
 
   // Y-axis tick values (0 at top, increasing drawdown downwards)
   const tickSteps = 4;
@@ -175,11 +194,24 @@ export const DrawdownAnalysisCard: React.FC<DrawdownAnalysisCardProps> = ({ data
                   fontSize="10"
                   className="fill-muted font-mono"
                 >
-                  {val === 0 ? '$0' : `-${formatAdaptivePnl(val)}`}
+                  {val === 0 ? formatAdaptivePnl(0) : `-${formatAdaptivePnl(val)}`}
                 </text>
               </g>
             );
           })}
+
+          {/* Peak Equity Notification if 0 Drawdown */}
+          {maxDrawdownUsd === 0 && (
+            <text
+              x={paddingLeft + chartWidth / 2}
+              y={paddingTop + chartHeight / 2}
+              textAnchor="middle"
+              className="fill-emerald-400/70 text-xs font-semibold"
+              fontSize="12"
+            >
+              ★ Peak Equity — 0 Drawdown Recorded
+            </text>
+          )}
 
           {/* Zero Top Baseline */}
           <line

@@ -8,13 +8,17 @@ import {
   calculateHourlyPerformance,
   calculateSymbolPerformance,
   calculateDrawdownAnalysis,
-  calculateStreakTracking
+  calculateStreakTracking,
+  calculateAvgHoldTime,
+  calculatePnlDistributionHistogram
 } from '../lib/performanceAnalytics';
 import { ProfitDistributionCard } from '../components/performance/ProfitDistributionCard';
 import { PerformanceByTimeCard } from '../components/performance/PerformanceByTimeCard';
 import { SymbolPerformanceCard } from '../components/performance/SymbolPerformanceCard';
 import { DrawdownAnalysisCard } from '../components/performance/DrawdownAnalysisCard';
 import { StreakTrackingCard } from '../components/performance/StreakTrackingCard';
+import { AvgHoldTimeCard } from '../components/performance/AvgHoldTimeCard';
+import { PnlDistributionHistogramCard } from '../components/performance/PnlDistributionHistogramCard';
 import {
   TrendingUp,
   Clock,
@@ -48,6 +52,8 @@ export const AnalyticsPage: React.FC = () => {
   const currentInitialBal = activeAccount ? activeAccount.initialBalance : 100000;
   const drawdownData = useMemo(() => calculateDrawdownAnalysis(accountTrades, currentInitialBal), [accountTrades, currentInitialBal]);
   const streakData = useMemo(() => calculateStreakTracking(accountTrades), [accountTrades]);
+  const avgHoldTimeData = useMemo(() => calculateAvgHoldTime(accountTrades), [accountTrades]);
+  const pnlDistributionData = useMemo(() => calculatePnlDistributionHistogram(accountTrades), [accountTrades]);
 
   // Breakdown by Session
   const sessionStats: Record<string, { pnl: number; count: number; wins: number }> = {
@@ -147,10 +153,16 @@ export const AnalyticsPage: React.FC = () => {
           {/* Image 2: Symbol Performance */}
           <SymbolPerformanceCard data={symbolData} />
 
-          {/* New Sections: Drawdown Analysis & Streak Tracking */}
+          {/* Sections: Drawdown Analysis & Streak Tracking */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             <DrawdownAnalysisCard data={drawdownData} />
             <StreakTrackingCard data={streakData} />
+          </div>
+
+          {/* Sections: Avg Hold Time & P&L Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <AvgHoldTimeCard data={avgHoldTimeData} />
+            <PnlDistributionHistogramCard data={pnlDistributionData} />
           </div>
 
           {/* Top Equity Curve (Account Balance Curve) */}

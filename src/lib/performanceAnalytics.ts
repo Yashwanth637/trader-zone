@@ -603,3 +603,248 @@ export function calculateStreakTracking(trades: Trade[]): StreakTrackingData {
     hasData: true
   };
 }
+
+export interface AvgHoldTimeData {
+  avgWinMinutes: number;
+  avgLossMinutes: number;
+  winTradeCount: number;
+  lossTradeCount: number;
+  maxDuration: number;
+  diffMinutes: number;
+  diffHours: number;
+  isLosersLonger: boolean;
+  advice: {
+    message: string;
+    isWarning: boolean;
+  };
+  hasData: boolean;
+}
+
+/**
+ * Calculates Average Hold Time for Winners vs Losers (Image 1 Left)
+ */
+export function calculateAvgHoldTime(trades: Trade[]): AvgHoldTimeData {
+  const closed = trades.filter(t => t.status === 'CLOSED');
+
+  if (closed.length === 0) {
+    return {
+      avgWinMinutes: 0,
+      avgLossMinutes: 0,
+      winTradeCount: 0,
+      lossTradeCount: 0,
+      maxDuration: 1,
+      diffMinutes: 0,
+      diffHours: 0,
+      isLosersLonger: false,
+      advice: {
+        message: 'No closed trades recorded yet to evaluate holding durations.',
+        isWarning: false
+      },
+      hasData: false
+    };
+  }
+
+  let totalWinMinutes = 0;
+  let winCount = 0;
+  let totalLossMinutes = 0;
+  let lossCount = 0;
+
+  closed.forEach(t => {
+    let durationMins = 0;
+    if (typeof t.durationMinutes === 'number' && t.durationMinutes > 0) {
+      durationMins = t.durationMinutes;
+    } else if (t.openTime && t.closeTime) {
+      const openMs = new Date(t.openTime).getTime();
+      const closeMs = new Date(t.closeTime).getTime();
+      if (!isNaN(openMs) && !isNaN(closeMs) && closeMs >= openMs) {
+        durationMins = Math.max(1, Math.round((closeMs - openMs) / 60000));
+      }
+    }
+
+    if (durationMins <= 0) durationMins = 1;
+
+    if (t.netPnl > 0.001) {
+      totalWinMinutes += durationMins;
+      winCount++;
+    } else if (t.netPnl < -0.001) {
+      totalLossMinutes += durationMins;
+      lossCount++;
+    }
+  });
+
+  const avgWinMinutes = winCount > 0 ? Math.round(totalWinMinutes / winCount) : 0;
+  const avgLossMinutes = lossCount > 0 ? Math.round(totalLossMinutes / lossCount) : 0;
+  const maxDuration = Math.max(avgWinMinutes, avgLossMinutes, 1);
+  const diffMinutes = Math.abs(avgLossMinutes - avgWinMinutes);
+  const diffHours = parseFloat((diffMinutes / 60).toFixed(1));
+  const isLosersLonger = avgLossMinutes > avgWinMinutes;
+
+  let adviceMessage = '';
+  let isWarning = false;
+
+  const formatDiffText = diffHours >= 1 ? `${diffHours} hrs` : `${diffMinutes} min`;
+
+  if (winCount === 0 || lossCount === 0) {
+    adviceMessage = 'Trade history currently contains only winning or only losing trades.';
+    isWarning = false;
+  } else if (isLosersLonger && diffMinutes >= 5) {
+    adviceMessage = `You hold losing trades ${formatDiffText} longer than winners. Classic "let losers run, cut winners short" pattern.`;
+    isWarning = true;
+  } else if (!isLosersLonger && diffMinutes >= 5) {
+    adviceMessage = `Great discipline! You let winning trades run ${formatDiffText} longer than losers.`;
+    isWarning = false;
+  } else {
+    adviceMessage = 'Hold times are well balanced between winning and losing trades.';
+    isWarning = false;
+  }
+
+  return {
+    avgWinMinutes,
+    avgLossMinutes,
+    winTradeCount: winCount,
+    lossTradeCount: lossCount,
+    maxDuration,
+    diffMinutes,
+    diffHours,
+    isLosersLonger,
+    advice: {
+      message: adviceMessage,
+      isWarning
+    },
+    hasData: true
+  };
+}
+
+export interface PnlHistogramBin {
+  binIndex: number;
+  min: number;
+  max: number;
+  midpoint: number;
+  count: number;
+  percentage: number;
+  isPositive: boolean;
+  totalPnlInBin: number;
+}
+
+export interface PnlDistributionHistogramData {
+  bins: PnlHistogramBin[];
+  maxCount: number;
+  yTicks: number[];
+  totalTrades: number;
+  hasData: boolean;
+}
+
+/**
+ * Calculates P&L Distribution Frequency Histogram (Image 1 Right)
+ */
+export function calculatePnlDistributionHistogram(trades: Trade[]): PnlDistributionHistogramData {
+  const closed = trades.filter(t => t.status === 'CLOSED');
+
+  if (closed.length === 0) {
+    return {
+      bins: [],
+      maxCount: 10,
+      yTicks: [0, 2, 4, 6, 8, 10],
+      totalTrades: 0,
+      hasData: false
+    };
+  }
+
+  const lossTrades = closed.filter(t => t.netPnl < -0.001);
+  const winTrades = closed.filter(t => t.netPnl >= -0.001);
+
+  const rawBins: { min: number; max: number; isPositive: boolean }[] = [];
+
+  // Determine negative bins
+  if (lossTrades.length > 0) {
+    const minLoss = Math.min(...lossTrades.map(t => t.netPnl));
+    const numLossBins = Math.min(5, Math.max(3, Math.ceil(lossTrades.length / 4)));
+    const lossStep = Math.abs(minLoss) / numLossBins;
+    for (let i = 0; i < numLossBins; i++) {
+      const bMin = minLoss + i * lossStep;
+      const bMax = minLoss + (i + 1) * lossStep;
+      rawBins.push({ min: bMin, max: bMax, isPositive: false });
+    }
+  } else {
+    rawBins.push({ min: -10, max: 0, isPositive: false });
+  }
+
+  // Determine positive bins
+  if (winTrades.length > 0) {
+    const maxWin = Math.max(...winTrades.map(t => t.netPnl), 1);
+    const numWinBins = Math.min(7, Math.max(4, Math.ceil(winTrades.length / 4)));
+    const winStep = maxWin / numWinBins;
+    for (let i = 0; i < numWinBins; i++) {
+      const bMin = i * winStep;
+      const bMax = (i + 1) * winStep;
+      rawBins.push({ min: bMin, max: bMax, isPositive: true });
+    }
+  } else {
+    rawBins.push({ min: 0, max: 10, isPositive: true });
+  }
+
+  const totalClosed = closed.length;
+  const bins: PnlHistogramBin[] = rawBins.map((bin, idx) => {
+    let count = 0;
+    let totalPnlInBin = 0;
+
+    closed.forEach(t => {
+      const pnl = t.netPnl;
+      const isLast = idx === rawBins.length - 1;
+      if (idx === 0) {
+        if (pnl >= bin.min && pnl <= bin.max) {
+          count++;
+          totalPnlInBin += pnl;
+        }
+      } else if (isLast) {
+        if (pnl > bin.min && pnl <= bin.max) {
+          count++;
+          totalPnlInBin += pnl;
+        }
+      } else {
+        if (pnl > bin.min && pnl <= bin.max) {
+          count++;
+          totalPnlInBin += pnl;
+        }
+      }
+    });
+
+    const midpoint = (bin.min + bin.max) / 2;
+    const percentage = totalClosed > 0 ? Math.round((count / totalClosed) * 100) : 0;
+
+    return {
+      binIndex: idx,
+      min: bin.min,
+      max: bin.max,
+      midpoint,
+      count,
+      percentage,
+      isPositive: bin.isPositive,
+      totalPnlInBin
+    };
+  });
+
+  // Calculate dynamic maxCount and Y-ticks
+  const highestCount = Math.max(...bins.map(b => b.count), 1);
+  let chartMaxY = 10;
+  if (highestCount <= 5) chartMaxY = 5;
+  else if (highestCount <= 10) chartMaxY = 10;
+  else if (highestCount <= 20) chartMaxY = 20;
+  else if (highestCount <= 40) chartMaxY = 40;
+  else if (highestCount <= 60) chartMaxY = 60;
+  else if (highestCount <= 80) chartMaxY = 80;
+  else if (highestCount <= 100) chartMaxY = 100;
+  else chartMaxY = Math.ceil(highestCount / 20) * 20;
+
+  const tickStep = chartMaxY / 4;
+  const yTicks = [0, tickStep, tickStep * 2, tickStep * 3, chartMaxY];
+
+  return {
+    bins,
+    maxCount: chartMaxY,
+    yTicks,
+    totalTrades: totalClosed,
+    hasData: true
+  };
+}
+
