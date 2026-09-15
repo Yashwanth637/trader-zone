@@ -80,6 +80,48 @@ export interface SymbolPerformanceData {
   symbols: SymbolDetailStat[];
 }
 
+export interface DrawdownPoint {
+  index: number;
+  date: string; // "Aug 26"
+  fullDate: string; // "Aug 26, 2026"
+  timestamp: number;
+  balance: number;
+  peak: number;
+  drawdownUsd: number; // e.g. 37369.88 (positive magnitude)
+  drawdownPct: number; // e.g. 37.37
+  tradeSymbol?: string;
+  tradePnl?: number;
+}
+
+export interface DrawdownAnalysisData {
+  points: DrawdownPoint[];
+  maxDrawdownUsd: number;
+  maxDrawdownPct: number;
+  maxDrawdownDate: string;
+  currentDrawdownUsd: number;
+  currentDrawdownPct: number;
+  hasData: boolean;
+}
+
+export interface StreakItem {
+  id: string;
+  type: 'W' | 'L';
+  count: number;
+}
+
+export interface StreakTrackingData {
+  currentStreak: {
+    type: 'win' | 'loss' | 'none';
+    count: number;
+  };
+  longestWin: number;
+  longestLoss: number;
+  history: StreakItem[];
+  totalWins: number;
+  totalLosses: number;
+  hasData: boolean;
+}
+
 /**
  * Calculates Profit Distribution analytics for Image 1 Left Card
  */
@@ -386,5 +428,178 @@ export function calculateSymbolPerformance(trades: Trade[]): SymbolPerformanceDa
     mostTradedSymbol,
     worstSymbol,
     symbols
+  };
+}
+
+/**
+ * Calculates Drawdown Analysis analytics and plot points for Performance Page
+ */
+export function calculateDrawdownAnalysis(
+  trades: Trade[],
+  initialBalance: number = 100000
+): DrawdownAnalysisData {
+  const closed = [...trades]
+    .filter(t => t.status === 'CLOSED')
+    .sort((a, b) => new Date(a.closeTime || a.openTime).getTime() - new Date(b.closeTime || b.openTime).getTime());
+
+  if (closed.length === 0) {
+    return {
+      points: [],
+      maxDrawdownUsd: 0,
+      maxDrawdownPct: 0,
+      maxDrawdownDate: '-',
+      currentDrawdownUsd: 0,
+      currentDrawdownPct: 0,
+      hasData: false
+    };
+  }
+
+  let peak = initialBalance;
+  let runningBalance = initialBalance;
+  let maxDrawdownUsd = 0;
+  let maxDrawdownPct = 0;
+  let maxDrawdownDate = '';
+
+  const points: DrawdownPoint[] = [
+    {
+      index: 0,
+      date: 'Start',
+      fullDate: 'Initial Balance',
+      timestamp: new Date(closed[0].openTime).getTime() - 1000,
+      balance: initialBalance,
+      peak: initialBalance,
+      drawdownUsd: 0,
+      drawdownPct: 0
+    }
+  ];
+
+  closed.forEach((t, i) => {
+    runningBalance += t.netPnl;
+    if (runningBalance > peak) {
+      peak = runningBalance;
+    }
+    const ddUsd = Math.max(0, peak - runningBalance);
+    const ddPct = peak > 0 ? (ddUsd / peak) * 100 : 0;
+
+    const tradeDate = new Date(t.closeTime || t.openTime);
+    const shortDate = tradeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const fullDate = tradeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    if (ddUsd > maxDrawdownUsd) {
+      maxDrawdownUsd = ddUsd;
+      maxDrawdownPct = ddPct;
+      maxDrawdownDate = shortDate;
+    }
+
+    points.push({
+      index: i + 1,
+      date: shortDate,
+      fullDate,
+      timestamp: tradeDate.getTime(),
+      balance: runningBalance,
+      peak,
+      drawdownUsd: parseFloat(ddUsd.toFixed(2)),
+      drawdownPct: parseFloat(ddPct.toFixed(1)),
+      tradeSymbol: t.symbol,
+      tradePnl: t.netPnl
+    });
+  });
+
+  const lastPoint = points[points.length - 1];
+
+  return {
+    points,
+    maxDrawdownUsd: parseFloat(maxDrawdownUsd.toFixed(2)),
+    maxDrawdownPct: parseFloat(maxDrawdownPct.toFixed(1)),
+    maxDrawdownDate: maxDrawdownDate || points[1]?.date || 'Start',
+    currentDrawdownUsd: lastPoint?.drawdownUsd || 0,
+    currentDrawdownPct: lastPoint?.drawdownPct || 0,
+    hasData: true
+  };
+}
+
+/**
+ * Calculates Streak Tracking analytics for Performance Page
+ */
+export function calculateStreakTracking(trades: Trade[]): StreakTrackingData {
+  const closed = [...trades]
+    .filter(t => t.status === 'CLOSED')
+    .sort((a, b) => new Date(a.closeTime || a.openTime).getTime() - new Date(b.closeTime || b.openTime).getTime());
+
+  if (closed.length === 0) {
+    return {
+      currentStreak: { type: 'none', count: 0 },
+      longestWin: 0,
+      longestLoss: 0,
+      history: [],
+      totalWins: 0,
+      totalLosses: 0,
+      hasData: false
+    };
+  }
+
+  const history: StreakItem[] = [];
+  let currentRunType: 'W' | 'L' | null = null;
+  let currentRunCount = 0;
+  let longestWin = 0;
+  let longestLoss = 0;
+  let totalWins = 0;
+  let totalLosses = 0;
+
+  closed.forEach((t) => {
+    // Treat netPnl >= 0 as Win, netPnl < 0 as Loss
+    const outcome: 'W' | 'L' = t.netPnl >= 0 ? 'W' : 'L';
+    if (outcome === 'W') totalWins++;
+    else totalLosses++;
+
+    if (currentRunType === null) {
+      currentRunType = outcome;
+      currentRunCount = 1;
+    } else if (currentRunType === outcome) {
+      currentRunCount++;
+    } else {
+      // Previous streak completed
+      history.push({
+        id: `streak-${history.length}`,
+        type: currentRunType,
+        count: currentRunCount
+      });
+      if (currentRunType === 'W' && currentRunCount > longestWin) {
+        longestWin = currentRunCount;
+      } else if (currentRunType === 'L' && currentRunCount > longestLoss) {
+        longestLoss = currentRunCount;
+      }
+      currentRunType = outcome;
+      currentRunCount = 1;
+    }
+  });
+
+  // Push final ongoing streak
+  if (currentRunType !== null) {
+    history.push({
+      id: `streak-${history.length}`,
+      type: currentRunType,
+      count: currentRunCount
+    });
+    if (currentRunType === 'W' && currentRunCount > longestWin) {
+      longestWin = currentRunCount;
+    } else if (currentRunType === 'L' && currentRunCount > longestLoss) {
+      longestLoss = currentRunCount;
+    }
+  }
+
+  const currentStreak = {
+    type: currentRunType === 'W' ? ('win' as const) : currentRunType === 'L' ? ('loss' as const) : ('none' as const),
+    count: currentRunCount
+  };
+
+  return {
+    currentStreak,
+    longestWin,
+    longestLoss,
+    history,
+    totalWins,
+    totalLosses,
+    hasData: true
   };
 }

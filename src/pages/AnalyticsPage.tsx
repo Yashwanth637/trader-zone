@@ -1,17 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { EquityCurveChart } from '../components/charts/EquityCurveChart';
-import { DrawdownChart } from '../components/charts/DrawdownChart';
 import { HeatmapChart } from '../components/charts/HeatmapChart';
 import { formatCurrency } from '../lib/calculations';
 import {
   calculateProfitDistribution,
   calculateHourlyPerformance,
-  calculateSymbolPerformance
+  calculateSymbolPerformance,
+  calculateDrawdownAnalysis,
+  calculateStreakTracking
 } from '../lib/performanceAnalytics';
 import { ProfitDistributionCard } from '../components/performance/ProfitDistributionCard';
 import { PerformanceByTimeCard } from '../components/performance/PerformanceByTimeCard';
 import { SymbolPerformanceCard } from '../components/performance/SymbolPerformanceCard';
+import { DrawdownAnalysisCard } from '../components/performance/DrawdownAnalysisCard';
+import { StreakTrackingCard } from '../components/performance/StreakTrackingCard';
 import {
   TrendingUp,
   Clock,
@@ -42,6 +45,9 @@ export const AnalyticsPage: React.FC = () => {
   const profitDistData = useMemo(() => calculateProfitDistribution(accountTrades), [accountTrades]);
   const hourlyData = useMemo(() => calculateHourlyPerformance(accountTrades), [accountTrades]);
   const symbolData = useMemo(() => calculateSymbolPerformance(accountTrades), [accountTrades]);
+  const currentInitialBal = activeAccount ? activeAccount.initialBalance : 100000;
+  const drawdownData = useMemo(() => calculateDrawdownAnalysis(accountTrades, currentInitialBal), [accountTrades, currentInitialBal]);
+  const streakData = useMemo(() => calculateStreakTracking(accountTrades), [accountTrades]);
 
   // Breakdown by Session
   const sessionStats: Record<string, { pnl: number; count: number; wins: number }> = {
@@ -141,17 +147,15 @@ export const AnalyticsPage: React.FC = () => {
           {/* Image 2: Symbol Performance */}
           <SymbolPerformanceCard data={symbolData} />
 
+          {/* New Sections: Drawdown Analysis & Streak Tracking */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <DrawdownAnalysisCard data={drawdownData} />
+            <StreakTrackingCard data={streakData} />
+          </div>
+
           {/* Top Equity Curve (Account Balance Curve) */}
           <div className="premium-card p-5">
             <EquityCurveChart
-              trades={accountTrades}
-              initialBalance={activeAccount ? activeAccount.initialBalance : 100000}
-            />
-          </div>
-
-          {/* Underwater Drawdown */}
-          <div className="premium-card p-5">
-            <DrawdownChart
               trades={accountTrades}
               initialBalance={activeAccount ? activeAccount.initialBalance : 100000}
             />
