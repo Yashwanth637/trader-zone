@@ -368,7 +368,7 @@ export const ReplayPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-muted">Timeframe:</span>
           <div className="flex items-center gap-1 p-1 bg-surface border border-border rounded-xl shadow-sm">
-            {['1m', '5m', '15m', '1h', '4h'].map(tf => (
+            {['1m', '5m', '15m', '1h', '4h', '1d'].map(tf => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
@@ -472,9 +472,23 @@ export const ReplayPage: React.FC = () => {
                       {selectedTrade.direction}
                     </Badge>
                     <span className="text-xs font-mono text-muted">{selectedTrade.lotSize} Lots</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border text-muted font-bold">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border text-muted font-bold font-mono">
                       {timeframe}
                     </span>
+                    {replayData && (
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
+                        replayData.isRealMarketData
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          replayData.isRealMarketData ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                        }`} />
+                        {replayData.isRealMarketData
+                          ? `Real Market Data (${replayData.source})`
+                          : 'Simulation Model'}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-muted mt-1 flex items-center gap-3">
                     <span>Entry: <strong className="text-foreground font-mono">{selectedTrade.entryPrice}</strong></span>
@@ -513,7 +527,7 @@ export const ReplayPage: React.FC = () => {
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
                   <div className="text-xs font-bold text-primary flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    Fetching & synchronizing historical candles...
+                    Fetching real market historical candles from internet...
                   </div>
                 </div>
               )}
@@ -537,9 +551,21 @@ export const ReplayPage: React.FC = () => {
                     }}
                     className="flex-1 accent-primary h-1.5 bg-border rounded-lg cursor-pointer"
                   />
-                  <span className="text-[10px] font-mono text-muted">
-                    Candle {currentStep} / {replayData.candles.length}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {replayData.candles[currentStep - 1] && (
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface border border-border text-foreground">
+                        {new Date(replayData.candles[currentStep - 1].time * 1000).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-mono text-muted">
+                      Candle {currentStep} / {replayData.candles.length}
+                    </span>
+                  </div>
                 </div>
               )}
 

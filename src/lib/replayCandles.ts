@@ -1,12 +1,13 @@
 import { Trade } from '../types/trade';
+import {
+  ReplayCandle,
+  getTimeframeSeconds,
+  fetchHistoricalCandlesForTrade,
+  FetchCandlesResult
+} from './marketDataService';
 
-export interface ReplayCandle {
-  time: number; // Unix timestamp in seconds
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
+export { getTimeframeSeconds };
+export type { ReplayCandle };
 
 export interface ReplayData {
   trade: Trade;
@@ -18,21 +19,13 @@ export interface ReplayData {
   stopLoss?: number;
   takeProfit?: number;
   timeframe: string;
-}
-
-export function getTimeframeSeconds(tf: string): number {
-  switch (tf) {
-    case '1m': return 60;
-    case '5m': return 300;
-    case '15m': return 900;
-    case '1h': return 3600;
-    case '4h': return 14400;
-    default: return 900;
-  }
+  source: 'Binance' | 'Binance Vision' | 'Bitfinex' | 'Fallback';
+  isRealMarketData: boolean;
 }
 
 /**
- * Fetch or generate realistic candles for a specific trade's exact entry and exit period
+ * Fetch authentic real historical market candles from public internet APIs for a specific trade.
+ * Falls back to anchored realistic generation only if network is offline or symbol is unsupported.
  */
 export async function getCandlesForTrade(
   trade: Trade,
@@ -60,38 +53,82 @@ export async function getCandlesForTrade(
       : parseFloat((entryPrice - Math.abs(exitPrice - entryPrice) * 1.2).toFixed(entryPrice < 10 ? 4 : 2))
   );
 
-  // Determine how many candles inside the trade
+  // 1. ATTEMPT REAL MARKET DATA FETCH FROM INTERNET
+  try {
+    const marketResult = await fetchHistoricalCandlesForTrade(trade, timeframe);
+
+    if (marketResult.isRealMarketData && marketResult.candles.length >= 3) {
+      const candles = marketResult.candles;
+
+      // Locate entryIndex: closest candle to openSec
+      let entryIndex = 0;
+      let minEntryDiff = Infinity;
+
+      for (let i = 0; i < candles.length; i++) {
+        const c = candles[i];
+        const diff = Math.abs(c.time - openSec);
+        if (diff < minEntryDiff) {
+          minEntryDiff = diff;
+          entryIndex = i;
+        }
+      }
+
+      // Locate exitIndex: closest candle to closeSec (must be >= entryIndex)
+      let exitIndex = entryIndex;
+      let minExitDiff = Infinity;
+
+      for (let i = entryIndex; i < candles.length; i++) {
+        const c = candles[i];
+        const diff = Math.abs(c.time - closeSec);
+        if (diff < minExitDiff) {
+          minExitDiff = diff;
+          exitIndex = i;
+        }
+      }
+
+      // If exit happened within same candle, advance exitIndex if possible
+      if (exitIndex === entryIndex && entryIndex < candles.length - 1) {
+        exitIndex = entryIndex + 1;
+      }
+
+      return {
+        trade,
+        candles,
+        entryIndex,
+        exitIndex,
+        entryPrice,
+        exitPrice,
+        stopLoss,
+        takeProfit,
+        timeframe,
+        source: marketResult.source,
+        isRealMarketData: true
+      };
+    }
+  } catch (err) {
+    console.warn('Real market candle fetch failed, falling back to anchored generator', err);
+  }
+
+  // 2. FALLBACK SIMULATED GENERATOR (Offline or unknown assets only)
   const durationSec = Math.max(closeSec - openSec, stepSec * 4);
   const inTradeCandlesCount = Math.max(Math.round(durationSec / stepSec), 6);
+  const preCandlesCount = 15;
+  const postCandlesCount = 10;
 
-  // Pre-entry candles (before trade was taken)
-  const preCandlesCount = 12;
-  // Post-exit candles (after trade was closed)
-  const postCandlesCount = 8;
-  const totalCandles = preCandlesCount + inTradeCandlesCount + postCandlesCount;
-
-  // Let's build a realistic price trajectory:
-  // 1. Pre-entry: approaches entry level (approaching from above for BUY support or below for SELL resistance)
-  // 2. Entry: touches entryPrice at preCandlesCount
-  // 3. In-trade: fluctuates realistically between entry, tests near SL or TP, then closes at exitPrice
-  // 4. Post-exit: continues or bounces
-  
   const candles: ReplayCandle[] = [];
   const decimals = entryPrice < 10 ? 4 : entryPrice < 100 ? 3 : 2;
   const priceRange = Math.abs(exitPrice - entryPrice) || (entryPrice * 0.003);
   const volatility = priceRange * 0.25;
 
   let currentPrice = trade.direction === 'BUY'
-    ? entryPrice + priceRange * 0.8 // was falling towards support
-    : entryPrice - priceRange * 0.8; // was rising towards resistance
+    ? entryPrice + priceRange * 0.8
+    : entryPrice - priceRange * 0.8;
 
-  // Start timestamp
   let currentTimestamp = openSec - (preCandlesCount * stepSec);
 
-  // Generate pre-entry candles
+  // Pre-entry candles
   for (let i = 0; i < preCandlesCount; i++) {
     const progress = i / preCandlesCount;
-    // target towards entryPrice
     const target = trade.direction === 'BUY'
       ? (entryPrice + priceRange * 0.8 * (1 - progress))
       : (entryPrice - priceRange * 0.8 * (1 - progress));
@@ -114,9 +151,9 @@ export async function getCandlesForTrade(
     currentTimestamp += stepSec;
   }
 
-  const entryIndex = candles.length; // Next candle is entry!
+  const entryIndex = candles.length;
 
-  // Entry candle: must touch entryPrice
+  // Entry candle
   {
     const open = currentPrice;
     const isBuy = trade.direction === 'BUY';
@@ -135,14 +172,12 @@ export async function getCandlesForTrade(
     currentTimestamp += stepSec;
   }
 
-  // Generate In-Trade progression towards exitPrice
+  // In-trade candles
   for (let i = 1; i < inTradeCandlesCount; i++) {
     const isFinalInTrade = i === inTradeCandlesCount - 1;
     const progress = i / (inTradeCandlesCount - 1);
     
-    // Smooth easing towards exitPrice
     const targetPrice = entryPrice + (exitPrice - entryPrice) * progress;
-    // Add realistic intermediate swings (e.g. pullback then expansion)
     const pullback = Math.sin(progress * Math.PI) * (volatility * (trade.netPnl >= 0 ? 0.6 : 1.2));
     const noisyTarget = isFinalInTrade ? exitPrice : targetPrice + (trade.direction === 'BUY' ? -pullback : pullback);
 
@@ -164,9 +199,9 @@ export async function getCandlesForTrade(
     currentTimestamp += stepSec;
   }
 
-  const exitIndex = candles.length - 1; // Last in-trade candle!
+  const exitIndex = candles.length - 1;
 
-  // Generate Post-Exit candles
+  // Post-exit candles
   for (let i = 0; i < postCandlesCount; i++) {
     const open = currentPrice;
     const delta = (Math.sin(i * 1.5) * volatility);
@@ -195,6 +230,8 @@ export async function getCandlesForTrade(
     exitPrice,
     stopLoss,
     takeProfit,
-    timeframe
+    timeframe,
+    source: 'Fallback',
+    isRealMarketData: false
   };
 }
