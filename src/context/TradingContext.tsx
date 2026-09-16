@@ -4,7 +4,7 @@ import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage, BehavioralAlert } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
 import { Storage } from '../lib/storage';
-import { calculateSummaryStats, SummaryStats, calculatePnlFromPrices, setActiveCurrency } from '../lib/calculations';
+import { calculateSummaryStats, SummaryStats, calculatePnlFromPrices, setActiveCurrency, sortTradesDescending } from '../lib/calculations';
 import { detectBehavioralPatterns } from '../lib/coachEngine';
 import { useAuth } from './AuthContext';
 import {
@@ -99,10 +99,10 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       return t;
     });
-    if (updated) {
-      Storage.saveTrades(normalized);
-    }
-    return normalized;
+    const sorted = sortTradesDescending(normalized);
+    // Persist sorted & normalized trades
+    Storage.saveTrades(sorted);
+    return sorted;
   });
   const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
   const [activeAccountId, setActiveAccountIdState] = useState<string>(() => Storage.getActiveAccountId());
@@ -181,7 +181,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Reload user-specific data whenever user signs in, logs out, or switches accounts
   useEffect(() => {
-    setTrades(Storage.getTrades());
+    setTrades(sortTradesDescending(Storage.getTrades()));
     setAccounts(Storage.getAccounts());
     setActiveAccountIdState(Storage.getActiveAccountId());
     setStrategies(Storage.getStrategies());
@@ -230,8 +230,10 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [computedAccounts, activeAccountId]);
 
   const accountTrades = useMemo(() => {
-    if (activeAccountId === 'all') return trades;
-    return trades.filter(t => t.accountId === activeAccountId);
+    const raw = activeAccountId === 'all'
+      ? trades
+      : trades.filter(t => t.accountId === activeAccountId);
+    return sortTradesDescending(raw);
   }, [trades, activeAccountId]);
 
   const stats = useMemo(() => {
@@ -250,12 +252,12 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: `trade-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       accountId: tradeData.accountId || (activeAccount?.id || 'acc-1')
     };
-    setTrades(prev => [newTrade, ...prev]);
+    setTrades(prev => sortTradesDescending([newTrade, ...prev]));
     return newTrade;
   };
 
   const updateTrade = (id: string, updates: Partial<Trade>) => {
-    setTrades(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTrades(prev => sortTradesDescending(prev.map(t => (t.id === id ? { ...t, ...updates } : t))));
   };
 
   const deleteTrade = (id: string) => {
@@ -263,7 +265,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const closeTrade = (id: string, exitPrice: number, closeTime: string = new Date().toISOString()) => {
-    setTrades(prev => prev.map(t => {
+    setTrades(prev => sortTradesDescending(prev.map(t => {
       if (t.id !== id) return t;
       const { grossPnl, netPnl, pips } = calculatePnlFromPrices(
         t.symbol,
@@ -284,11 +286,11 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         pips,
         realizedRR: t.stopLoss ? parseFloat(((exitPrice - t.entryPrice) / (t.entryPrice - t.stopLoss)).toFixed(2)) : undefined
       };
-    }));
+    })));
   };
 
   const importTrades = (newTrades: Trade[]) => {
-    setTrades(prev => [...newTrades, ...prev]);
+    setTrades(prev => sortTradesDescending([...newTrades, ...prev]));
   };
 
   const addAccount = (accData: Omit<TradingAccount, 'id' | 'createdAt'>): TradingAccount => {

@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { formatCurrency } from '../lib/calculations';
+import { formatCurrency, sortTradesDescending } from '../lib/calculations';
 import {
   History,
   Search,
@@ -36,21 +36,24 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
   const [closeExitPrice, setCloseExitPrice] = useState('');
 
-  const filteredTrades = accountTrades.filter(t => {
-    if (search) {
-      const q = search.toLowerCase();
-      const matchSym = t.symbol.toLowerCase().includes(q);
-      const matchTicket = t.ticket.toLowerCase().includes(q);
-      const matchNotes = t.notes?.toLowerCase().includes(q);
-      if (!matchSym && !matchTicket && !matchNotes) return false;
-    }
-    if (directionFilter !== 'ALL' && t.direction !== directionFilter) return false;
-    if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-    if (outcomeFilter === 'WIN' && t.netPnl <= 0) return false;
-    if (outcomeFilter === 'LOSS' && t.netPnl >= 0) return false;
-    if (strategyFilter !== 'ALL' && t.strategyId !== strategyFilter) return false;
-    return true;
-  });
+  const filteredTrades = React.useMemo(() => {
+    const list = accountTrades.filter(t => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matchSym = t.symbol.toLowerCase().includes(q);
+        const matchTicket = t.ticket.toLowerCase().includes(q);
+        const matchNotes = t.notes?.toLowerCase().includes(q);
+        if (!matchSym && !matchTicket && !matchNotes) return false;
+      }
+      if (directionFilter !== 'ALL' && t.direction !== directionFilter) return false;
+      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+      if (outcomeFilter === 'WIN' && t.netPnl <= 0) return false;
+      if (outcomeFilter === 'LOSS' && t.netPnl >= 0) return false;
+      if (strategyFilter !== 'ALL' && t.strategyId !== strategyFilter) return false;
+      return true;
+    });
+    return sortTradesDescending(list);
+  }, [accountTrades, search, directionFilter, statusFilter, outcomeFilter, strategyFilter]);
 
   const handleCloseSubmit = (e: React.FormEvent) => {
     e.preventDefault();

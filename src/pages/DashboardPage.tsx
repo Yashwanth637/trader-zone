@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { StatCard } from '../components/ui/StatCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { filterTradesByPeriod, formatCurrency } from '../lib/calculations';
+import { filterTradesByPeriod, formatCurrency, sortTradesDescending } from '../lib/calculations';
 import {
   calculateTradeScores,
   calculateTradingActivity
@@ -252,7 +252,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {accountTrades.slice(0, 5).map(t => {
+              {sortTradesDescending(accountTrades).slice(0, 5).map(t => {
                 const isWin = t.netPnl > 0;
                 const isLoss = t.netPnl < 0;
 

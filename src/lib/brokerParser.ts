@@ -1,5 +1,5 @@
 import { Trade, Direction, AssetClass } from '../types/trade';
-import { detectTradingSession, calculatePips } from './calculations';
+import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
 import { isDeltaIndiaCsv, parseDeltaIndiaCsv } from './deltaIndiaParser';
 
 export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
@@ -113,5 +113,5 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
     }
   }
 
-  return trades;
+  return sortTradesDescending(trades);
 }

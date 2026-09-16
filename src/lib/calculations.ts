@@ -305,12 +305,45 @@ export function calculateSummaryStats(trades: Trade[], startingBalance: number =
   };
 }
 
+/**
+ * Safely extracts timestamp milliseconds from a trade.
+ * Prioritizes openTime (the execution date displayed in the journal),
+ * falling back to closeTime.
+ */
+export function getTradeTimestamp(trade: Trade): number {
+  const timeStr = trade.openTime || trade.closeTime;
+  if (!timeStr) return 0;
+  const time = new Date(timeStr).getTime();
+  return isNaN(time) ? 0 : time;
+}
+
+/**
+ * Sorts trades in descending chronological order (newest / latest trades on top, older ones at the bottom).
+ */
+export function sortTradesDescending(trades: Trade[]): Trade[] {
+  return [...trades].sort((a, b) => {
+    const timeA = getTradeTimestamp(a);
+    const timeB = getTradeTimestamp(b);
+    if (timeB !== timeA) {
+      return timeB - timeA; // Latest date on top
+    }
+    // Tie-breaker: closeTime if different
+    const closeA = a.closeTime ? new Date(a.closeTime).getTime() : 0;
+    const closeB = b.closeTime ? new Date(b.closeTime).getTime() : 0;
+    if (closeB !== closeA) {
+      return closeB - closeA;
+    }
+    // Final tie-breaker: ticket / ID
+    return (b.ticket || b.id || '').localeCompare(a.ticket || a.id || '');
+  });
+}
+
 export function filterTradesByPeriod(trades: Trade[], period: string, customRange?: { from: string; to: string }): Trade[] {
   const now = new Date();
   
-  if (period === 'all') return trades;
+  if (period === 'all') return sortTradesDescending(trades);
 
-  return trades.filter(t => {
+  const filtered = trades.filter(t => {
     const tradeDate = new Date(t.closeTime || t.openTime);
     if (period === 'today') {
       return tradeDate.toDateString() === now.toDateString();
@@ -338,4 +371,7 @@ export function filterTradesByPeriod(trades: Trade[], period: string, customRang
     }
     return true;
   });
+
+  return sortTradesDescending(filtered);
 }
+

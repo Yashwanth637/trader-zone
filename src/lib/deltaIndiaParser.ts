@@ -1,5 +1,5 @@
 import { Trade, Direction, AssetClass } from '../types/trade';
-import { detectTradingSession, calculatePips } from './calculations';
+import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
 
 /**
  * Format a Date object into DD-MM-YYYY (e.g., 04-09-2026)
@@ -219,5 +219,5 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
     }
   }
 
-  return trades;
+  return sortTradesDescending(trades);
 }

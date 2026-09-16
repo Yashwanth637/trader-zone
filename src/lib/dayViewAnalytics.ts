@@ -139,7 +139,7 @@ export function calculateDayViewData(trades: Trade[]): {
       profitFactor: parseFloat(profitFactor.toFixed(2)),
       commissions: parseFloat(commissions.toFixed(2)),
       intradayProgression,
-      trades: executionTrades
+      trades: [...executionTrades].reverse()
     };
   });
 
