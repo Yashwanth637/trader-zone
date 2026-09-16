@@ -23,6 +23,8 @@ import {
   DEFAULT_PROGRESS_CONFIG,
   getTradeDate
 } from '../lib/progressTrackerAnalytics';
+import { ProgressCalendarCard } from '../components/progress/ProgressCalendarCard';
+import { CurrentRulesTableCard } from '../components/progress/CurrentRulesTableCard';
 
 const STORAGE_KEY_CONFIG = 'progress_tracker_rule_config';
 
@@ -312,65 +314,77 @@ export const ProgressTrackerPage: React.FC = () => {
 
       {/* Main Area: Daily Checklist & Today Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Daily Checklist (approx 8 cols) */}
-        <div className="lg:col-span-8 bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 shadow-sm">
-          {/* Header Row */}
-          <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/5">
-            <h2 className="text-lg md:text-xl font-bold text-foreground">
-              {formattedHeaderDate}
-            </h2>
+        {/* Left Column: Daily Checklist & Calendar Card (approx 8 cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Daily Checklist Card */}
+          <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 shadow-sm">
+            {/* Header Row */}
+            <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/5">
+              <h2 className="text-lg md:text-xl font-bold text-foreground">
+                {formattedHeaderDate}
+              </h2>
 
-            <button
-              onClick={() => navigate(`/day-view?date=${selectedDate}`)}
-              className="px-4 py-1.5 bg-[#6366f1] hover:bg-[#5254db] text-white text-xs md:text-sm font-medium rounded-xl shadow-md transition-colors active:scale-95 flex items-center gap-1.5"
-            >
-              <span>View this day</span>
-            </button>
-          </div>
+              <button
+                onClick={() => navigate(`/day-view?date=${selectedDate}`)}
+                className="px-4 py-1.5 bg-[#6366f1] hover:bg-[#5254db] text-white text-xs md:text-sm font-medium rounded-xl shadow-md transition-colors active:scale-95 flex items-center gap-1.5"
+              >
+                <span>View this day</span>
+              </button>
+            </div>
 
-          {/* Section Subtitle */}
-          <div className="mt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            AUTOMATED RULES ({trackerData.selectedDayAudit.totalRules})
-          </div>
+            {/* Section Subtitle */}
+            <div className="mt-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              AUTOMATED RULES ({trackerData.selectedDayAudit.totalRules})
+            </div>
 
-          {/* Rules List */}
-          <div className="mt-4 space-y-1">
-            {trackerData.selectedDayAudit.rules.map((rule) => {
-              return (
-                <div
-                  key={rule.id}
-                  onClick={() => handleToggleRule(rule.id, rule.isPassed)}
-                  className="group flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-white/[0.03] transition-colors cursor-pointer"
-                  title="Click to toggle rule status for this date"
-                >
-                  {/* Left: Checkmark + Rule Title + Status */}
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="shrink-0 transition-transform group-active:scale-90">
-                      {rule.isPassed ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-500/10" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-zinc-600 group-hover:text-zinc-500" />
-                      )}
+            {/* Rules List */}
+            <div className="mt-4 space-y-1">
+              {trackerData.selectedDayAudit.rules.map((rule) => {
+                return (
+                  <div
+                    key={rule.id}
+                    onClick={() => handleToggleRule(rule.id, rule.isPassed)}
+                    className="group flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    title="Click to toggle rule status for this date"
+                  >
+                    {/* Left: Checkmark + Rule Title + Status */}
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="shrink-0 transition-transform group-active:scale-90">
+                        {rule.isPassed ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-500/10" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-zinc-600 group-hover:text-zinc-500" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-foreground group-hover:text-white transition-colors truncate">
+                          {rule.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+                          {rule.statusLabel}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground group-hover:text-white transition-colors truncate">
-                        {rule.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">
-                        {rule.statusLabel}
-                      </div>
+                    {/* Right: Period Ratio */}
+                    <div className="text-xs font-mono text-muted-foreground/70 shrink-0 ml-4">
+                      {rule.ratioString}
                     </div>
                   </div>
-
-                  {/* Right: Period Ratio */}
-                  <div className="text-xs font-mono text-muted-foreground/70 shrink-0 ml-4">
-                    {rule.ratioString}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          {/* Calendar Card (Image 1) */}
+          <ProgressCalendarCard
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            trades={accountTrades}
+            journalEntries={journalEntries}
+            config={config}
+          />
         </div>
 
         {/* Right Column: Today Summary (approx 4 cols) */}
@@ -422,6 +436,17 @@ export const ProgressTrackerPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Current Rules Performance Table Card (Image 2) */}
+      <CurrentRulesTableCard
+        ruleSummaries={trackerData.ruleSummaries}
+        onEditRules={() => {
+          setEditStartTime(config.startTime);
+          setEditMaxRisk(String(config.maxRiskUsd));
+          setEditMaxLoss(String(config.maxDailyLossUsd));
+          setSettingsOpen(true);
+        }}
+      />
 
       {/* Rule Limit Configuration Modal */}
       <Modal

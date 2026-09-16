@@ -17,6 +17,7 @@ export const DEFAULT_PROGRESS_CONFIG: ProgressRuleConfig = {
 export interface EvaluatedRule {
   id: string;
   name: string;
+  condition: string; // e.g. "09:30", "100%", "$100", "$500"
   statusLabel: string; // e.g. "Completed / $500", "Not yet / 09:30"
   isPassed: boolean;
   periodPassedCount: number;
@@ -32,6 +33,30 @@ export interface DayRulesAudit {
   complianceScore: number; // 0 - 100
 }
 
+export interface RulePerformanceSummary {
+  id: string;
+  name: string;
+  condition: string;
+  ruleStreak: number;
+  avgPerformance: number | null;
+  avgPerformanceFormatted: string;
+  followRate: number;
+  followRateFormatted: string;
+  followRateColor: string;
+}
+
+export interface CalendarDayCompliance {
+  date: string; // YYYY-MM-DD
+  dayNumber: number;
+  isCurrentMonth: boolean;
+  isTradingDay: boolean;
+  complianceScore: number | null;
+  rulesPassed: number;
+  totalRules: number;
+  tradeCount: number;
+  netPnl: number;
+}
+
 export interface ProgressTrackerData {
   selectedDayAudit: DayRulesAudit;
   currentStreak: number;
@@ -43,6 +68,7 @@ export interface ProgressTrackerData {
     currentStreak: number;
   };
   activeDates: string[];
+  ruleSummaries: RulePerformanceSummary[];
 }
 
 /**
@@ -86,7 +112,7 @@ export function evaluateSingleDayRules(
   journalEntry?: DailyJournalEntry,
   config: ProgressRuleConfig = DEFAULT_PROGRESS_CONFIG
 ): {
-  rules: Array<{ id: string; name: string; statusLabel: string; isPassed: boolean }>;
+  rules: Array<{ id: string; name: string; condition: string; statusLabel: string; isPassed: boolean }>;
   rulesPassed: number;
   totalRules: number;
   complianceScore: number;
@@ -200,11 +226,11 @@ export function evaluateSingleDayRules(
   }
 
   const rules = [
-    { id: 'rule_start_time', name: `Start trading by ${config.startTime}`, statusLabel: r1Status, isPassed: r1Passed },
-    { id: 'rule_stop_loss', name: 'Set stop loss on all trades', statusLabel: r2Status, isPassed: r2Passed },
-    { id: 'rule_max_risk', name: 'Max risk per trade', statusLabel: r3Status, isPassed: r3Passed },
-    { id: 'rule_daily_loss', name: 'Max daily loss limit', statusLabel: r4Status, isPassed: r4Passed },
-    { id: 'rule_journal_trade', name: 'Journal every trade', statusLabel: r5Status, isPassed: r5Passed },
+    { id: 'rule_start_time', name: `Start trading by ${config.startTime}`, condition: config.startTime, statusLabel: r1Status, isPassed: r1Passed },
+    { id: 'rule_stop_loss', name: 'Set stop loss on all trades', condition: '100%', statusLabel: r2Status, isPassed: r2Passed },
+    { id: 'rule_max_risk', name: 'Max risk per trade', condition: formattedRisk, statusLabel: r3Status, isPassed: r3Passed },
+    { id: 'rule_daily_loss', name: 'Max daily loss limit', condition: formattedLoss, statusLabel: r4Status, isPassed: r4Passed },
+    { id: 'rule_journal_trade', name: 'Journal every trade', condition: '100%', statusLabel: r5Status, isPassed: r5Passed },
   ];
 
   const rulesPassed = rules.filter(r => r.isPassed).length;
@@ -219,7 +245,7 @@ export function evaluateSingleDayRules(
 }
 
 /**
- * Calculates complete Progress Tracker analytics including period scores and streaks
+ * Calculates complete Progress Tracker analytics including period scores, streaks, and current rules table summary
  */
 export function calculateProgressTracker(
   selectedDate: string,
@@ -248,8 +274,17 @@ export function calculateProgressTracker(
   const periodDates = sortedDatesDesc.slice(0, periodWindowSize);
   const totalPeriodDays = periodDates.length || 13;
 
-  // 3. Pre-audit each day in the period to gather historical rule pass counts
+  // 3. Pre-audit each day in the period to gather historical rule pass counts and daily net PnL
   const rulePassCounts: Record<string, number> = {
+    rule_start_time: 0,
+    rule_stop_loss: 0,
+    rule_max_risk: 0,
+    rule_daily_loss: 0,
+    rule_journal_trade: 0,
+  };
+
+  // Track daily PnLs on days each rule was followed
+  const ruleCompliantPnlSums: Record<string, number> = {
     rule_start_time: 0,
     rule_stop_loss: 0,
     rule_max_risk: 0,
@@ -264,9 +299,13 @@ export function calculateProgressTracker(
     const audit = evaluateSingleDayRules(d, trades, entry, config);
     dayAuditMap.set(d, audit);
 
+    const dayTrades = trades.filter(t => getTradeDate(t) === d);
+    const dayNetPnl = dayTrades.reduce((sum, t) => sum + (t.netPnl || 0), 0);
+
     audit.rules.forEach(r => {
       if (r.isPassed) {
         rulePassCounts[r.id] = (rulePassCounts[r.id] || 0) + 1;
+        ruleCompliantPnlSums[r.id] = (ruleCompliantPnlSums[r.id] || 0) + dayNetPnl;
       }
     });
   });
@@ -278,7 +317,7 @@ export function calculateProgressTracker(
     ? Math.round((totalPassedChecks / totalPossibleChecks) * 100)
     : 0;
 
-  // 4. Calculate Current Streak (consecutive days compliant with at least 80% or all rules)
+  // 4. Calculate Current Overall Streak (consecutive days compliant with at least 80% or all rules)
   let streak = 0;
   for (const d of sortedDatesDesc) {
     const entry = journalEntries.find(j => j.date === d);
@@ -286,7 +325,7 @@ export function calculateProgressTracker(
     if (!audit) {
       audit = evaluateSingleDayRules(d, trades, entry, config);
     }
-    // A streak day is compliant if score >= 80% (or all 5 passed)
+    // A streak day is compliant if score >= 80%
     if (audit.complianceScore >= 80) {
       streak++;
     } else {
@@ -298,7 +337,38 @@ export function calculateProgressTracker(
     }
   }
 
-  // 5. Selected Day Audit with ratio string
+  // 5. Calculate Individual Rule Streaks (consecutive active days rule was followed)
+  const ruleStreaks: Record<string, number> = {
+    rule_start_time: 0,
+    rule_stop_loss: 0,
+    rule_max_risk: 0,
+    rule_daily_loss: 0,
+    rule_journal_trade: 0,
+  };
+
+  const ruleKeys = ['rule_start_time', 'rule_stop_loss', 'rule_max_risk', 'rule_daily_loss', 'rule_journal_trade'];
+  ruleKeys.forEach(key => {
+    let rStreak = 0;
+    for (const d of sortedDatesDesc) {
+      const entry = journalEntries.find(j => j.date === d);
+      let audit = dayAuditMap.get(d);
+      if (!audit) {
+        audit = evaluateSingleDayRules(d, trades, entry, config);
+      }
+      const ruleObj = audit.rules.find(r => r.id === key);
+      if (ruleObj?.isPassed) {
+        rStreak++;
+      } else {
+        if (d === todayStr && rStreak === 0 && trades.filter(t => getTradeDate(t) === todayStr).length === 0) {
+          continue;
+        }
+        break;
+      }
+    }
+    ruleStreaks[key] = rStreak;
+  });
+
+  // 6. Selected Day Audit with ratio string
   const selectedEntry = journalEntries.find(j => j.date === selectedDate);
   const selectedRawAudit = dayAuditMap.get(selectedDate) || evaluateSingleDayRules(selectedDate, trades, selectedEntry, config);
 
@@ -309,9 +379,42 @@ export function calculateProgressTracker(
     ratioString: `${rulePassCounts[r.id] || 0} / ${totalPeriodDays}`,
   }));
 
-  // 6. Today's stats
+  // 7. Today's stats
   const todayEntry = journalEntries.find(j => j.date === todayStr);
   const todayAudit = dayAuditMap.get(todayStr) || evaluateSingleDayRules(todayStr, trades, todayEntry, config);
+
+  // 8. Build Current Rules table summaries (Image 2)
+  const ruleSummaries: RulePerformanceSummary[] = selectedRulesWithRatio.map(r => {
+    const passedCount = rulePassCounts[r.id] || 0;
+    const followRate = Math.round((passedCount / totalPeriodDays) * 100);
+
+    let followRateColor = 'text-[#ef4444]'; // Red < 50%
+    if (followRate >= 80) {
+      followRateColor = 'text-emerald-400';
+    } else if (followRate >= 50) {
+      followRateColor = 'text-amber-400';
+    }
+
+    let avgPerformance: number | null = null;
+    let avgPerformanceFormatted = '—';
+    if (passedCount > 0) {
+      const sumPnl = ruleCompliantPnlSums[r.id] || 0;
+      avgPerformance = sumPnl / passedCount;
+      avgPerformanceFormatted = formatCurrency(avgPerformance);
+    }
+
+    return {
+      id: r.id,
+      name: r.name,
+      condition: r.condition,
+      ruleStreak: ruleStreaks[r.id] || 0,
+      avgPerformance,
+      avgPerformanceFormatted,
+      followRate,
+      followRateFormatted: `${followRate}%`,
+      followRateColor,
+    };
+  });
 
   return {
     selectedDayAudit: {
@@ -330,5 +433,74 @@ export function calculateProgressTracker(
       currentStreak: streak,
     },
     activeDates: sortedDatesDesc,
+    ruleSummaries,
   };
+}
+
+/**
+ * Generates calendar grid cells for a given month and year
+ */
+export function getMonthCalendarDays(
+  year: number,
+  month: number, // 1 - 12
+  trades: Trade[],
+  journalEntries: DailyJournalEntry[],
+  config: ProgressRuleConfig = DEFAULT_PROGRESS_CONFIG
+): CalendarDayCompliance[] {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDayOfWeek = new Date(year, month - 1, 1).getDay(); // 0 = Sun, 1 = Mon ...
+
+  const result: CalendarDayCompliance[] = [];
+
+  // Pad previous month days as non-current month
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    result.push({
+      date: '',
+      dayNumber: 0,
+      isCurrentMonth: false,
+      isTradingDay: false,
+      complianceScore: null,
+      rulesPassed: 0,
+      totalRules: 5,
+      tradeCount: 0,
+      netPnl: 0,
+    });
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const monthStr = String(month).padStart(2, '0');
+    const dayStr = String(d).padStart(2, '0');
+    const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+    const dayTrades = trades.filter(t => getTradeDate(t) === dateStr);
+    const entry = journalEntries.find(j => j.date === dateStr);
+    const isTradingDay = dayTrades.length > 0 || !!entry;
+
+    let complianceScore: number | null = null;
+    let rulesPassed = 0;
+    let totalRules = 5;
+    const netPnl = dayTrades.reduce((sum, t) => sum + (t.netPnl || 0), 0);
+
+    if (isTradingDay) {
+      const audit = evaluateSingleDayRules(dateStr, trades, entry, config);
+      complianceScore = audit.complianceScore;
+      rulesPassed = audit.rulesPassed;
+      totalRules = audit.totalRules;
+    }
+
+    result.push({
+      date: dateStr,
+      dayNumber: d,
+      isCurrentMonth: true,
+      isTradingDay,
+      complianceScore,
+      rulesPassed,
+      totalRules,
+      tradeCount: dayTrades.length,
+      netPnl,
+    });
+  }
+
+  return result;
 }
