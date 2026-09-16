@@ -19,7 +19,8 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Target
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -235,15 +236,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </NavLink>
 
-        {/* Progress & Discipline */}
+        {/* Progress Tracker */}
         <NavLink
-          to="/progress"
+          to="/progress-tracker"
           onClick={onMobileClose}
           className={({ isActive }) => navClass(isActive)}
-          title={collapsed ? "Discipline Tracker" : undefined}
+          title={collapsed ? "Progress Tracker" : undefined}
         >
-          <ShieldCheck className="w-4 h-4 shrink-0 text-teal-500" />
-          {!collapsed && <span>Discipline & Rules</span>}
+          <Target className="w-4 h-4 shrink-0 text-cyan-400" />
+          {!collapsed && <span>Progress Tracker</span>}
         </NavLink>
 
         {/* Market Hours */}
