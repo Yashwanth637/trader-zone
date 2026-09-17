@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Target
+  Target,
+  Flame
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -234,6 +235,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </div>
           )}
+        </NavLink>
+
+        {/* Hot Topics */}
+        <NavLink
+          to="/hot-topics"
+          onClick={onMobileClose}
+          className={({ isActive }) => navClass(isActive)}
+          title={collapsed ? "Hot Topics" : undefined}
+        >
+          <Flame className="w-4 h-4 shrink-0 text-orange-500" />
+          {!collapsed && <span>Hot Topics</span>}
         </NavLink>
 
         {/* Progress Tracker */}

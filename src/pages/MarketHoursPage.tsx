@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Globe, Zap, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, Globe, Zap, AlertCircle, Flame } from 'lucide-react';
 
 interface MarketSession {
   name: string;
@@ -11,6 +12,7 @@ interface MarketSession {
 }
 
 export const MarketHoursPage: React.FC = () => {
+  const navigate = useNavigate();
   const [nowUtc, setNowUtc] = useState(() => new Date());
 
   useEffect(() => {
@@ -42,14 +44,34 @@ export const MarketHoursPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-          <Clock className="w-6 h-6 text-cyan-400" />
-          <span>Global Market Hours & Sessions</span>
-        </h1>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Live institutional market session tracking, liquidity overlap windows, and session volume clocks.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <Clock className="w-6 h-6 text-cyan-400" />
+            <span>Global Market Hours & Sessions</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Live institutional market session tracking, liquidity overlap windows, and session volume clocks.
+          </p>
+        </div>
+
+        {/* Top-Right Toggle Navigation: Hot Topics vs Market Hours */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate('/hot-topics')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-white/10 bg-[#12131a] hover:bg-white/5 text-orange-400 hover:text-orange-300 transition-all shadow-sm"
+          >
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span>Hot Topics</span>
+          </button>
+
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-purple-500/40 bg-purple-500/15 text-purple-400 shadow-sm shadow-purple-500/20"
+          >
+            <Clock className="w-4 h-4 text-purple-400" />
+            <span>Market Hours</span>
+          </button>
+        </div>
       </div>
 
       {/* UTC Clock Banner */}
