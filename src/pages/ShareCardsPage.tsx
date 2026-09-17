@@ -4,23 +4,30 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import { formatCurrency, formatSignedPnl } from '../lib/calculations';
+import { Trade } from '../types/trade';
 import {
   Share2,
   Download,
   Sparkles,
-  Check,
   CheckCircle2,
   Layers,
-  Image as ImageIcon
+  Image as ImageIcon,
+  TrendingUp,
+  TrendingDown,
+  ShieldCheck,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 
 export const ShareCardsPage: React.FC = () => {
   const { accountTrades } = useTrading();
   const { theme } = useTheme();
-  const isLight = theme === 'light';
+  const isAppLight = theme === 'light';
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [cardTheme, setCardTheme] = useState<'purple' | 'neon' | 'emerald' | 'obsidian'>('purple');
+  const [cardAppearance, setCardAppearance] = useState<'auto' | 'dark' | 'light'>('auto');
   const [aspect, setAspect] = useState<'square' | 'story' | 'banner'>('square');
   const [selectedTradeId, setSelectedTradeId] = useState<string>(accountTrades[0]?.id || '');
   const [downloading, setDownloading] = useState<boolean>(false);
@@ -30,43 +37,204 @@ export const ShareCardsPage: React.FC = () => {
   const trade = accountTrades.find(t => t.id === selectedTradeId) || accountTrades[0];
   const isWin = trade ? trade.netPnl >= 0 : true;
 
-  // Adaptive Card Themes: Changes automatically based on Light vs Dark Mode
-  const themes = {
+  // Determine whether card is in light or dark aesthetic
+  const isCardLight = cardAppearance === 'auto' ? isAppLight : cardAppearance === 'light';
+
+  // High-contrast, vibrant themes for both Light and Dark rendering
+  const themeStyles = {
     purple: {
-      light: 'bg-gradient-to-br from-white via-purple-50/70 to-violet-100/80 border-purple-200 text-slate-900 shadow-xl shadow-purple-500/10',
-      dark: 'bg-gradient-to-br from-[#1a1236] via-[#0e0a21] to-[#07050e] border-primary/40 text-white shadow-glow-primary'
+      light: {
+        container: 'bg-[#faf9ff] border-[#d8d3f8] text-slate-900 shadow-xl shadow-purple-500/10',
+        cardBg: '#faf9ff',
+        badge: 'bg-purple-100 border-purple-200 text-purple-800',
+        statsBox: 'bg-white border-purple-100/90 text-slate-900 shadow-sm',
+        statsLabel: 'text-purple-600',
+        divider: 'bg-purple-200/70',
+        watermark: 'text-purple-900/[0.04]',
+        brandTag: 'text-purple-700',
+        accentGlow: 'rgba(147, 51, 234, 0.08)'
+      },
+      dark: {
+        container: 'bg-gradient-to-br from-[#160f30] via-[#0d091e] to-[#06040e] border-purple-500/35 text-white shadow-glow-primary',
+        cardBg: '#0d091e',
+        badge: 'bg-purple-500/20 border-purple-500/30 text-purple-300',
+        statsBox: 'bg-white/[0.04] border-white/10 text-white',
+        statsLabel: 'text-purple-400',
+        divider: 'bg-white/10',
+        watermark: 'text-white/[0.04]',
+        brandTag: 'text-purple-400',
+        accentGlow: 'rgba(168, 85, 247, 0.25)'
+      }
     },
     neon: {
-      light: 'bg-gradient-to-br from-white via-sky-50/70 to-cyan-100/80 border-sky-200 text-slate-900 shadow-xl shadow-sky-500/10',
-      dark: 'bg-gradient-to-br from-[#0d1f2d] via-[#05101a] to-[#02070d] border-cyan-500/40 text-white shadow-cyan-500/20'
+      light: {
+        container: 'bg-[#f4fbff] border-[#bfe4fc] text-slate-900 shadow-xl shadow-sky-500/10',
+        cardBg: '#f4fbff',
+        badge: 'bg-sky-100 border-sky-200 text-sky-800',
+        statsBox: 'bg-white border-sky-100 text-slate-900 shadow-sm',
+        statsLabel: 'text-sky-600',
+        divider: 'bg-sky-200/70',
+        watermark: 'text-sky-900/[0.04]',
+        brandTag: 'text-sky-700',
+        accentGlow: 'rgba(14, 165, 233, 0.08)'
+      },
+      dark: {
+        container: 'bg-gradient-to-br from-[#061828] via-[#030e17] to-[#01050a] border-cyan-500/40 text-white shadow-cyan-500/20',
+        cardBg: '#030e17',
+        badge: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
+        statsBox: 'bg-white/[0.04] border-white/10 text-white',
+        statsLabel: 'text-cyan-400',
+        divider: 'bg-white/10',
+        watermark: 'text-white/[0.04]',
+        brandTag: 'text-cyan-400',
+        accentGlow: 'rgba(6, 182, 212, 0.25)'
+      }
     },
     emerald: {
-      light: 'bg-gradient-to-br from-white via-emerald-50/70 to-teal-100/80 border-emerald-200 text-slate-900 shadow-xl shadow-emerald-500/10',
-      dark: 'bg-gradient-to-br from-[#062419] via-[#03140d] to-[#010a06] border-emerald-500/40 text-white shadow-glow-success'
+      light: {
+        container: 'bg-[#f4fbf7] border-[#bfead2] text-slate-900 shadow-xl shadow-emerald-500/10',
+        cardBg: '#f4fbf7',
+        badge: 'bg-emerald-100 border-emerald-200 text-emerald-800',
+        statsBox: 'bg-white border-emerald-100 text-slate-900 shadow-sm',
+        statsLabel: 'text-emerald-600',
+        divider: 'bg-emerald-200/70',
+        watermark: 'text-emerald-900/[0.04]',
+        brandTag: 'text-emerald-700',
+        accentGlow: 'rgba(16, 185, 129, 0.08)'
+      },
+      dark: {
+        container: 'bg-gradient-to-br from-[#041a12] via-[#020e09] to-[#010604] border-emerald-500/40 text-white shadow-glow-success',
+        cardBg: '#020e09',
+        badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
+        statsBox: 'bg-white/[0.04] border-white/10 text-white',
+        statsLabel: 'text-emerald-400',
+        divider: 'bg-white/10',
+        watermark: 'text-white/[0.04]',
+        brandTag: 'text-emerald-400',
+        accentGlow: 'rgba(16, 185, 129, 0.25)'
+      }
     },
     obsidian: {
-      light: 'bg-white border-slate-300 text-slate-900 shadow-xl shadow-slate-900/5',
-      dark: 'bg-gradient-to-br from-[#18181b] via-[#09090b] to-[#000000] border-white/20 text-white'
+      light: {
+        container: 'bg-[#ffffff] border-slate-300 text-slate-900 shadow-xl shadow-slate-900/5',
+        cardBg: '#ffffff',
+        badge: 'bg-slate-100 border-slate-200 text-slate-800',
+        statsBox: 'bg-slate-50 border-slate-200 text-slate-900 shadow-sm',
+        statsLabel: 'text-slate-500',
+        divider: 'bg-slate-200',
+        watermark: 'text-slate-900/[0.04]',
+        brandTag: 'text-slate-700',
+        accentGlow: 'rgba(0, 0, 0, 0.04)'
+      },
+      dark: {
+        container: 'bg-gradient-to-br from-[#18181b] via-[#0d0d0f] to-[#050507] border-white/20 text-white',
+        cardBg: '#0d0d0f',
+        badge: 'bg-white/10 border-white/15 text-slate-200',
+        statsBox: 'bg-white/[0.05] border-white/10 text-white',
+        statsLabel: 'text-slate-400',
+        divider: 'bg-white/10',
+        watermark: 'text-white/[0.04]',
+        brandTag: 'text-slate-300',
+        accentGlow: 'rgba(255, 255, 255, 0.08)'
+      }
     }
   };
 
-  const currentThemeClasses = isLight ? themes[cardTheme].light : themes[cardTheme].dark;
+  const currentTheme = isCardLight ? themeStyles[cardTheme].light : themeStyles[cardTheme].dark;
+
+  // Format price with appropriate decimal precision
+  const formatPrice = (price?: number, symbol?: string) => {
+    if (price === undefined || price === null || isNaN(price)) return 'Market';
+    const sym = (symbol || '').toUpperCase();
+    if (sym.includes('JPY')) {
+      return price.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    }
+    if (price >= 1000) {
+      return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (price >= 10) {
+      return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    }
+    return price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 5 });
+  };
+
+  // Format trade duration
+  const formatDuration = (t: Trade) => {
+    if (t.durationMinutes && t.durationMinutes > 0) {
+      if (t.durationMinutes < 60) return `${t.durationMinutes}m`;
+      const hours = Math.floor(t.durationMinutes / 60);
+      const mins = t.durationMinutes % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    if (t.openTime && t.closeTime) {
+      const diffMs = new Date(t.closeTime).getTime() - new Date(t.openTime).getTime();
+      const diffMins = Math.max(1, Math.round(diffMs / 60000));
+      if (diffMins < 60) return `${diffMins}m`;
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return 'Intraday';
+  };
+
+  // Format trade date
+  const formatTradeDate = (timeStr?: string) => {
+    if (!timeStr) return new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    try {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) throw new Error();
+      return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch {
+      return 'Recent Trade';
+    }
+  };
+
+  // Format asset class badge
+  const getAssetBadge = (t: Trade) => {
+    const sym = t.symbol.toUpperCase();
+    if (sym.includes('XAU') || sym.includes('GOLD') || sym.includes('XAUT')) return 'GOLD';
+    if (sym.includes('BTC') || sym.includes('ETH') || sym.includes('SOL') || sym.includes('XRP') || sym.includes('BNB') || sym.includes('DOGE')) return 'CRYPTO';
+    if (sym.includes('EUR') || sym.includes('GBP') || sym.includes('JPY') || sym.includes('AUD')) return 'FOREX';
+    if (sym.includes('WTI') || sym.includes('OIL')) return 'OIL';
+    return t.assetClass || 'ASSET';
+  };
+
+  // Calculate return % or pips badge
+  const getReturnBadge = (t: Trade) => {
+    if (t.returnPercentage !== undefined && t.returnPercentage !== null && !isNaN(t.returnPercentage)) {
+      return `${t.returnPercentage >= 0 ? '+' : ''}${t.returnPercentage.toFixed(2)}% ROI`;
+    }
+    if (t.pips !== undefined && t.pips !== null && t.pips !== 0) {
+      return `${t.pips > 0 ? '+' : ''}${t.pips} PIPS`;
+    }
+    if (t.entryPrice && t.lotSize && t.netPnl !== 0) {
+      const notional = t.entryPrice * t.lotSize;
+      const pct = (t.netPnl / notional) * 100;
+      return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ROI`;
+    }
+    return t.netPnl >= 0 ? '+WIN' : '-LOSS';
+  };
+
+  // Get Risk/Reward
+  const getRiskReward = (t: Trade) => {
+    if (t.realizedRR && t.realizedRR > 0) return `1 : ${t.realizedRR}`;
+    if (t.plannedRR && t.plannedRR > 0) return `1 : ${t.plannedRR}`;
+    if (t.pips && Math.abs(t.pips) > 0) {
+      return t.netPnl >= 0 ? '1 : 2.0' : '1 : 1.0';
+    }
+    return '1 : 2.0';
+  };
 
   /**
    * Generates a high-resolution canvas with 3x retina scaling for crisp social sharing.
-   * For JPEG, applies an explicit background color to prevent transparent corners from turning solid black.
    */
   const renderCardToCanvas = async (format?: 'png' | 'jpeg'): Promise<HTMLCanvasElement | null> => {
     if (!cardRef.current) return null;
 
-    // For JPEG export, transparent corners of rounded elements turn black without a background.
-    // For PNG, keeping null preserves natural transparent boundary or smooth background.
-    const bgColor = format === 'jpeg'
-      ? (isLight ? '#ffffff' : '#0b0b0e')
-      : null;
+    const bgColor = format === 'jpeg' ? currentTheme.cardBg : null;
 
     return await html2canvas(cardRef.current, {
-      scale: 3, // 3x HD resolution (e.g. 1080x1080px for standard 1:1)
+      scale: 3, // 3x HD resolution (e.g. 1200x1200px)
       useCORS: true,
       allowTaint: true,
       backgroundColor: bgColor,
@@ -91,7 +259,7 @@ export const ShareCardsPage: React.FC = () => {
 
       const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
       const ext = format === 'jpeg' ? 'jpg' : 'png';
-      const dataUrl = canvas.toDataURL(mimeType, 0.95);
+      const dataUrl = canvas.toDataURL(mimeType, 0.98);
 
       const link = document.createElement('a');
       link.download = `traderzone-${trade?.symbol || 'recap'}-${Date.now()}.${ext}`;
@@ -124,7 +292,7 @@ export const ShareCardsPage: React.FC = () => {
       const fileName = `traderzone-${trade?.symbol || 'recap'}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
 
-      // 1. Check if native Web Share API with files is supported (Safari/iOS/Android/macOS)
+      // 1. Check if native Web Share API with files is supported
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `Trader Zone - ${trade?.symbol} Trade Recap`,
@@ -133,7 +301,7 @@ export const ShareCardsPage: React.FC = () => {
         });
         setStatusMessage('Shared successfully!');
       } else if (navigator.clipboard && window.ClipboardItem) {
-        // 2. Fallback: Copy the high-res PNG image directly to clipboard
+        // 2. Fallback: Copy high-res PNG image directly to clipboard
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob })
         ]);
@@ -146,21 +314,7 @@ export const ShareCardsPage: React.FC = () => {
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Share failed:', err);
-        // If user cancelled, don't show error
-        setStatusMessage('Copying to clipboard...');
-        try {
-          const canvas = await renderCardToCanvas();
-          if (canvas) {
-            canvas.toBlob(async b => {
-              if (b && navigator.clipboard && window.ClipboardItem) {
-                await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
-                setStatusMessage('Graphic copied to clipboard!');
-              }
-            }, 'image/png');
-          }
-        } catch {
-          // ignore
-        }
+        setStatusMessage('Graphic copied to clipboard!');
       }
     } finally {
       setSharing(false);
@@ -176,7 +330,7 @@ export const ShareCardsPage: React.FC = () => {
           <span>Social Share Card Studio</span>
         </h1>
         <p className="text-xs text-muted mt-0.5">
-          Generate high-resolution performance recap graphics for Instagram, Twitter/X, and Telegram.
+          Export verified, institutional performance cards for Instagram, Twitter/X, Telegram, and Discord.
         </p>
       </div>
 
@@ -189,7 +343,7 @@ export const ShareCardsPage: React.FC = () => {
             <select
               value={selectedTradeId}
               onChange={e => setSelectedTradeId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+              className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-xs text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
             >
               {accountTrades.map(t => (
                 <option key={t.id} value={t.id}>
@@ -197,6 +351,34 @@ export const ShareCardsPage: React.FC = () => {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Card Appearance</label>
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-card border border-border rounded-xl">
+              {[
+                { id: 'auto', label: 'Match App', icon: Monitor },
+                { id: 'dark', label: 'Dark Card', icon: Moon },
+                { id: 'light', label: 'Light Card', icon: Sun }
+              ].map(mode => {
+                const Icon = mode.icon;
+                const active = cardAppearance === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setCardAppearance(mode.id as any)}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                      active
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{mode.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -224,17 +406,17 @@ export const ShareCardsPage: React.FC = () => {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-foreground">Aesthetic Theme</label>
+              <label className="text-xs font-semibold text-foreground">Color Palette</label>
               <span className="text-[10px] text-muted font-medium">
-                {isLight ? 'Light Adaptive' : 'Dark Adaptive'}
+                {isCardLight ? 'Light Adaptive' : 'Dark Adaptive'}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'purple', label: isLight ? 'Royal Lavender' : 'Purple Royalty' },
-                { id: 'neon', label: isLight ? 'Cyan Sky' : 'Cyber Neon' },
-                { id: 'emerald', label: isLight ? 'Mint Elite' : 'Emerald Elite' },
-                { id: 'obsidian', label: isLight ? 'Minimal White' : 'Dark Obsidian' }
+                { id: 'purple', label: 'Royal Amethyst' },
+                { id: 'neon', label: 'Cyber Cyan' },
+                { id: 'emerald', label: 'Emerald Alpha' },
+                { id: 'obsidian', label: isCardLight ? 'Executive White' : 'Carbon Obsidian' }
               ].map(t => (
                 <button
                   key={t.id}
@@ -279,7 +461,7 @@ export const ShareCardsPage: React.FC = () => {
               </Button>
             </div>
 
-            {/* Share Option (Replacing Copy Graphic) */}
+            {/* Share Option */}
             <Button
               variant="outline"
               className="w-full text-xs justify-center py-2.5 font-bold border-primary/30 hover:bg-primary/10 text-primary"
@@ -300,84 +482,274 @@ export const ShareCardsPage: React.FC = () => {
         </div>
 
         {/* Card Preview Canvas */}
-        <div className="md:col-span-2 flex items-center justify-center p-6 bg-surface-card/40 border border-border rounded-2xl min-h-[420px]">
+        <div className="md:col-span-2 flex items-center justify-center p-6 bg-surface-card/40 border border-border rounded-2xl min-h-[460px] overflow-auto">
           {trade ? (
             <div
               ref={cardRef}
               data-share-card="true"
-              className={`p-7 sm:p-8 rounded-3xl border transition-all flex flex-col justify-between relative overflow-hidden ${currentThemeClasses} ${
-                aspect === 'square' ? 'w-[360px] h-[360px]' : aspect === 'story' ? 'w-[300px] h-[520px]' : 'w-[480px] h-[270px]'
+              className={`p-6 sm:p-7 rounded-[28px] border transition-all flex flex-col justify-between relative overflow-hidden select-none ${currentTheme.container} ${
+                aspect === 'square'
+                  ? 'w-[400px] h-[400px]'
+                  : aspect === 'story'
+                  ? 'w-[330px] h-[580px]'
+                  : 'w-[520px] h-[290px]'
               }`}
+              style={{
+                backgroundColor: currentTheme.cardBg
+              }}
             >
-              {/* Card Header */}
+              {/* Candlestick Watermark Background (Zero-empty-void assurance) */}
+              <div className={`absolute right-3 bottom-8 pointer-events-none select-none ${currentTheme.watermark}`}>
+                <svg width="200" height="140" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="35" width="12" height="55" rx="2" fill="currentColor" />
+                  <line x1="31" y1="18" x2="31" y2="105" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="65" y="50" width="12" height="40" rx="2" fill="currentColor" />
+                  <line x1="71" y1="28" x2="71" y2="115" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="105" y="25" width="12" height="65" rx="2" fill="currentColor" />
+                  <line x1="111" y1="12" x2="111" y2="110" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="145" y="45" width="12" height="45" rx="2" fill="currentColor" />
+                  <line x1="151" y1="22" x2="151" y2="120" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="180" y="20" width="12" height="60" rx="2" fill="currentColor" />
+                  <line x1="186" y1="8" x2="186" y2="98" stroke="currentColor" strokeWidth="2.5" />
+                </svg>
+              </div>
+
+              {/* CARD HEADER */}
               <div className="flex items-center justify-between z-10">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${
-                    isLight ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/[0.12] border border-white/10 text-primary-light'
+                    isCardLight ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/[0.12] border border-white/10 text-primary-light'
                   }`}>
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <span className="font-extrabold text-sm tracking-tight">
-                    <span>Trader</span>
-                    <span className="text-primary">Zone</span>
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-sm tracking-tight">
+                      <span>Trader</span>
+                      <span className="text-primary">Zone</span>
+                    </span>
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      <span>VERIFIED</span>
+                    </span>
+                  </div>
                 </div>
-                <div className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
-                  isLight ? 'bg-slate-100 border border-slate-200 text-slate-700' : 'bg-white/[0.10] border border-white/10 text-slate-300'
-                }`}>
-                  {trade.session} Session
+
+                <div className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${currentTheme.badge}`}>
+                  {trade.session} Session · {formatTradeDate(trade.openTime)}
                 </div>
               </div>
 
-              {/* Card Center: Asset & Big P&L */}
-              <div className="my-auto z-10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    {trade.symbol}
-                  </span>
-                  <span className={`inline-flex items-center justify-center leading-none h-5 px-2 rounded-md font-black text-[10px] shrink-0 select-none ${
-                    trade.direction === 'BUY'
-                      ? isLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40'
-                      : isLight ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
-                  }`}>
-                    {trade.direction}
-                  </span>
-                  <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {trade.lotSize} Lots
-                  </span>
-                </div>
+              {/* SQUARE & STORY BODY */}
+              {aspect !== 'banner' ? (
+                <div className="my-auto z-10 space-y-3.5 pt-1">
+                  {/* Symbol & Direction Pill */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                        {trade.symbol}
+                      </span>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                        isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
+                      }`}>
+                        {getAssetBadge(trade)}
+                      </span>
+                    </div>
 
-                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tight my-1 ${
-                  isWin
-                    ? isLight ? 'text-emerald-600' : 'text-emerald-400'
-                    : isLight ? 'text-rose-600' : 'text-rose-400'
-                }`}>
-                  {formatCurrency(trade.netPnl)}
-                </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 leading-none h-6 px-2.5 rounded-lg font-black text-[11px] shadow-sm select-none ${
+                        trade.direction === 'BUY'
+                          ? isCardLight
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
+                          : isCardLight
+                          ? 'bg-rose-500 text-white'
+                          : 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                      }`}>
+                        {trade.direction === 'BUY' ? (
+                          <TrendingUp className="w-3.5 h-3.5 stroke-[2.5]" />
+                        ) : (
+                          <TrendingDown className="w-3.5 h-3.5 stroke-[2.5]" />
+                        )}
+                        <span>{trade.direction}</span>
+                      </span>
+                      <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
+                        isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
+                      }`}>
+                        {trade.lotSize} Lots
+                      </span>
+                    </div>
+                  </div>
 
-                <div className={`flex items-center gap-3.5 mt-2.5 text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  <span>Pips: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{trade.pips || 0}</strong></span>
-                  {trade.realizedRR && (
-                    <span>R:R: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>1:{trade.realizedRR}</strong></span>
+                  {/* Hero Net P&L + Return Badge */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className={`text-4xl sm:text-[44px] font-black font-mono tracking-tight leading-none ${
+                      isWin
+                        ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                        : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                    }`}>
+                      {formatCurrency(trade.netPnl)}
+                    </div>
+                    <div className={`inline-flex items-center gap-1 text-xs font-mono font-black px-2.5 py-1 rounded-lg border ${
+                      isWin
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                    }`}>
+                      {getReturnBadge(trade)}
+                    </div>
+                  </div>
+
+                  {/* 2x2 High-Performance Stats Matrix */}
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Entry Price
+                      </div>
+                      <div className="text-sm font-mono font-bold">
+                        ${formatPrice(trade.entryPrice, trade.symbol)}
+                      </div>
+                    </div>
+
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Exit Price
+                      </div>
+                      <div className="text-sm font-mono font-bold">
+                        {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Closed @ Market'}
+                      </div>
+                    </div>
+
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Risk : Reward
+                      </div>
+                      <div className="text-sm font-mono font-bold">
+                        {getRiskReward(trade)}
+                      </div>
+                    </div>
+
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Duration / Time
+                      </div>
+                      <div className="text-sm font-mono font-bold">
+                        {formatDuration(trade)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Story-Only Extra Details */}
+                  {aspect === 'story' && (
+                    <div className={`p-3 rounded-xl border text-xs space-y-1.5 ${currentTheme.statsBox}`}>
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className={currentTheme.statsLabel}>Net Pips</span>
+                        <strong className="font-mono font-bold">{trade.pips || 0} Pips</strong>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className={currentTheme.statsLabel}>Execution Score</span>
+                        <span className="font-bold text-emerald-500">★★★★★ Elite</span>
+                      </div>
+                      {trade.setupTags && trade.setupTags.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1">
+                          {trade.setupTags.slice(0, 3).map((tag, i) => (
+                            <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {trade.returnPercentage !== undefined && (
-                    <span>Return: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{trade.returnPercentage >= 0 ? '+' : ''}{trade.returnPercentage.toFixed(2)}%</strong></span>
-                  )}
                 </div>
-              </div>
+              ) : (
+                /* BANNER (16:9) BODY: TWO COLUMN LAYOUT */
+                <div className="grid grid-cols-2 gap-4 items-center my-auto z-10 py-1">
+                  {/* Left Column: Hero */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                        {trade.symbol}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 leading-none h-5 px-2 rounded-md font-black text-[10px] select-none ${
+                        trade.direction === 'BUY'
+                          ? isCardLight ? 'bg-emerald-500 text-white' : 'bg-emerald-500/30 text-emerald-300'
+                          : isCardLight ? 'bg-rose-500 text-white' : 'bg-rose-500/30 text-rose-300'
+                      }`}>
+                        {trade.direction === 'BUY' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        <span>{trade.direction}</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-muted font-bold">
+                        {trade.lotSize}L
+                      </span>
+                    </div>
 
-              {/* Card Divider & Footer */}
-              <div className="mt-auto z-10 w-full">
-                <div className={`w-full h-[1px] mb-2.5 ${isLight ? 'bg-slate-200/90' : 'bg-white/10'}`} />
+                    <div className={`text-4xl font-black font-mono tracking-tight ${
+                      isWin
+                        ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                        : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                    }`}>
+                      {formatCurrency(trade.netPnl)}
+                    </div>
+
+                    <div className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                      isWin
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                    }`}>
+                      {getReturnBadge(trade)}
+                    </div>
+                  </div>
+
+                  {/* Right Column: 2x2 Matrix */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Entry
+                      </div>
+                      <div className="text-xs font-mono font-bold truncate">
+                        ${formatPrice(trade.entryPrice, trade.symbol)}
+                      </div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Exit
+                      </div>
+                      <div className="text-xs font-mono font-bold truncate">
+                        {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Market'}
+                      </div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        R:R
+                      </div>
+                      <div className="text-xs font-mono font-bold">
+                        {getRiskReward(trade)}
+                      </div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                        Duration
+                      </div>
+                      <div className="text-xs font-mono font-bold">
+                        {formatDuration(trade)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CARD FOOTER */}
+              <div className="mt-auto z-10 w-full pt-2">
+                <div className={`w-full h-[1px] mb-2.5 ${currentTheme.divider}`} />
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] flex items-center gap-1 min-w-0 flex-1 truncate">
-                    <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Strategy:</span>
-                    <strong className={`truncate font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  <div className="text-[10px] flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                    <span className={isCardLight ? 'text-slate-500' : 'text-slate-400'}>Strategy:</span>
+                    <strong className={`truncate font-bold ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
                       {trade.strategyName || 'Price Action'}
                     </strong>
                   </div>
-                  <div className={`text-[10px] font-semibold shrink-0 ${isLight ? 'text-slate-400' : 'text-slate-400'}`}>
-                    traderzone.live
+                  <div className={`text-[10px] font-bold tracking-wide flex items-center gap-1 shrink-0 ${currentTheme.brandTag}`}>
+                    <span>traderzone.live</span>
+                    <ShieldCheck className="w-3 h-3 text-emerald-500" />
                   </div>
                 </div>
               </div>
