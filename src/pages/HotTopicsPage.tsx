@@ -18,6 +18,8 @@ import {
   RawHeadline,
   MarketIntelligenceCard,
   getActiveMarketSessions,
+  getInitialMarketTickers,
+  getInitialHeadlines,
   fetchLiveMarketTickers,
   applyLiveMicroTick,
   fetchLiveNewsHeadlines,
@@ -59,9 +61,9 @@ export const HotTopicsPage: React.FC = () => {
     return getActiveMarketSessions(nowUtc.getUTCHours());
   }, [nowUtc]);
 
-  // Live Market Tickers & Headlines state
-  const [tickers, setTickers] = useState<MarketTicker[]>([]);
-  const [headlines, setHeadlines] = useState<RawHeadline[]>([]);
+  // Live Market Tickers & Headlines state (pre-seeded with initial market cache so animation starts instantly)
+  const [tickers, setTickers] = useState<MarketTicker[]>(() => getInitialMarketTickers());
+  const [headlines, setHeadlines] = useState<RawHeadline[]>(() => getInitialHeadlines());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedText, setLastRefreshedText] = useState('intel just now');
   const tickersRef = useRef<MarketTicker[]>([]);
@@ -162,9 +164,7 @@ export const HotTopicsPage: React.FC = () => {
           display: flex;
           width: max-content;
           animation: tickerEscalator 42s linear infinite;
-        }
-        .animate-escalator:hover {
-          animation-play-state: paused;
+          will-change: transform;
         }
       `}</style>
 

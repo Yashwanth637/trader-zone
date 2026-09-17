@@ -382,6 +382,20 @@ export function applyLiveMicroTick(tickers: MarketTicker[]): MarketTicker[] {
 }
 
 /**
+ * Returns immediate initial market tickers so the escalator tape starts moving with full width on frame 0
+ */
+export function getInitialMarketTickers(): MarketTicker[] {
+  return [...cachedTickers];
+}
+
+/**
+ * Returns immediate initial headlines so news feeds render instantly on frame 0
+ */
+export function getInitialHeadlines(): RawHeadline[] {
+  return [...FALLBACK_HEADLINES];
+}
+
+/**
  * Curated fallback headlines if internet RSS is temporarily unreachable
  */
 export const FALLBACK_HEADLINES: RawHeadline[] = [
