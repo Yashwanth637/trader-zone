@@ -112,13 +112,7 @@ export const LandingPage: React.FC = () => {
             <Eye className="w-3.5 h-3.5" />
             <span>Journal Preview</span>
           </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('pricing')}
-            className="hover:text-white transition-colors cursor-pointer"
-          >
-            Pricing
-          </button>
+
         </div>
 
         <div className="flex items-center gap-3">
@@ -526,66 +520,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Pricing Matrix */}
-      <section id="pricing" className="py-20 px-6 border-t border-border/80 bg-surface/30">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 mb-3">
-              ACCESS & PRICING
-            </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3">
-              Personal Trader Ownership
-            </h2>
-            <p className="text-sm text-slate-400">
-              No hidden fees, no recurring subscriptions. Unlocked with your Access Key.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="premium-card p-8 border-primary/40 shadow-glow-primary relative">
-              <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary-light mb-4">
-                PERSONAL EDITION (UNLOCKED)
-              </div>
-              <div className="text-4xl font-black text-white mb-2">
-                $0 <span className="text-base font-normal text-slate-400">/ forever</span>
-              </div>
-              <p className="text-xs text-slate-400 mb-6">
-                100% full access to all features, analytics, calendar, AI modules, and Delta India sync.
-              </p>
-              <ul className="space-y-3 text-xs text-slate-300 mb-8">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Unlimited trade logging & calendar journal</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Delta Exchange India direct API sync</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Cross-device sync between MacBook and phone</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> AI Chart Vision & Behavioral Coach</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Institutional Web Terminal (Default XAU/USD)</li>
-              </ul>
-              <Button variant="primary" className="w-full" onClick={handleLaunch}>
-                {user ? 'Open Journal Now' : 'Enter With Access Key'}
-              </Button>
-            </div>
-
-            <div className="premium-card p-8 relative opacity-80">
-              <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 mb-4">
-                COMMERCIAL / PRO FIRMS
-              </div>
-              <div className="text-4xl font-black text-slate-500 mb-2">
-                $49 <span className="text-base font-normal text-slate-600">/ month</span>
-              </div>
-              <p className="text-xs text-slate-400 mb-6">
-                For proprietary trading firms and hedge funds requiring multi-seat risk officer monitoring.
-              </p>
-              <ul className="space-y-3 text-xs text-slate-400 mb-8">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-slate-600" /> Multi-trader organization dashboard</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-slate-600" /> Real-time risk officer alerts</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-slate-600" /> Custom API broker direct webhooks</li>
-              </ul>
-              <Button variant="secondary" disabled className="w-full">
-                Enterprise Managed
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="py-10 px-6 border-t border-border/80 text-center text-xs text-slate-500">
