@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import {
@@ -8,14 +8,10 @@ import {
   Eye,
   Activity,
   Radio,
-  ExternalLink,
   Target,
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles,
-  Zap,
-  TrendingUp,
-  TrendingDown
+  Sparkles
 } from 'lucide-react';
 import {
   MarketTicker,
@@ -23,8 +19,9 @@ import {
   MarketIntelligenceCard,
   getActiveMarketSessions,
   fetchLiveMarketTickers,
+  applyLiveMicroTick,
   fetchLiveNewsHeadlines,
-  getMarketIntelligenceCards,
+  generateDynamicCardsFromLiveNews,
   generateSparklineSvgPath
 } from '../lib/hotTopicsService';
 
@@ -38,7 +35,7 @@ export const HotTopicsPage: React.FC = () => {
     accountTrades.forEach(t => {
       if (t.symbol) set.add(t.symbol.toUpperCase());
     });
-    // Default common user pairs if none logged yet
+    // Default pairs if none logged yet
     if (set.size === 0) {
       set.add('XAUUSD');
       set.add('BTCUSD');
@@ -62,16 +59,18 @@ export const HotTopicsPage: React.FC = () => {
     return getActiveMarketSessions(nowUtc.getUTCHours());
   }, [nowUtc]);
 
-  // Live Market Tickers state
+  // Live Market Tickers & Headlines state
   const [tickers, setTickers] = useState<MarketTicker[]>([]);
   const [headlines, setHeadlines] = useState<RawHeadline[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedText, setLastRefreshedText] = useState('intel just now');
+  const tickersRef = useRef<MarketTicker[]>([]);
+  tickersRef.current = tickers;
 
-  // Curated & Matched Intelligence Cards
+  // Dynamically synthesized cards from real news & live prices
   const { topStory, gridCards } = useMemo(() => {
-    return getMarketIntelligenceCards(userSymbols);
-  }, [userSymbols]);
+    return generateDynamicCardsFromLiveNews(headlines, tickers, userSymbols);
+  }, [headlines, tickers, userSymbols]);
 
   // Count items on user's radar
   const radarCount = useMemo(() => {
@@ -83,7 +82,7 @@ export const HotTopicsPage: React.FC = () => {
     return count;
   }, [topStory, gridCards]);
 
-  // Fetch real-time market data
+  // Full refresh from live APIs
   const loadLiveMarketData = async () => {
     setIsRefreshing(true);
     try {
@@ -101,17 +100,74 @@ export const HotTopicsPage: React.FC = () => {
     }
   };
 
-  // Initial load + periodic background polling (every 60s)
+  // Initial load
   useEffect(() => {
     loadLiveMarketData();
-    const interval = setInterval(() => {
-      loadLiveMarketData();
-    }, 60000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Continuous live micro-tick engine (every 2.5 seconds, jitter active live prices)
+  useEffect(() => {
+    const tickInterval = setInterval(() => {
+      if (tickersRef.current.length > 0) {
+        setTickers(prev => applyLiveMicroTick(prev));
+      }
+    }, 2500);
+    return () => clearInterval(tickInterval);
+  }, []);
+
+  // Periodic network polling for fresh mark prices (every 12 seconds)
+  useEffect(() => {
+    const networkPoll = setInterval(async () => {
+      try {
+        const freshTickers = await fetchLiveMarketTickers();
+        setTickers(freshTickers);
+      } catch (err) {
+        console.warn('Silent price poll failed', err);
+      }
+    }, 12000);
+    return () => clearInterval(networkPoll);
+  }, []);
+
+  // Periodic news feed polling (every 45 seconds)
+  useEffect(() => {
+    const newsPoll = setInterval(async () => {
+      try {
+        const freshNews = await fetchLiveNewsHeadlines();
+        if (freshNews.length > 0) {
+          setHeadlines(freshNews);
+          setLastRefreshedText('intel just now');
+        }
+      } catch (err) {
+        console.warn('Silent news poll failed', err);
+      }
+    }, 45000);
+    return () => clearInterval(newsPoll);
+  }, []);
+
+  // Duplicate tickers array for seamless infinite escalator loop
+  const escalatorTickers = useMemo(() => {
+    if (tickers.length === 0) return [];
+    return [...tickers, ...tickers];
+  }, [tickers]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Dynamic Keyframes for Continuous Escalator Marquee */}
+      <style>{`
+        @keyframes tickerEscalator {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+        .animate-escalator {
+          display: flex;
+          width: max-content;
+          animation: tickerEscalator 42s linear infinite;
+        }
+        .animate-escalator:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
       {/* Top Header Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -139,7 +195,7 @@ export const HotTopicsPage: React.FC = () => {
 
           <button
             onClick={() => navigate('/market-hours')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-white/10 bg-[#12131a] hover:bg-white/5 text-purple-400 hover:text-purple-300 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-white/10 bg-[#12131a] hover:bg-white/5 text-purple-400 hover:text-purple-300 transition-all shadow-sm cursor-pointer"
           >
             <Clock className="w-4 h-4 text-purple-400" />
             <span>Market Hours</span>
@@ -147,17 +203,23 @@ export const HotTopicsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Live Market Ticker Tape Bar (Image 1) */}
-      <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-2.5 overflow-hidden shadow-sm">
-        <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-1 px-2 whitespace-nowrap">
-          {tickers.map(ticker => {
+      {/* Live Market Ticker Tape: Continuous Infinite Escalator Loop (Image 1) */}
+      <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-2.5 relative overflow-hidden shadow-sm group">
+        {/* Left & Right Smooth Edge Fade Masks */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#12131a] to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#12131a] to-transparent z-10" />
+
+        {/* Continuous Looping Track */}
+        <div className="animate-escalator py-1">
+          {escalatorTickers.map((ticker, idx) => {
             const pathData = generateSparklineSvgPath(ticker.sparkline, 55, 18);
             const isGold = ticker.symbol.includes('XAU');
 
             return (
               <div
-                key={ticker.symbol}
-                className="flex items-center gap-2.5 shrink-0 select-none group"
+                key={`${ticker.symbol}-${idx}`}
+                className="flex items-center gap-3 shrink-0 select-none px-5 py-0.5 hover:bg-white/[0.03] rounded-xl transition-colors cursor-default"
+                title={`${ticker.name} - Live: ${ticker.formattedPrice} (${ticker.changePercent >= 0 ? '+' : ''}${ticker.changePercent}%)`}
               >
                 {/* Mini Sparkline Chart */}
                 <svg className="w-14 h-5 overflow-visible" viewBox="0 0 55 18">
@@ -183,13 +245,15 @@ export const HotTopicsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Price */}
-                <span className="text-xs font-mono font-medium text-zinc-300">
+                {/* Live Real-Time Price */}
+                <span className="text-xs font-mono font-bold text-white transition-all duration-300">
                   {ticker.formattedPrice}
                 </span>
 
                 {/* 24h Percentage Change */}
-                <div className={`flex items-center text-xs font-mono font-semibold ${ticker.isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <div className={`flex items-center text-xs font-mono font-semibold transition-colors duration-300 ${
+                  ticker.isPositive ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
                   <span>{ticker.isPositive ? '▲' : '▼'}</span>
                   <span>{Math.abs(ticker.changePercent).toFixed(2)}%</span>
                 </div>
@@ -294,7 +358,7 @@ export const HotTopicsPage: React.FC = () => {
               key={headline.id}
               className="py-3 flex items-start gap-4 hover:bg-white/[0.02] px-2 rounded-xl transition-colors group cursor-default"
             >
-              <div className={`text-[11px] font-bold font-mono tracking-wider w-24 shrink-0 mt-0.5 ${headline.sourceColor || 'text-zinc-400'}`}>
+              <div className={`text-[11px] font-bold font-mono tracking-wider w-28 shrink-0 mt-0.5 ${headline.sourceColor || 'text-zinc-400'}`}>
                 {headline.source}
               </div>
 
@@ -312,7 +376,7 @@ export const HotTopicsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Featured Breaking Top Story Hero Card (Image 2 Top) */}
+      {/* Dynamic Featured Breaking Top Story Hero Card (Image 2 Top) */}
       <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 md:p-8 relative overflow-hidden shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Left Content */}
@@ -326,13 +390,23 @@ export const HotTopicsPage: React.FC = () => {
               <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 tracking-wider">
                 HIGH
               </span>
-              <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 tracking-wider">
-                <ArrowDownRight className="w-3.5 h-3.5" />
-                BEARISH
+              <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg tracking-wider ${
+                topStory.sentiment === 'BULLISH'
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+              }`}>
+                {topStory.sentiment === 'BULLISH' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                {topStory.sentiment}
               </span>
               <span className="px-2.5 py-0.5 rounded-lg bg-white/5 text-zinc-400 tracking-wider">
-                TODAY
+                {topStory.timeBadge}
               </span>
+              {topStory.isUserMarket && (
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg border border-orange-500/40 bg-orange-500/10 text-orange-400 tracking-wider">
+                  <Target className="w-3.5 h-3.5 text-orange-400" />
+                  YOUR MARKET
+                </span>
+              )}
             </div>
 
             {/* Headline */}
@@ -346,15 +420,17 @@ export const HotTopicsPage: React.FC = () => {
             </p>
 
             {/* Watch Advisory Callout */}
-            <div className="flex items-start gap-2 pt-1 text-xs md:text-sm text-zinc-300">
-              <div className="flex items-center gap-1 text-orange-400 font-bold font-mono shrink-0 uppercase tracking-wide">
-                <Eye className="w-3.5 h-3.5" />
-                <span>WATCH</span>
+            {topStory.watchCallout && (
+              <div className="flex items-start gap-2 pt-1 text-xs md:text-sm text-zinc-300">
+                <div className="flex items-center gap-1 text-orange-400 font-bold font-mono shrink-0 uppercase tracking-wide">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>WATCH</span>
+                </div>
+                <span className="text-zinc-300">
+                  {topStory.watchCallout}
+                </span>
               </div>
-              <span className="text-zinc-300">
-                {topStory.watchCallout}
-              </span>
-            </div>
+            )}
 
             {/* Impacted Asset Pills */}
             <div className="flex items-center gap-2 pt-2">
@@ -369,7 +445,7 @@ export const HotTopicsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Heat Gauge & Mini Asset Widget */}
+          {/* Right Heat Gauge & Live Asset Widget */}
           <div className="shrink-0 flex lg:flex-col items-end justify-between gap-4 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-white/5 lg:pl-8">
             <div className="text-right">
               <div className="text-[10px] font-bold font-mono tracking-widest text-zinc-500 uppercase">
@@ -384,12 +460,14 @@ export const HotTopicsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Mini Asset Card */}
+            {/* Live Asset Card */}
             {topStory.relatedAsset && (
               <div className="bg-[#181922] border border-white/5 rounded-xl p-3 w-40">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-zinc-300">{topStory.relatedAsset.symbol}</span>
-                  <span className="font-semibold text-emerald-400">{topStory.relatedAsset.changeText}</span>
+                  <span className={`font-semibold ${topStory.relatedAsset.isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {topStory.relatedAsset.changeText}
+                  </span>
                 </div>
                 <div className="text-lg font-black font-mono text-white mt-1">
                   {topStory.relatedAsset.price}
@@ -399,7 +477,7 @@ export const HotTopicsPage: React.FC = () => {
                     <path
                       d={generateSparklineSvgPath(topStory.relatedAsset.sparkline, 55, 18)}
                       fill="none"
-                      stroke="#10b981"
+                      stroke={topStory.relatedAsset.isPositive ? '#10b981' : '#f43f5e'}
                       strokeWidth="2"
                       strokeLinecap="round"
                     />
@@ -411,7 +489,7 @@ export const HotTopicsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2x2 Categorized Intelligence News Cards Grid (Image 2 Bottom) */}
+      {/* Dynamic 2x2 Categorized Intelligence News Cards Grid (Image 2 Bottom) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {gridCards.map((card) => {
           return (
@@ -466,7 +544,7 @@ export const HotTopicsPage: React.FC = () => {
                   {card.description}
                 </p>
 
-                {/* Highlight Tags (if any) */}
+                {/* Highlight Tags */}
                 {card.highlightTags && card.highlightTags.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     {card.highlightTags.map(tag => (
@@ -491,7 +569,7 @@ export const HotTopicsPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Card Footer: Tags & Asset Performance */}
+              {/* Card Footer: Tags & Live Asset Performance */}
               <div className="flex items-center justify-between mt-5 pt-4 border-t border-white/5">
                 <div className="flex items-center gap-2">
                   {card.affectedSymbols.map(sym => (
