@@ -146,11 +146,18 @@ export const HotTopicsPage: React.FC = () => {
     return () => clearInterval(newsPoll);
   }, []);
 
-  // Duplicate tickers array for seamless infinite escalator loop
+  // Exclude user-requested pairs from escalator tape: US500, EURUSD, XAUAUD, COIN, USDJPY, HOOD
+  const EXCLUDED_SYMBOLS = useMemo(() => new Set(['US500', 'EURUSD', 'XAUAUD', 'COIN', 'USDJPY', 'HOOD']), []);
+
+  const activeTickers = useMemo(() => {
+    return tickers.filter(t => !EXCLUDED_SYMBOLS.has(t.symbol.toUpperCase()));
+  }, [tickers, EXCLUDED_SYMBOLS]);
+
+  // Duplicate active tickers array for seamless infinite escalator loop
   const escalatorTickers = useMemo(() => {
-    if (tickers.length === 0) return [];
-    return [...tickers, ...tickers];
-  }, [tickers]);
+    if (activeTickers.length === 0) return [];
+    return [...activeTickers, ...activeTickers];
+  }, [activeTickers]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
@@ -163,8 +170,11 @@ export const HotTopicsPage: React.FC = () => {
         .animate-escalator {
           display: flex;
           width: max-content;
-          animation: tickerEscalator 42s linear infinite;
+          animation: tickerEscalator 28s linear infinite;
           will-change: transform;
+        }
+        .animate-escalator:hover {
+          animation-play-state: paused;
         }
       `}</style>
 

@@ -90,72 +90,6 @@ export function generateSparklineSvgPath(points: number[], width = 60, height = 
 // In-memory persistent cache for live tickers across tick updates
 let cachedTickers: MarketTicker[] = [
   {
-    symbol: 'XAUAUD',
-    displaySymbol: 'XAUAUD',
-    name: 'Gold / AUD',
-    price: 4092.50,
-    formattedPrice: '4,092.50',
-    changePercent: 0.82,
-    isPositive: true,
-    sparkline: [40, 45, 42, 50, 55, 60, 58, 65, 70, 75, 72, 80],
-    category: 'Gold',
-  },
-  {
-    symbol: 'WTIUSD',
-    displaySymbol: 'WTIUSD',
-    name: 'Crude Oil',
-    price: 91.75,
-    formattedPrice: '91.75',
-    changePercent: 0.49,
-    isPositive: true,
-    sparkline: [50, 48, 52, 55, 53, 58, 60, 59, 62, 65],
-    category: 'Indices',
-  },
-  {
-    symbol: 'USDJPY',
-    displaySymbol: 'USDJPY',
-    name: 'USD / JPY',
-    price: 155.94,
-    formattedPrice: '155.94',
-    changePercent: -1.72,
-    isPositive: false,
-    sparkline: [80, 75, 78, 65, 60, 55, 50, 45, 40, 35, 30],
-    category: 'Forex',
-  },
-  {
-    symbol: 'COIN',
-    displaySymbol: 'COIN',
-    name: 'Coinbase Global',
-    price: 192.70,
-    formattedPrice: '192.70',
-    changePercent: 10.14,
-    isPositive: true,
-    sparkline: [30, 35, 40, 45, 50, 60, 70, 75, 85, 90],
-    category: 'Equities',
-  },
-  {
-    symbol: 'HOOD',
-    displaySymbol: 'HOOD',
-    name: 'Robinhood Markets',
-    price: 124.72,
-    formattedPrice: '124.72',
-    changePercent: 16.57,
-    isPositive: true,
-    sparkline: [25, 30, 40, 50, 65, 70, 80, 85, 95],
-    category: 'Equities',
-  },
-  {
-    symbol: 'US500',
-    displaySymbol: 'US500',
-    name: 'S&P 500 Index',
-    price: 7747.70,
-    formattedPrice: '7,747.7',
-    changePercent: 1.06,
-    isPositive: true,
-    sparkline: [45, 50, 48, 55, 60, 58, 65, 70, 75, 80],
-    category: 'Indices',
-  },
-  {
     symbol: 'XAUUSD',
     displaySymbol: 'XAUUSD',
     name: 'Gold Spot / USD',
@@ -170,31 +104,20 @@ let cachedTickers: MarketTicker[] = [
     symbol: 'BTCUSD',
     displaySymbol: 'BTCUSD',
     name: 'Bitcoin',
-    price: 76420.00,
-    formattedPrice: '$76,420',
-    changePercent: 1.06,
+    price: 76592.50,
+    formattedPrice: '$76,592',
+    changePercent: 1.13,
     isPositive: true,
     sparkline: [35, 40, 45, 52, 60, 68, 75, 80, 85, 92],
     category: 'Crypto',
   },
   {
-    symbol: 'EURUSD',
-    displaySymbol: 'EURUSD',
-    name: 'EUR / USD',
-    price: 1.1502,
-    formattedPrice: '1.1502',
-    changePercent: 0.32,
-    isPositive: true,
-    sparkline: [50, 52, 49, 54, 56, 58, 60, 62],
-    category: 'Forex',
-  },
-  {
     symbol: 'ETHUSD',
     displaySymbol: 'ETHUSD',
     name: 'Ethereum',
-    price: 2453.60,
-    formattedPrice: '$2,453.60',
-    changePercent: 1.85,
+    price: 2459.75,
+    formattedPrice: '$2,459.75',
+    changePercent: 2.86,
     isPositive: true,
     sparkline: [40, 45, 48, 52, 58, 65, 70, 78, 82],
     category: 'Crypto',
@@ -203,25 +126,69 @@ let cachedTickers: MarketTicker[] = [
     symbol: 'SOLUSD',
     displaySymbol: 'SOLUSD',
     name: 'Solana',
-    price: 100.37,
-    formattedPrice: '$100.37',
-    changePercent: 3.42,
+    price: 100.87,
+    formattedPrice: '$100.87',
+    changePercent: 3.75,
     isPositive: true,
     sparkline: [30, 38, 45, 50, 60, 70, 78, 85, 90],
     category: 'Crypto',
-  }
+  },
+  {
+    symbol: 'XRPUSD',
+    displaySymbol: 'XRPUSD',
+    name: 'XRP / Ripple',
+    price: 1.30,
+    formattedPrice: '$1.300',
+    changePercent: 2.57,
+    isPositive: true,
+    sparkline: [45, 48, 52, 55, 62, 68, 72, 75],
+    category: 'Crypto',
+  },
+  {
+    symbol: 'BNBUSD',
+    displaySymbol: 'BNBUSD',
+    name: 'BNB Coin',
+    price: 727.16,
+    formattedPrice: '$727.16',
+    changePercent: 1.94,
+    isPositive: true,
+    sparkline: [50, 52, 55, 58, 65, 70, 72, 76],
+    category: 'Crypto',
+  },
+  {
+    symbol: 'DOGEUSD',
+    displaySymbol: 'DOGEUSD',
+    name: 'Dogecoin',
+    price: 0.0817,
+    formattedPrice: '$0.0817',
+    changePercent: 3.03,
+    isPositive: true,
+    sparkline: [40, 42, 46, 50, 55, 62, 65, 70],
+    category: 'Crypto',
+  },
+  {
+    symbol: 'WTIUSD',
+    displaySymbol: 'WTIUSD',
+    name: 'Crude Oil',
+    price: 91.75,
+    formattedPrice: '91.75',
+    changePercent: 0.49,
+    isPositive: true,
+    sparkline: [50, 48, 52, 55, 53, 58, 60, 59, 62, 65],
+    category: 'Indices',
+  },
 ];
 
 /**
- * Fetches real-time market prices from Delta Exchange India & Open Exchange Rates
+ * Fetches real-time market prices from Delta Exchange India
  */
 export async function fetchLiveMarketTickers(): Promise<MarketTicker[]> {
   const updated = [...cachedTickers];
 
-  // 1. Fetch live Delta Exchange India tickers (BTCUSD, XAUTUSD, ETHUSD, SOLUSD)
+  // Fetch live Delta Exchange India tickers (BTCUSD, XAUTUSD, ETHUSD, SOLUSD, XRPUSD, BNBUSD, DOGEUSD)
   try {
     const deltaRes = await fetch('https://api.india.delta.exchange/v2/tickers', {
-      signal: AbortSignal.timeout(4500),
+      signal: AbortSignal.timeout(6000),
     });
     if (deltaRes.ok) {
       const deltaData = await deltaRes.json();
@@ -276,67 +243,45 @@ export async function fetchLiveMarketTickers(): Promise<MarketTicker[]> {
                 isPositive: rawChange >= 0,
               };
             }
+          } else if (sym === 'XRPUSD') {
+            const idx = updated.findIndex(t => t.symbol === 'XRPUSD');
+            if (idx >= 0) {
+              updated[idx] = {
+                ...updated[idx],
+                price,
+                formattedPrice: `$${price.toFixed(4)}`,
+                changePercent: !isNaN(rawChange) ? rawChange : updated[idx].changePercent,
+                isPositive: rawChange >= 0,
+              };
+            }
+          } else if (sym === 'BNBUSD') {
+            const idx = updated.findIndex(t => t.symbol === 'BNBUSD');
+            if (idx >= 0) {
+              updated[idx] = {
+                ...updated[idx],
+                price,
+                formattedPrice: `$${price.toFixed(2)}`,
+                changePercent: !isNaN(rawChange) ? rawChange : updated[idx].changePercent,
+                isPositive: rawChange >= 0,
+              };
+            }
+          } else if (sym === 'DOGEUSD') {
+            const idx = updated.findIndex(t => t.symbol === 'DOGEUSD');
+            if (idx >= 0) {
+              updated[idx] = {
+                ...updated[idx],
+                price,
+                formattedPrice: `$${price.toFixed(4)}`,
+                changePercent: !isNaN(rawChange) ? rawChange : updated[idx].changePercent,
+                isPositive: rawChange >= 0,
+              };
+            }
           }
         });
       }
     }
   } catch (err) {
     console.warn('Delta India live ticker fetch failed, attempting backup', err);
-  }
-
-  // 2. Fetch live Forex & Dollar rates from open.er-api.com
-  try {
-    const fxRes = await fetch('https://open.er-api.com/v6/latest/USD', {
-      signal: AbortSignal.timeout(4000),
-    });
-    if (fxRes.ok) {
-      const fxData = await fxRes.json();
-      if (fxData?.rates) {
-        // USDJPY
-        const jpyRate = fxData.rates.JPY;
-        if (jpyRate) {
-          const jpyIdx = updated.findIndex(t => t.symbol === 'USDJPY');
-          if (jpyIdx >= 0) {
-            updated[jpyIdx] = {
-              ...updated[jpyIdx],
-              price: jpyRate,
-              formattedPrice: jpyRate.toFixed(2),
-            };
-          }
-        }
-
-        // EURUSD
-        const eurRate = fxData.rates.EUR;
-        if (eurRate) {
-          const eurUsd = 1 / eurRate;
-          const eurIdx = updated.findIndex(t => t.symbol === 'EURUSD');
-          if (eurIdx >= 0) {
-            updated[eurIdx] = {
-              ...updated[eurIdx],
-              price: eurUsd,
-              formattedPrice: eurUsd.toFixed(4),
-            };
-          }
-        }
-
-        // XAUAUD (Gold in AUD = Gold in USD * AUD rate)
-        const audRate = fxData.rates.AUD;
-        const goldUsd = updated.find(t => t.symbol === 'XAUUSD')?.price || 2714;
-        if (audRate) {
-          const xauAud = goldUsd * (1 / (1 / audRate));
-          const xauAudIdx = updated.findIndex(t => t.symbol === 'XAUAUD');
-          if (xauAudIdx >= 0) {
-            updated[xauAudIdx] = {
-              ...updated[xauAudIdx],
-              price: xauAud,
-              formattedPrice: xauAud.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-            };
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Forex exchange rates fetch failed, keeping active tickers', err);
   }
 
   cachedTickers = updated;
@@ -395,126 +340,170 @@ export function getInitialHeadlines(): RawHeadline[] {
   return [...FALLBACK_HEADLINES];
 }
 
+function decodeHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/&amp;#038;/g, '&')
+    .replace(/&#038;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8216;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+}
+
+function parseRssDate(raw: string | undefined): number {
+  if (!raw) return Date.now();
+  if (raw.includes('Z') || raw.includes('+') || raw.includes('GMT') || raw.includes('UTC')) {
+    const parsed = new Date(raw).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+  // Standard "YYYY-MM-DD HH:mm:ss" from rss2json is in UTC
+  const normalized = raw.trim().replace(' ', 'T') + 'Z';
+  const parsed = new Date(normalized).getTime();
+  return !isNaN(parsed) ? parsed : Date.now();
+}
+
 /**
  * Curated fallback headlines if internet RSS is temporarily unreachable
  */
 export const FALLBACK_HEADLINES: RawHeadline[] = [
   {
     id: 'h1',
-    source: 'JUST IN',
-    sourceColor: 'text-red-400',
-    title: 'Polymarket Launches Perpetual Trading With Up to 20x Leverage Polymarket has launched Polymarket Perps, offering perpetual trading with up to 20x leverage on cryptocurrencies, stoc',
-    timeAgo: '1m ago',
-    timestamp: Date.now() - 60000,
-    tags: ['Crypto', 'Perps'],
+    source: 'COINTELEGRAPH',
+    sourceColor: 'text-orange-400',
+    title: 'Bitcoin coils near $76.5K as US stocks rebound from Fed rate hike',
+    timeAgo: '14m ago',
+    timestamp: Date.now() - 14 * 60000,
+    tags: ['BTCUSD', 'Fed', 'Macro'],
   },
   {
     id: 'h2',
     source: 'DECRYPT',
     sourceColor: 'text-emerald-400',
-    title: 'Utah Becomes First State to Target VPNs in Age-Verification Crackdown',
-    timeAgo: '4m ago',
-    timestamp: Date.now() - 240000,
-    tags: ['Regulation', 'Tech'],
+    title: 'Financial Data Giant S&P Global Moves Deeper Into Crypto With OpenZeppelin Deal',
+    timeAgo: '22m ago',
+    timestamp: Date.now() - 22 * 60000,
+    tags: ['Institutional', 'Web3'],
   },
   {
     id: 'h3',
-    source: 'THE STREET',
-    sourceColor: 'text-zinc-400',
-    title: "HIVE's Frank Holmes says governments, not Bitcoin, are the biggest risk to the AI buildout",
-    timeAgo: '9m ago',
-    timestamp: Date.now() - 540000,
-    tags: ['Bitcoin', 'AI'],
+    source: 'CNBC',
+    sourceColor: 'text-blue-400',
+    title: 'Bank of England defies Fed rate lead, holding benchmark borrowing rates steady',
+    timeAgo: '35m ago',
+    timestamp: Date.now() - 35 * 60000,
+    tags: ['Rates', 'CentralBanks', 'Macro'],
   },
   {
     id: 'h4',
-    source: 'KOREA TIMES',
-    sourceColor: 'text-zinc-400',
-    title: 'Presidential policy chief\'s exit fuels hopes for softer crypto regulation',
-    timeAgo: '14m ago',
-    timestamp: Date.now() - 840000,
-    tags: ['Crypto', 'Policy'],
+    source: 'COINDESK',
+    sourceColor: 'text-amber-400',
+    title: 'Institutional inflows into spot Bitcoin and Ethereum ETFs reach weekly high',
+    timeAgo: '48m ago',
+    timestamp: Date.now() - 48 * 60000,
+    tags: ['BTCUSD', 'ETHUSD', 'ETF'],
   },
   {
     id: 'h5',
-    source: 'LSK',
-    sourceColor: 'text-zinc-400',
-    title: 'Kyb Is Not a One Time Cost',
-    timeAgo: '19m ago',
-    timestamp: Date.now() - 1140000,
-    tags: ['Compliance'],
+    source: 'BLOOMBERG',
+    sourceColor: 'text-cyan-400',
+    title: 'Gold advances near record peak as safe-haven bid accelerates and yields compress',
+    timeAgo: '1h ago',
+    timestamp: Date.now() - 65 * 60000,
+    tags: ['Gold', 'XAUUSD', 'Yields'],
   },
   {
     id: 'h6',
     source: 'YAHOO FINANCE',
     sourceColor: 'text-purple-400',
-    title: "Mysterious trader moves $122 million ahead of Federal Reserve interest rate decision",
-    timeAgo: '24m ago',
-    timestamp: Date.now() - 1440000,
+    title: 'Mysterious macro trader repositions $120 million ahead of FOMC policy guidance',
+    timeAgo: '1h ago',
+    timestamp: Date.now() - 75 * 60000,
     tags: ['Fed', 'Rates', 'Macro'],
   },
   {
     id: 'h7',
-    source: 'MARKETWATCH',
-    sourceColor: 'text-cyan-400',
-    title: "Gold advances to record heights as bond yields compress and safe-haven accumulation persists",
-    timeAgo: '32m ago',
-    timestamp: Date.now() - 1920000,
-    tags: ['Gold', 'XAUUSD', 'Yields'],
+    source: 'OILPRICE',
+    sourceColor: 'text-rose-400',
+    title: 'Crude oil consolidates near $91 as geopolitical tensions and Middle East supply dynamics hold focus',
+    timeAgo: '2h ago',
+    timestamp: Date.now() - 110 * 60000,
+    tags: ['WTIUSD', 'Energy'],
   },
   {
     id: 'h8',
-    source: 'COINDESK',
-    sourceColor: 'text-amber-400',
-    title: "Bitcoin faces macro parallels as institutional inflows into spot ETFs reach yearly record",
-    timeAgo: '45m ago',
-    timestamp: Date.now() - 2700000,
-    tags: ['BTCUSD', 'ETF'],
+    source: 'DECRYPT',
+    sourceColor: 'text-emerald-400',
+    title: 'SEC clears a path for tokenized stock futures as 24/7 institutional trading expands',
+    timeAgo: '2h ago',
+    timestamp: Date.now() - 130 * 60000,
+    tags: ['Regulation', 'Markets'],
   }
 ];
 
 /**
- * Fetches real live news articles from RSS to JSON feeds (Yahoo Finance, MarketWatch, Decrypt, CoinDesk)
+ * Fetches real live news articles from curated RSS feeds (Cointelegraph, Decrypt, CNBC, CoinDesk, Yahoo Finance)
  */
 export async function fetchLiveNewsHeadlines(): Promise<RawHeadline[]> {
-  const feedUrls = [
-    { source: 'YAHOO FINANCE', url: 'https://api.rss2json.com/v1/api.json?rss_url=https://finance.yahoo.com/news/rssindex', color: 'text-purple-400' },
-    { source: 'DECRYPT', url: 'https://api.rss2json.com/v1/api.json?rss_url=https://decrypt.co/feed', color: 'text-emerald-400' },
-    { source: 'COINDESK', url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.coindesk.com/arc/outboundfeeds/rss/', color: 'text-amber-400' },
-    { source: 'MARKETWATCH', url: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.content.dowjones.io/public/rss/mw_topstories', color: 'text-cyan-400' },
+  const feedDefs = [
+    { source: 'COINTELEGRAPH', url: 'https://cointelegraph.com/rss', color: 'text-orange-400' },
+    { source: 'DECRYPT', url: 'https://decrypt.co/feed', color: 'text-emerald-400' },
+    { source: 'CNBC', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', color: 'text-blue-400' },
+    { source: 'COINDESK', url: 'https://feeds.feedburner.com/CoinDesk', color: 'text-amber-400' },
+    { source: 'YAHOO FINANCE', url: 'https://finance.yahoo.com/news/rssindex', color: 'text-purple-400' },
   ];
 
   const results: RawHeadline[] = [];
+  const cacheBuster = Math.floor(Date.now() / 60000); // 1-minute cache buster
 
-  // Fetch concurrently with timeout
-  const promises = feedUrls.map(async (feed) => {
+  const promises = feedDefs.map(async (feed) => {
     try {
-      const res = await fetch(feed.url, { signal: AbortSignal.timeout(4500) });
+      const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&_t=${cacheBuster}`;
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8500) });
       if (res.ok) {
         const data = await res.json();
         if (data?.items && Array.isArray(data.items)) {
           data.items.slice(0, 8).forEach((item: any, idx: number) => {
-            const pubDate = item.pubDate ? new Date(item.pubDate).getTime() : Date.now() - idx * 300000;
+            const title = decodeHtml(item.title || '');
+            const desc = decodeHtml(item.description || item.content || '');
+            if (!title) return;
+
+            // Skip irrelevant lifestyle/personal finance articles
+            const lower = title.toLowerCase();
+            if (
+              lower.includes('buy a house') ||
+              lower.includes('rental property') ||
+              lower.includes('heloc') ||
+              lower.includes('holiday travel') ||
+              lower.includes('flying home') ||
+              lower.includes('renters are gaining') ||
+              lower.includes('personal finance')
+            ) {
+              return;
+            }
+
+            const pubDate = parseRssDate(item.pubDate);
             const diffMins = Math.max(1, Math.floor((Date.now() - pubDate) / 60000));
             const timeAgo = diffMins < 60 ? `${diffMins}m ago` : `${Math.floor(diffMins / 60)}h ago`;
 
-            // Clean title and description HTML
-            const cleanTitle = (item.title || '').replace(/<[^>]*>?/gm, '').trim();
-            const cleanDesc = (item.description || item.content || '').replace(/<[^>]*>?/gm, '').trim();
-
-            if (cleanTitle) {
-              results.push({
-                id: `rss-${feed.source}-${idx}-${pubDate}`,
-                source: feed.source,
-                sourceColor: feed.color,
-                title: cleanTitle,
-                description: cleanDesc,
-                url: item.link,
-                timeAgo,
-                timestamp: pubDate,
-                tags: item.categories || [],
-              });
-            }
+            results.push({
+              id: `rss-${feed.source}-${idx}-${pubDate}`,
+              source: feed.source,
+              sourceColor: feed.color,
+              title,
+              description: desc,
+              url: item.link,
+              timeAgo,
+              timestamp: pubDate,
+              tags: item.categories || [],
+            });
           });
         }
       }
@@ -526,7 +515,7 @@ export async function fetchLiveNewsHeadlines(): Promise<RawHeadline[]> {
   await Promise.allSettled(promises);
 
   if (results.length > 0) {
-    // Sort descending by timestamp
+    // Sort descending by timestamp (latest first)
     results.sort((a, b) => b.timestamp - a.timestamp);
     return results.slice(0, 30);
   }
@@ -573,41 +562,41 @@ export function generateDynamicCardsFromLiveNews(
 
     // Classify symbol
     if (text.includes('gold') || text.includes('bullion') || text.includes('xau') || text.includes('metal')) {
-      affectedSymbols = ['XAUUSD', 'XAUAUD'];
+      affectedSymbols = ['XAUUSD'];
       primarySymbol = 'XAUUSD';
       highlightTags = ['Gold ATH Zone', 'Safe Haven Bid'];
       watchCallout = 'Watch Treasury yields and real interest rate expectations; monitor gold resistance break above $4,380.';
+    } else if (text.includes('solana') || text.includes('sol')) {
+      affectedSymbols = ['SOLUSD', 'BTCUSD'];
+      primarySymbol = 'SOLUSD';
+      highlightTags = ['Solana Network Activity', 'DeFi Momentum'];
+      watchCallout = 'Track Solana breakout velocity and network fee accumulation.';
+    } else if (text.includes('xrp') || text.includes('ripple') || text.includes('sec') || text.includes('regulation') || text.includes('etf')) {
+      affectedSymbols = ['XRPUSD', 'BTCUSD'];
+      primarySymbol = 'XRPUSD';
+      highlightTags = ['Regulatory Clarity', 'Institutional Volume'];
+      watchCallout = 'Monitor regulatory rulings and institutional ETF adoption trends.';
     } else if (text.includes('bitcoin') || text.includes('btc') || text.includes('crypto')) {
-      affectedSymbols = ['BTCUSD', 'USDJPY'];
+      affectedSymbols = ['BTCUSD', 'ETHUSD'];
       primarySymbol = 'BTCUSD';
       highlightTags = ['BTCUSD Key Resistance', 'ETF Net Inflows'];
-      watchCallout = 'Watch for sustained liquidity expansion and correlation with USDJPY carry unwind; test of next level.';
-    } else if (text.includes('yen') || text.includes('jpy') || text.includes('japan') || text.includes('boj')) {
-      affectedSymbols = ['USDJPY', 'EURUSD'];
-      primarySymbol = 'USDJPY';
-      highlightTags = ['Yen Carry Unwind', 'BOJ Policy Vigilance'];
-      watchCallout = 'Track USDJPY key support levels; monitor if yen strength persists into the next session.';
-    } else if (text.includes('fed') || text.includes('powell') || text.includes('rates') || text.includes('inflation') || text.includes('pmi') || text.includes('jobs') || text.includes('nfp')) {
-      affectedSymbols = ['US500', 'EURUSD'];
-      primarySymbol = 'US500';
-      highlightTags = ['Fed Rate Trajectory', 'Macro Liquidity'];
-      watchCallout = 'Monitor bond yields and rate-cut expectations as upcoming jobs report looms; track dollar strength reaction.';
-    } else if (text.includes('oil') || text.includes('crude') || text.includes('energy') || text.includes('opec')) {
+      watchCallout = 'Watch for sustained liquidity expansion and institutional buying depth; test of next key high.';
+    } else if (text.includes('fed') || text.includes('powell') || text.includes('rates') || text.includes('inflation') || text.includes('pmi') || text.includes('jobs') || text.includes('nfp') || text.includes('boe') || text.includes('bank')) {
+      affectedSymbols = ['XAUUSD', 'BTCUSD'];
+      primarySymbol = 'XAUUSD';
+      highlightTags = ['Fed Policy Vigilance', 'Global Rate Trajectory'];
+      watchCallout = 'Monitor sovereign bond yields and rate expectations as central banks pivot monetary policy.';
+    } else if (text.includes('oil') || text.includes('crude') || text.includes('energy') || text.includes('opec') || text.includes('wti')) {
       affectedSymbols = ['WTIUSD'];
       primarySymbol = 'WTIUSD';
       highlightTags = ['WTI Supply Buffer', 'Energy Sector'];
       watchCallout = 'Watch Middle East geopolitical developments and weekly EIA crude inventory data.';
-    } else if (text.includes('coinbase') || text.includes('robinhood') || text.includes('etf') || text.includes('sec')) {
-      affectedSymbols = ['BTCUSD', 'COIN', 'HOOD'];
-      primarySymbol = 'COIN';
-      highlightTags = ['Institutional Onramp', 'Retail Volume Surge'];
-      watchCallout = 'Monitor institutional partnership announcements and exchange fee generation momentum.';
     } else {
       // General markets
-      affectedSymbols = ['US500', 'EURUSD'];
-      primarySymbol = 'US500';
-      highlightTags = ['Market Momentum'];
-      watchCallout = 'Track broader index breadth and market sentiment indicators.';
+      affectedSymbols = ['BTCUSD', 'XAUUSD'];
+      primarySymbol = 'BTCUSD';
+      highlightTags = ['Market Momentum', 'Risk Appetite'];
+      watchCallout = 'Track broader macro liquidity breadth and cross-asset risk sentiment indicators.';
     }
 
     // Classify sentiment
