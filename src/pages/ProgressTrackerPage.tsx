@@ -226,7 +226,7 @@ export const ProgressTrackerPage: React.FC = () => {
       {/* Top 3 Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Current Streak */}
-        <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+        <div className="bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
             <Flame className="w-4 h-4 text-orange-500 fill-orange-500/20 shrink-0" />
             <span>Current Streak</span>
@@ -242,9 +242,9 @@ export const ProgressTrackerPage: React.FC = () => {
         </div>
 
         {/* Card 2: Current Period Score */}
-        <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+        <div className="bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
-            <Award className="w-4 h-4 text-purple-400 shrink-0" />
+            <Award className="w-4 h-4 text-purple-500 dark:text-purple-400 shrink-0" />
             <span>Current Period Score</span>
           </div>
 
@@ -256,7 +256,7 @@ export const ProgressTrackerPage: React.FC = () => {
                   cx="50"
                   cy="50"
                   r={radius}
-                  className="stroke-zinc-800"
+                  className="stroke-zinc-200 dark:stroke-zinc-800"
                   strokeWidth="8"
                   fill="transparent"
                 />
@@ -283,9 +283,9 @@ export const ProgressTrackerPage: React.FC = () => {
         </div>
 
         {/* Card 3: Today's Progress */}
-        <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
+        <div className="bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium">
-            <Target className="w-4 h-4 text-cyan-400 shrink-0" />
+            <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400 shrink-0" />
             <span>Today's Progress</span>
           </div>
 
@@ -300,7 +300,7 @@ export const ProgressTrackerPage: React.FC = () => {
             </div>
 
             {/* Horizontal Progress Bar */}
-            <div className="w-full h-2 bg-zinc-800 rounded-full mt-4 overflow-hidden">
+            <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full mt-4 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${getProgressBgClass(trackerData.todayStats.complianceScore)}`}
                 style={{
@@ -317,9 +317,9 @@ export const ProgressTrackerPage: React.FC = () => {
         {/* Left Column: Daily Checklist & Calendar Card (approx 8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           {/* Daily Checklist Card */}
-          <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 shadow-sm">
             {/* Header Row */}
-            <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/5">
+            <div className="flex items-center justify-between gap-4 pb-4 border-b border-zinc-100 dark:border-white/5">
               <h2 className="text-lg md:text-xl font-bold text-foreground">
                 {formattedHeaderDate}
               </h2>
@@ -344,21 +344,21 @@ export const ProgressTrackerPage: React.FC = () => {
                   <div
                     key={rule.id}
                     onClick={() => handleToggleRule(rule.id, rule.isPassed)}
-                    className="group flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    className="group flex items-center justify-between py-3.5 px-3 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
                     title="Click to toggle rule status for this date"
                   >
                     {/* Left: Checkmark + Rule Title + Status */}
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="shrink-0 transition-transform group-active:scale-90">
                         {rule.isPassed ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-500/10" />
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 fill-emerald-500/10" />
                         ) : (
-                          <Circle className="w-5 h-5 text-zinc-600 group-hover:text-zinc-500" />
+                          <Circle className="w-5 h-5 text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-500" />
                         )}
                       </div>
 
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground group-hover:text-white transition-colors truncate">
+                        <div className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors truncate">
                           {rule.name}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5 font-mono">
@@ -388,7 +388,7 @@ export const ProgressTrackerPage: React.FC = () => {
         </div>
 
         {/* Right Column: Today Summary (approx 4 cols) */}
-        <div className="lg:col-span-4 bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <h2 className="text-lg md:text-xl font-bold text-foreground mb-6">
             Today
           </h2>

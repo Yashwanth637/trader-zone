@@ -12,7 +12,7 @@ export const CurrentRulesTableCard: React.FC<CurrentRulesTableCardProps> = ({
   onEditRules,
 }) => {
   return (
-    <div className="bg-[#12131a] dark:bg-[#12131a] border border-white/5 rounded-2xl p-6 shadow-sm">
+    <div className="bg-white dark:bg-[#12131a] border border-zinc-200 dark:border-white/5 rounded-2xl p-6 shadow-sm">
       {/* Header Row */}
       <div className="flex items-center justify-between pb-4">
         <h3 className="text-lg md:text-xl font-bold text-foreground">
@@ -21,7 +21,7 @@ export const CurrentRulesTableCard: React.FC<CurrentRulesTableCardProps> = ({
 
         <button
           onClick={onEditRules}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.05] text-xs font-medium text-foreground transition-all shadow-sm active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 bg-black/[0.02] hover:bg-black/[0.05] dark:bg-white/[0.02] dark:hover:bg-white/[0.05] text-xs font-medium text-foreground transition-all shadow-sm active:scale-95"
         >
           <SquarePen className="w-3.5 h-3.5 text-muted-foreground" />
           <span>Edit rules</span>
@@ -32,7 +32,7 @@ export const CurrentRulesTableCard: React.FC<CurrentRulesTableCardProps> = ({
       <div className="overflow-x-auto mt-2">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-white/5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+            <tr className="border-b border-zinc-100 dark:border-white/5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
               <th className="py-3 px-3">RULE</th>
               <th className="py-3 px-3">CONDITION</th>
               <th className="py-3 px-3">RULE STREAK</th>
@@ -40,7 +40,7 @@ export const CurrentRulesTableCard: React.FC<CurrentRulesTableCardProps> = ({
               <th className="py-3 px-3 text-right">FOLLOW RATE</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.03] text-sm">
+          <tbody className="divide-y divide-zinc-100 dark:divide-white/[0.03] text-sm">
             {ruleSummaries.map((rule) => {
               const isPositive = rule.avgPerformance !== null && rule.avgPerformance > 0;
               const isNegative = rule.avgPerformance !== null && rule.avgPerformance < 0;
@@ -48,35 +48,35 @@ export const CurrentRulesTableCard: React.FC<CurrentRulesTableCardProps> = ({
               return (
                 <tr
                   key={rule.id}
-                  className="hover:bg-white/[0.02] transition-colors group"
+                  className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group"
                 >
                   {/* RULE */}
-                  <td className="py-4 px-3 font-medium text-foreground group-hover:text-white transition-colors">
+                  <td className="py-4 px-3 font-medium text-foreground group-hover:text-foreground transition-colors">
                     {rule.name}
                   </td>
 
                   {/* CONDITION */}
-                  <td className="py-4 px-3 text-zinc-400 font-mono">
+                  <td className="py-4 px-3 text-zinc-600 dark:text-zinc-400 font-mono">
                     {rule.condition}
                   </td>
 
                   {/* RULE STREAK */}
-                  <td className="py-4 px-3 text-zinc-300 font-mono">
+                  <td className="py-4 px-3 text-zinc-800 dark:text-zinc-300 font-mono">
                     {rule.ruleStreak}
                   </td>
 
                   {/* AVG PERFORMANCE */}
                   <td className="py-4 px-3 font-mono font-medium">
                     {rule.avgPerformance === null ? (
-                      <span className="text-zinc-600">—</span>
+                      <span className="text-zinc-400 dark:text-zinc-600">—</span>
                     ) : (
                       <span
                         className={
                           isPositive
-                            ? 'text-emerald-400'
+                            ? 'text-emerald-600 dark:text-emerald-400'
                             : isNegative
-                            ? 'text-red-400'
-                            : 'text-zinc-400'
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-zinc-600 dark:text-zinc-400'
                         }
                       >
                         {rule.avgPerformanceFormatted}

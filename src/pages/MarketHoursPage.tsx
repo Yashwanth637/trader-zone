@@ -59,9 +59,9 @@ export const MarketHoursPage: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate('/hot-topics')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-white/10 bg-[#12131a] hover:bg-white/5 text-orange-400 hover:text-orange-300 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#12131a] hover:bg-black/5 dark:hover:bg-white/5 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all shadow-sm"
           >
-            <Flame className="w-4 h-4 text-orange-400" />
+            <Flame className="w-4 h-4 text-orange-500 dark:text-orange-400" />
             <span>Hot Topics</span>
           </button>
 
