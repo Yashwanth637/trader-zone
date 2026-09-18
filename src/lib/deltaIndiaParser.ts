@@ -74,6 +74,7 @@ export function isDeltaIndiaCsv(csvText: string): boolean {
 
 interface RawDeltaOrder {
   dateObj: Date;
+  ts: number;
   isoTime: string;
   displayDate: string;
   contract: string;
@@ -82,16 +83,32 @@ interface RawDeltaOrder {
   side: 'buy' | 'sell';
   execPrice: number;
   stopPrice?: number;
+  orderPrice?: number;
   fee: number;
   pnl: number;
   orderId: string;
+  status: string;
+  explanation: string;
+}
+
+interface RawBracketOrder {
+  dateObj: Date;
+  ts: number;
+  contract: string;
+  qty: number;
+  side: 'buy' | 'sell';
+  stopPrice?: number;
+  orderPrice?: number;
+  explanation: string;
 }
 
 /**
  * Specialized parser for Delta Exchange India Order History CSV.
- * - Filters out cancelled, zero-filled, and liquidation trigger rows.
+ * - Captures both executed orders and conditional bracket trigger orders (SL / TP).
+ * - Pairs opening & closing executions while matching bracket cancellations to extract TP and SL.
+ * - Computes Planned R:R and Realized R:R.
  * - Divides lot size by 1000 as requested.
- * - Stores dates in DD-MM-YYYY format.
+ * - Stores dates in DD-MM-YYYY format and ISO timestamps.
  * - Accurately determines round-trip trade direction (closing buy = SELL short; closing sell = BUY long).
  */
 export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] {
@@ -99,6 +116,7 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
   if (lines.length < 2) return [];
 
   const validRows: RawDeltaOrder[] = [];
+  const bracketOrders: RawBracketOrder[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -109,39 +127,61 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
     if (cols.length < 14) continue;
 
     const status = cols[13].toLowerCase();
-    const filled = cols[4] || '';
-    const execPrice = parseFloat(cols[5]);
-
-    // Filter out cancelled, zero-filled, or unexecuted orders
-    if (status !== 'closed' || isNaN(execPrice) || execPrice <= 0 || filled.startsWith('0.00')) {
-      continue;
-    }
-
+    const explanation = (cols[14] || '').toLowerCase();
     const rawTime = cols[0];
     const parsedDate = parseUniversalDate(rawTime);
-
+    const contract = (cols[1] || 'CRYPTO').toUpperCase();
     const rawQty = parseFloat(cols[2]) || 0;
-    // Divide lot size by 1000
     const lotSize = parseFloat((rawQty / 1000).toFixed(5));
+    const side = cols[3].toLowerCase() === 'sell' ? 'sell' : 'buy';
+    const execPrice = parseFloat(cols[5]);
+    const orderPrice = parseFloat(cols[6]) || undefined;
+    const stopPrice = parseFloat(cols[7]) || undefined;
+    const triggerPrice = stopPrice || orderPrice;
 
-    validRows.push({
-      dateObj: parsedDate,
-      isoTime: parsedDate.toISOString(),
-      displayDate: formatDDMMYYYY(parsedDate),
-      contract: (cols[1] || 'CRYPTO').toUpperCase(),
-      rawQty,
-      lotSize,
-      side: cols[3].toLowerCase() === 'sell' ? 'sell' : 'buy',
-      execPrice,
-      stopPrice: parseFloat(cols[7]) || undefined,
-      fee: parseFloat(cols[9]) || 0,
-      pnl: parseFloat(cols[11]) || 0,
-      orderId: cols[16] || cols[15] || `DELTA-${i}`
-    });
+    // Check if this row is a conditional bracket trigger order (cancelled when position closes, e.g. SL or TP)
+    if (
+      triggerPrice &&
+      (status === 'cancelled' || explanation.includes('position_closed') || explanation.includes('cancelled_by_user'))
+    ) {
+      bracketOrders.push({
+        dateObj: parsedDate,
+        ts: parsedDate.getTime(),
+        contract,
+        qty: rawQty,
+        side,
+        stopPrice: triggerPrice,
+        orderPrice,
+        explanation
+      });
+    }
+
+    // Executed orders
+    const filled = cols[4] || '';
+    if (status === 'closed' && !isNaN(execPrice) && execPrice > 0 && !filled.startsWith('0.00')) {
+      validRows.push({
+        dateObj: parsedDate,
+        ts: parsedDate.getTime(),
+        isoTime: parsedDate.toISOString(),
+        displayDate: formatDDMMYYYY(parsedDate),
+        contract,
+        rawQty,
+        lotSize,
+        side,
+        execPrice,
+        stopPrice,
+        orderPrice,
+        fee: parseFloat(cols[9]) || 0,
+        pnl: parseFloat(cols[11]) || 0,
+        orderId: cols[16] || cols[15] || `DELTA-${i}`,
+        status,
+        explanation
+      });
+    }
   }
 
   // Sort chronologically (oldest first)
-  validRows.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+  validRows.sort((a, b) => a.ts - b.ts);
 
   // Pairing order queues
   const openLongs: Record<string, RawDeltaOrder[]> = {};
@@ -163,95 +203,104 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
 
     if (order.pnl !== 0) {
       // CLOSING ORDER
-      if (order.side === 'buy') {
-        // Closing order is BUY -> Original trade direction was SELL (Short)
-        let matchIdx = openShorts[sym].findIndex(o => Math.abs(o.rawQty - order.rawQty) < 0.001);
-        if (matchIdx === -1) matchIdx = 0;
-        const openOrder = openShorts[sym].splice(matchIdx, 1)[0];
+      const isClosingSell = order.side === 'sell';
+      const direction: Direction = isClosingSell ? 'BUY' : 'SELL';
+      const queue = isClosingSell ? openLongs[sym] : openShorts[sym];
 
-        const entryPrice = openOrder ? openOrder.execPrice : order.execPrice;
-        const exitPrice = order.execPrice;
-        const openTime = openOrder ? openOrder.isoTime : order.isoTime;
-        const closeTime = order.isoTime;
-        const commission = (openOrder ? openOrder.fee : 0) + order.fee;
-        const stopLoss = order.stopPrice || (openOrder ? openOrder.stopPrice : undefined);
+      let matchIdx = queue.findIndex(o => Math.abs(o.rawQty - order.rawQty) < 0.001);
+      if (matchIdx === -1) matchIdx = 0;
+      const openOrder = queue.length > 0 ? queue.splice(matchIdx, 1)[0] : undefined;
 
-        const durationMinutes = Math.max(
-          1,
-          Math.round((new Date(closeTime).getTime() - new Date(openTime).getTime()) / (1000 * 60))
-        );
+      const entryPrice = openOrder ? openOrder.execPrice : order.execPrice;
+      const exitPrice = order.execPrice;
+      const openTime = openOrder ? openOrder.isoTime : order.isoTime;
+      const closeTime = order.isoTime;
+      const commission = (openOrder ? openOrder.fee : 0) + order.fee;
 
-        trades.push({
-          id: `delta-${order.orderId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          ticket: order.orderId,
-          accountId,
-          symbol: sym,
-          assetClass,
-          direction: 'SELL',
-          status: 'CLOSED',
-          lotSize: order.lotSize,
-          entryPrice,
-          exitPrice,
-          stopLoss,
-          openTime,
-          closeTime,
-          grossPnl: order.pnl + commission,
-          commission: parseFloat(commission.toFixed(4)),
-          swap: 0,
-          netPnl: parseFloat(order.pnl.toFixed(4)),
-          pips: calculatePips(sym, 'SELL', entryPrice, exitPrice),
-          durationMinutes,
-          session: detectTradingSession(openTime),
-          setupTags: ['Delta Exchange India'],
-          mistakeTags: [],
-          notes: `Delta India | Date: ${order.displayDate} | Lots: ${order.lotSize} | Entry: ${entryPrice} | Exit: ${exitPrice}`,
-          executionRating: order.pnl > 0 ? 5 : 3
-        });
+      // Find any bracket trigger orders around close time (within 10 seconds of position closing)
+      const matchingBrackets = bracketOrders.filter(b => 
+        b.contract === sym && Math.abs(b.ts - order.ts) <= 10000
+      );
+
+      // Aggregate all potential trigger prices from closing order, open order, and bracket cancellations
+      const candidatePrices: number[] = [];
+      if (order.stopPrice && !isNaN(order.stopPrice)) candidatePrices.push(order.stopPrice);
+      if (openOrder?.stopPrice && !isNaN(openOrder.stopPrice)) candidatePrices.push(openOrder.stopPrice);
+      matchingBrackets.forEach(b => {
+        if (b.stopPrice && !isNaN(b.stopPrice)) candidatePrices.push(b.stopPrice);
+      });
+
+      let stopLoss: number | undefined = undefined;
+      let takeProfit: number | undefined = undefined;
+
+      if (direction === 'BUY') {
+        // For BUY (Long): SL is below entry, TP is above entry
+        const lowerPrices = candidatePrices.filter(p => p < entryPrice);
+        const higherPrices = candidatePrices.filter(p => p > entryPrice);
+        if (lowerPrices.length > 0) stopLoss = Math.max(...lowerPrices);
+        if (higherPrices.length > 0) takeProfit = Math.min(...higherPrices);
       } else {
-        // Closing order is SELL -> Original trade direction was BUY (Long)
-        let matchIdx = openLongs[sym].findIndex(o => Math.abs(o.rawQty - order.rawQty) < 0.001);
-        if (matchIdx === -1) matchIdx = 0;
-        const openOrder = openLongs[sym].splice(matchIdx, 1)[0];
-
-        const entryPrice = openOrder ? openOrder.execPrice : order.execPrice;
-        const exitPrice = order.execPrice;
-        const openTime = openOrder ? openOrder.isoTime : order.isoTime;
-        const closeTime = order.isoTime;
-        const commission = (openOrder ? openOrder.fee : 0) + order.fee;
-        const stopLoss = order.stopPrice || (openOrder ? openOrder.stopPrice : undefined);
-
-        const durationMinutes = Math.max(
-          1,
-          Math.round((new Date(closeTime).getTime() - new Date(openTime).getTime()) / (1000 * 60))
-        );
-
-        trades.push({
-          id: `delta-${order.orderId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          ticket: order.orderId,
-          accountId,
-          symbol: sym,
-          assetClass,
-          direction: 'BUY',
-          status: 'CLOSED',
-          lotSize: order.lotSize,
-          entryPrice,
-          exitPrice,
-          stopLoss,
-          openTime,
-          closeTime,
-          grossPnl: order.pnl + commission,
-          commission: parseFloat(commission.toFixed(4)),
-          swap: 0,
-          netPnl: parseFloat(order.pnl.toFixed(4)),
-          pips: calculatePips(sym, 'BUY', entryPrice, exitPrice),
-          durationMinutes,
-          session: detectTradingSession(openTime),
-          setupTags: ['Delta Exchange India'],
-          mistakeTags: [],
-          notes: `Delta India | Date: ${order.displayDate} | Lots: ${order.lotSize} | Entry: ${entryPrice} | Exit: ${exitPrice}`,
-          executionRating: order.pnl > 0 ? 5 : 3
-        });
+        // For SELL (Short): SL is above entry, TP is below entry
+        const higherPrices = candidatePrices.filter(p => p > entryPrice);
+        const lowerPrices = candidatePrices.filter(p => p < entryPrice);
+        if (higherPrices.length > 0) stopLoss = Math.min(...higherPrices);
+        if (lowerPrices.length > 0) takeProfit = Math.max(...lowerPrices);
       }
+
+      // Compute planned R:R
+      let plannedRR: number | undefined = undefined;
+      if (stopLoss && takeProfit) {
+        const risk = Math.abs(entryPrice - stopLoss);
+        const reward = Math.abs(takeProfit - entryPrice);
+        if (risk > 0) {
+          plannedRR = parseFloat((reward / risk).toFixed(2));
+        }
+      }
+
+      // Compute realized R:R
+      let realizedRR: number | undefined = undefined;
+      if (stopLoss) {
+        const risk = Math.abs(entryPrice - stopLoss);
+        if (risk > 0) {
+          const gain = direction === 'BUY' ? (exitPrice - entryPrice) : (entryPrice - exitPrice);
+          realizedRR = parseFloat((gain / risk).toFixed(2));
+        }
+      }
+
+      const durationMinutes = Math.max(
+        1,
+        Math.round((new Date(closeTime).getTime() - new Date(openTime).getTime()) / (1000 * 60))
+      );
+
+      trades.push({
+        id: `delta-${order.orderId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        ticket: order.orderId,
+        accountId,
+        symbol: sym,
+        assetClass,
+        direction,
+        status: 'CLOSED',
+        lotSize: order.lotSize,
+        entryPrice,
+        exitPrice,
+        stopLoss,
+        takeProfit,
+        plannedRR,
+        realizedRR,
+        openTime,
+        closeTime,
+        grossPnl: order.pnl + commission,
+        commission: parseFloat(commission.toFixed(4)),
+        swap: 0,
+        netPnl: parseFloat(order.pnl.toFixed(4)),
+        pips: calculatePips(sym, direction, entryPrice, exitPrice),
+        durationMinutes,
+        session: detectTradingSession(openTime),
+        setupTags: ['Delta Exchange India'],
+        mistakeTags: [],
+        notes: `Delta India | Date: ${order.displayDate} | Lots: ${order.lotSize} | Entry: ${entryPrice} | Exit: ${exitPrice}${stopLoss ? ` | SL: ${stopLoss}` : ''}${takeProfit ? ` | TP: ${takeProfit}` : ''}`,
+        executionRating: order.pnl > 0 ? 5 : 3
+      });
     } else {
       // OPENING ORDER (pnl === 0)
       if (order.side === 'buy') {

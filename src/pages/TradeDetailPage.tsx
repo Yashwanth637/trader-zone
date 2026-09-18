@@ -133,9 +133,9 @@ export const TradeDetailPage: React.FC = () => {
       </div>
 
       {/* Execution and Risk Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="premium-card p-4">
-          <div className="text-[10px] text-muted font-bold uppercase">Entry Price</div>
+          <div className="text-[10px] text-muted font-bold uppercase tracking-wider">Entry Price</div>
           <div className="text-lg font-black text-foreground font-mono mt-1">{trade.entryPrice}</div>
           <div className="text-[10px] text-muted mt-0.5">
             {new Date(trade.openTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -143,7 +143,7 @@ export const TradeDetailPage: React.FC = () => {
         </div>
 
         <div className="premium-card p-4">
-          <div className="text-[10px] text-muted font-bold uppercase">Exit Price</div>
+          <div className="text-[10px] text-muted font-bold uppercase tracking-wider">Exit Price</div>
           <div className="text-lg font-black text-foreground font-mono mt-1">{trade.exitPrice || 'Running'}</div>
           <div className="text-[10px] text-muted mt-0.5">
             {trade.closeTime ? new Date(trade.closeTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
@@ -151,20 +151,28 @@ export const TradeDetailPage: React.FC = () => {
         </div>
 
         <div className="premium-card p-4">
-          <div className="text-[10px] text-muted font-bold uppercase">Stop Loss / Risk</div>
+          <div className="text-[10px] text-muted font-bold uppercase tracking-wider">Stop Loss / Risk</div>
           <div className="text-lg font-black text-rose-500 font-mono mt-1">{trade.stopLoss || 'None'}</div>
           <div className="text-[10px] text-muted mt-0.5">
-            Planned R:R: <strong className="text-foreground">1:{trade.plannedRR || '-'}</strong>
+            Risk: <strong className="text-foreground font-mono">{trade.stopLoss ? Math.abs(trade.entryPrice - trade.stopLoss).toFixed(2) : '-'}</strong>
           </div>
         </div>
 
         <div className="premium-card p-4">
-          <div className="text-[10px] text-muted font-bold uppercase">Realized R:R</div>
+          <div className="text-[10px] text-muted font-bold uppercase tracking-wider">Take Profit / Target</div>
+          <div className="text-lg font-black text-emerald-500 font-mono mt-1">{trade.takeProfit || 'None'}</div>
+          <div className="text-[10px] text-muted mt-0.5">
+            Target: <strong className="text-foreground font-mono">{trade.takeProfit ? Math.abs(trade.takeProfit - trade.entryPrice).toFixed(2) : '-'}</strong>
+          </div>
+        </div>
+
+        <div className="premium-card p-4">
+          <div className="text-[10px] text-muted font-bold uppercase tracking-wider">Planned / Realized R:R</div>
           <div className="text-lg font-black text-primary font-mono mt-1">
-            {trade.realizedRR ? `1:${trade.realizedRR}` : '-'}
+            {trade.realizedRR !== undefined ? `${trade.realizedRR > 0 ? '+' : ''}${trade.realizedRR}R` : trade.plannedRR ? `1:${trade.plannedRR}` : '-'}
           </div>
           <div className="text-[10px] text-muted mt-0.5">
-            Fees: {formatCurrency((trade.commission || 0) + (trade.swap || 0))}
+            Plan: <strong className="text-foreground font-mono">{trade.plannedRR ? `1:${trade.plannedRR}` : '-'}</strong> · Fees: {formatCurrency((trade.commission || 0) + (trade.swap || 0))}
           </div>
         </div>
       </div>

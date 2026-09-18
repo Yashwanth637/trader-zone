@@ -88,16 +88,32 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const rawTrades = Storage.getTrades();
     let updated = false;
     const normalized = rawTrades.map(t => {
+      let mod = { ...t };
       // If an imported trade currently has lotSize >= 10 (e.g. 50 from CSV), convert to true lot size (0.05)
       const isImported = t.id?.startsWith('imported') || t.notes?.toLowerCase().includes('delta') || t.ticket?.startsWith('CSV');
       if (isImported && t.lotSize >= 10) {
         updated = true;
-        return {
-          ...t,
-          lotSize: parseFloat((t.lotSize / 1000).toFixed(5))
-        };
+        mod.lotSize = parseFloat((t.lotSize / 1000).toFixed(5));
       }
-      return t;
+      // Compute plannedRR if SL and TP exist
+      if (mod.stopLoss && mod.takeProfit && !mod.plannedRR && mod.entryPrice) {
+        const risk = Math.abs(mod.entryPrice - mod.stopLoss);
+        const reward = Math.abs(mod.takeProfit - mod.entryPrice);
+        if (risk > 0) {
+          mod.plannedRR = parseFloat((reward / risk).toFixed(2));
+          updated = true;
+        }
+      }
+      // Compute realizedRR if SL and exit exist
+      if (mod.stopLoss && mod.exitPrice && mod.realizedRR === undefined && mod.entryPrice) {
+        const risk = Math.abs(mod.entryPrice - mod.stopLoss);
+        if (risk > 0) {
+          const gain = mod.direction === 'BUY' ? (mod.exitPrice - mod.entryPrice) : (mod.entryPrice - mod.exitPrice);
+          mod.realizedRR = parseFloat((gain / risk).toFixed(2));
+          updated = true;
+        }
+      }
+      return mod;
     });
     const sorted = sortTradesDescending(normalized);
     // Persist sorted & normalized trades

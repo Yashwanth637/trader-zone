@@ -83,6 +83,26 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
 
       const pips = exitPrice ? calculatePips(symbol, direction, entryPrice, exitPrice) : 0;
 
+      // Compute planned R:R
+      let plannedRR: number | undefined = undefined;
+      if (stopLoss && takeProfit) {
+        const risk = Math.abs(entryPrice - stopLoss);
+        const reward = Math.abs(takeProfit - entryPrice);
+        if (risk > 0) {
+          plannedRR = parseFloat((reward / risk).toFixed(2));
+        }
+      }
+
+      // Compute realized R:R
+      let realizedRR: number | undefined = undefined;
+      if (stopLoss && exitPrice) {
+        const risk = Math.abs(entryPrice - stopLoss);
+        if (risk > 0) {
+          const gain = direction === 'BUY' ? (exitPrice - entryPrice) : (entryPrice - exitPrice);
+          realizedRR = parseFloat((gain / risk).toFixed(2));
+        }
+      }
+
       trades.push({
         id: `imported-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         ticket,
@@ -96,6 +116,8 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
         exitPrice,
         stopLoss,
         takeProfit,
+        plannedRR,
+        realizedRR,
         openTime,
         closeTime,
         grossPnl: netPnl + commission + swap,
