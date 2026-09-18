@@ -48,9 +48,11 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
     [accountTrades, filteredTrades, stats]
   );
 
+  const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
+
   const activityData = useMemo(
-    () => calculateTradingActivity(accountTrades.length > 0 ? accountTrades : filteredTrades),
-    [accountTrades, filteredTrades]
+    () => calculateTradingActivity(accountTrades.length > 0 ? accountTrades : filteredTrades, activityYear),
+    [accountTrades, filteredTrades, activityYear]
   );
 
   // AI Guidance Status
@@ -184,7 +186,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
       {/* 1. [IMAGE 1] Trade Score & Trading Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <TradeScoreCard scoreData={scoreData} />
-        <TradingActivityCard activityData={activityData} />
+        <TradingActivityCard activityData={activityData} onYearChange={setActivityYear} />
       </div>
 
       {/* 2. [IMAGE 2] Analytics Overview Grid */}
@@ -244,7 +246,6 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                 <th className="pb-3">Lots</th>
                 <th className="pb-3">Entry</th>
                 <th className="pb-3">Exit</th>
-                <th className="pb-3">Pips</th>
                 <th className="pb-3">Net P&L</th>
                 <th className="pb-3">R:R</th>
                 <th className="pb-3">Status</th>
@@ -276,7 +277,6 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                     <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
                     <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>
                     <td className="py-3 font-mono text-foreground">{t.exitPrice || '-'}</td>
-                    <td className="py-3 font-mono text-foreground">{t.pips ? `${t.pips > 0 ? '+' : ''}${t.pips}` : '-'}</td>
                     <td className="py-3 font-mono font-bold">
                       <span className={isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-muted'}>
                         {formatCurrency(t.netPnl)}

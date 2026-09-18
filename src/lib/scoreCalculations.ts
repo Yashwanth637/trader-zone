@@ -35,6 +35,7 @@ export interface DayActivity {
 export interface TradingActivityStats {
   totalTradesInYear: number;
   year: number;
+  availableYears: number[];
   daysTraded: number;
   greenDays: number;
   redDays: number;
@@ -239,17 +240,30 @@ function buildDimensionList(dims: {
 /**
  * Calculates calendar day activity, streaks, best/worst days, and monthly heat dots
  */
-export function calculateTradingActivity(trades: Trade[]): TradingActivityStats {
-  const currentYear = new Date().getFullYear();
+export function calculateTradingActivity(trades: Trade[], targetYear?: number): TradingActivityStats {
+  const currentYearNow = new Date().getFullYear();
   const closed = trades.filter(t => t.status === 'CLOSED');
 
-  // Filter trades for this year (or fallback to all closed if current year has few)
-  const thisYearTrades = closed.filter(t => {
+  // Discover all available years from trade records
+  const yearsSet = new Set<number>();
+  closed.forEach(t => {
     const d = new Date(t.closeTime || t.openTime);
-    return d.getFullYear() === currentYear;
+    if (!isNaN(d.getFullYear())) {
+      yearsSet.add(d.getFullYear());
+    }
+  });
+  yearsSet.add(currentYearNow);
+  const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+
+  // Use requested year, or default to current calendar year if available
+  const selectedYear = targetYear !== undefined ? targetYear : (yearsSet.has(currentYearNow) ? currentYearNow : availableYears[0]);
+
+  // Filter trades for the selected year
+  const activeTrades = closed.filter(t => {
+    const d = new Date(t.closeTime || t.openTime);
+    return d.getFullYear() === selectedYear;
   });
 
-  const activeTrades = thisYearTrades.length > 0 ? thisYearTrades : closed;
   const totalTradesInYear = activeTrades.length;
 
   // Group trades by day (YYYY-MM-DD)
@@ -352,7 +366,8 @@ export function calculateTradingActivity(trades: Trade[]): TradingActivityStats 
 
   return {
     totalTradesInYear,
-    year: currentYear,
+    year: selectedYear,
+    availableYears,
     daysTraded,
     greenDays,
     redDays,

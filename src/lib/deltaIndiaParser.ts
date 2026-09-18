@@ -2,6 +2,55 @@ import { Trade, Direction, AssetClass } from '../types/trade';
 import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
 
 /**
+ * Robust date parser supporting YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD, DD/MM/YYYY, YYYY.MM.DD, DD.MM.YYYY
+ * with optional timestamps. Always extracts and registers the correct trade year.
+ */
+export function parseUniversalDate(dateStr: string): Date {
+  if (!dateStr || typeof dateStr !== 'string') return new Date();
+  const trimmed = dateStr.trim();
+
+  // 1. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (e.g. 2026-09-18 14:30:00 or 2026.09.18)
+  const ymdMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const hour = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+    const minute = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+    const second = ymdMatch[6] ? parseInt(ymdMatch[6], 10) : 0;
+    return new Date(year, month, day, hour, minute, second);
+  }
+
+  // 2. DD-MM-YYYY or MM-DD-YYYY or DD/MM/YYYY or DD.MM.YYYY (e.g. 18-09-2026 14:30:00 or 09/18/2026)
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (dmyMatch) {
+    const p1 = parseInt(dmyMatch[1], 10);
+    const p2 = parseInt(dmyMatch[2], 10);
+    const year = parseInt(dmyMatch[3], 10);
+    const hour = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
+    const minute = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
+    const second = dmyMatch[6] ? parseInt(dmyMatch[6], 10) : 0;
+
+    let day = p1;
+    let month = p2 - 1;
+    if (p1 <= 12 && p2 > 12) {
+      // US format MM/DD/YYYY
+      month = p1 - 1;
+      day = p2;
+    }
+    return new Date(year, month, day, hour, minute, second);
+  }
+
+  // 3. Fallback standard Date parse
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  return new Date();
+}
+
+/**
  * Format a Date object into DD-MM-YYYY (e.g., 04-09-2026)
  */
 export function formatDDMMYYYY(dateObj: Date): string {
@@ -69,13 +118,7 @@ export function parseDeltaIndiaCsv(csvText: string, accountId: string): Trade[] 
     }
 
     const rawTime = cols[0];
-    const timeMatch = rawTime.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/);
-    let parsedDate: Date;
-    if (timeMatch) {
-      parsedDate = new Date(`${timeMatch[1]}T${timeMatch[2]}+05:30`);
-    } else {
-      parsedDate = new Date(rawTime.split(' ')[0] || Date.now());
-    }
+    const parsedDate = parseUniversalDate(rawTime);
 
     const rawQty = parseFloat(cols[2]) || 0;
     // Divide lot size by 1000

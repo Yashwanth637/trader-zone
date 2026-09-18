@@ -1,6 +1,6 @@
 import { Trade, Direction, AssetClass } from '../types/trade';
 import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
-import { isDeltaIndiaCsv, parseDeltaIndiaCsv } from './deltaIndiaParser';
+import { isDeltaIndiaCsv, parseDeltaIndiaCsv, parseUniversalDate } from './deltaIndiaParser';
 
 export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
   // Check if this is a Delta Exchange India CSV export
@@ -44,7 +44,7 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
       if (header.includes('ticket') || header.includes('order')) {
         // Typical MT4/MT5 statement
         ticket = cols[0] || ticket;
-        openTime = cols[1] ? new Date(cols[1]).toISOString() : openTime;
+        openTime = cols[1] ? parseUniversalDate(cols[1]).toISOString() : openTime;
         direction = cols[2]?.toLowerCase().includes('sell') ? 'SELL' : 'BUY';
         const rawSize = parseFloat(cols[3]) || 1.0;
         // If raw size in CSV is contracts (e.g. 50 in CSV), convert to actual lot size (0.05)
@@ -53,14 +53,14 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
         entryPrice = parseFloat(cols[5]) || 0;
         stopLoss = parseFloat(cols[6]) || undefined;
         takeProfit = parseFloat(cols[7]) || undefined;
-        closeTime = cols[8] ? new Date(cols[8]).toISOString() : undefined;
+        closeTime = cols[8] ? parseUniversalDate(cols[8]).toISOString() : undefined;
         exitPrice = cols[9] ? parseFloat(cols[9]) : undefined;
         commission = cols[10] ? parseFloat(cols[10]) : 0;
         swap = cols[12] ? parseFloat(cols[12]) : 0;
         netPnl = cols[13] ? parseFloat(cols[13]) : 0;
       } else {
         // Generic CSV: Date, Symbol, Type, Lots, Entry, Exit, PnL
-        openTime = cols[0] ? new Date(cols[0]).toISOString() : openTime;
+        openTime = cols[0] ? parseUniversalDate(cols[0]).toISOString() : openTime;
         symbol = (cols[1] || 'EURUSD').toUpperCase();
         direction = cols[2]?.toLowerCase().includes('sell') || cols[2]?.toLowerCase().includes('short') ? 'SELL' : 'BUY';
         const rawSize = parseFloat(cols[3]) || 1.0;
@@ -69,7 +69,7 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
         entryPrice = parseFloat(cols[4]) || 0;
         exitPrice = cols[5] ? parseFloat(cols[5]) : undefined;
         netPnl = cols[6] ? parseFloat(cols[6]) : 0;
-        closeTime = exitPrice ? new Date(openTime).toISOString() : undefined;
+        closeTime = exitPrice ? openTime : undefined;
       }
 
       let assetClass: AssetClass = 'Forex';

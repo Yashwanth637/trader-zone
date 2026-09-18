@@ -13,7 +13,9 @@ import {
   ArrowUpRight,
   Trash2,
   PlayCircle,
-  Zap
+  Zap,
+  Calendar,
+  RotateCcw
 } from 'lucide-react';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 
@@ -31,10 +33,22 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'WIN' | 'LOSS'>('ALL');
   const [strategyFilter, setStrategyFilter] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('ALL');
 
   // Close Trade Modal state
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
   const [closeExitPrice, setCloseExitPrice] = useState('');
+
+  const availableYears = React.useMemo(() => {
+    const years = new Set<number>();
+    accountTrades.forEach(t => {
+      const y = new Date(t.openTime).getFullYear();
+      if (!isNaN(y)) years.add(y);
+    });
+    if (years.size === 0) years.add(new Date().getFullYear());
+    return Array.from(years).sort((a, b) => b - a);
+  }, [accountTrades]);
 
   const filteredTrades = React.useMemo(() => {
     const list = accountTrades.filter(t => {
@@ -50,10 +64,22 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
       if (outcomeFilter === 'WIN' && t.netPnl <= 0) return false;
       if (outcomeFilter === 'LOSS' && t.netPnl >= 0) return false;
       if (strategyFilter !== 'ALL' && t.strategyId !== strategyFilter) return false;
+
+      const tradeDate = new Date(t.openTime);
+      if (yearFilter !== 'ALL') {
+        if (tradeDate.getFullYear().toString() !== yearFilter) return false;
+      }
+      if (dateFilter) {
+        const yyyy = tradeDate.getFullYear();
+        const mm = String(tradeDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(tradeDate.getDate()).padStart(2, '0');
+        const formattedTradeDate = `${yyyy}-${mm}-${dd}`;
+        if (formattedTradeDate !== dateFilter) return false;
+      }
       return true;
     });
     return sortTradesDescending(list);
-  }, [accountTrades, search, directionFilter, statusFilter, outcomeFilter, strategyFilter]);
+  }, [accountTrades, search, directionFilter, statusFilter, outcomeFilter, strategyFilter, yearFilter, dateFilter]);
 
   const handleCloseSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,17 +118,42 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
 
       {/* Filter and Search Bar */}
       <div className="premium-card p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}
-          <div className="relative md:col-span-2">
+          <div className="relative sm:col-span-2 lg:col-span-2">
             <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search symbol, ticket, or notes..."
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              placeholder="Search symbol, ticket, notes..."
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none placeholder:text-muted/60"
             />
+          </div>
+
+          {/* View by Exact Date */}
+          <div>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              title="Filter trades by exact date"
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-mono"
+            />
+          </div>
+
+          {/* Year Filter */}
+          <div>
+            <select
+              value={yearFilter}
+              onChange={e => setYearFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-medium"
+            >
+              <option value="ALL">Year: All</option>
+              {availableYears.map(yr => (
+                <option key={yr} value={yr.toString()}>{yr}</option>
+              ))}
+            </select>
           </div>
 
           {/* Direction */}
@@ -118,32 +169,82 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             </select>
           </div>
 
-          {/* Status */}
-          <div>
+          {/* Status & Outcome */}
+          <div className="flex gap-2">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              className="w-full px-2.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
             >
               <option value="ALL">Status: All</option>
-              <option value="OPEN">Running (OPEN)</option>
-              <option value="CLOSED">Closed Trades</option>
+              <option value="OPEN">Running</option>
+              <option value="CLOSED">Closed</option>
             </select>
-          </div>
-
-          {/* Outcome */}
-          <div>
             <select
               value={outcomeFilter}
               onChange={e => setOutcomeFilter(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              className="w-full px-2.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
             >
-              <option value="ALL">Outcome: All</option>
-              <option value="WIN">Winners Only</option>
-              <option value="LOSS">Losers Only</option>
+              <option value="ALL">Result: All</option>
+              <option value="WIN">Winners</option>
+              <option value="LOSS">Losers</option>
             </select>
           </div>
         </div>
+
+        {/* Active filter pills / reset row if any filter active */}
+        {(dateFilter || yearFilter !== 'ALL' || directionFilter !== 'ALL' || statusFilter !== 'ALL' || outcomeFilter !== 'ALL' || search) && (
+          <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-muted text-[11px] font-medium">Active Filters:</span>
+              {dateFilter && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20">
+                  <Calendar className="w-3 h-3" />
+                  Date: {dateFilter}
+                  <button onClick={() => setDateFilter('')} className="hover:text-primary-hover ml-1 font-bold">×</button>
+                </span>
+              )}
+              {yearFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20">
+                  Year: {yearFilter}
+                  <button onClick={() => setYearFilter('ALL')} className="hover:text-primary-hover ml-1 font-bold">×</button>
+                </span>
+              )}
+              {directionFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface text-foreground text-[11px] border border-border">
+                  {directionFilter}
+                  <button onClick={() => setDirectionFilter('ALL')} className="hover:text-primary ml-1 font-bold">×</button>
+                </span>
+              )}
+              {statusFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface text-foreground text-[11px] border border-border">
+                  {statusFilter}
+                  <button onClick={() => setStatusFilter('ALL')} className="hover:text-primary ml-1 font-bold">×</button>
+                </span>
+              )}
+              {outcomeFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface text-foreground text-[11px] border border-border">
+                  {outcomeFilter}
+                  <button onClick={() => setOutcomeFilter('ALL')} className="hover:text-primary ml-1 font-bold">×</button>
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setSearch('');
+                setDateFilter('');
+                setYearFilter('ALL');
+                setDirectionFilter('ALL');
+                setStatusFilter('ALL');
+                setOutcomeFilter('ALL');
+              }}
+              className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-foreground transition-colors font-medium ml-auto"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset All
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Trades Table */}
@@ -166,10 +267,9 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                   <th className="pb-3">Symbol & Setup</th>
                   <th className="pb-3">Side</th>
                   <th className="pb-3">Lots</th>
-                  <th className="pb-3">Open Date</th>
+                  <th className="pb-3">Open Date & Time</th>
                   <th className="pb-3">Entry</th>
                   <th className="pb-3">Exit</th>
-                  <th className="pb-3">Pips</th>
                   <th className="pb-3">Net P&L</th>
                   <th className="pb-3">R:R</th>
                   <th className="pb-3">Status</th>
@@ -205,15 +305,12 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
 
                       <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
 
-                      <td className="py-3 text-muted font-mono">
-                        {new Date(t.openTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      <td className="py-3 text-muted font-mono whitespace-nowrap">
+                        {new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
                       </td>
 
                       <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>
                       <td className="py-3 font-mono text-foreground">{t.exitPrice || '-'}</td>
-                      <td className="py-3 font-mono text-muted">
-                        {t.pips ? `${t.pips > 0 ? '+' : ''}${t.pips}` : '-'}
-                      </td>
 
                       <td className="py-3 font-mono font-bold">
                         <span className={isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-muted'}>

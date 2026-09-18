@@ -5,12 +5,14 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 interface TradingActivityCardProps {
   activityData: TradingActivityStats;
+  onYearChange?: (year: number) => void;
 }
 
-export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activityData }) => {
+export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activityData, onYearChange }) => {
   const {
     totalTradesInYear,
     year,
+    availableYears,
     daysTraded,
     greenDays,
     redDays,
@@ -23,6 +25,8 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
     worstDay,
     monthlyDots
   } = activityData;
+
+  const yearsList = Array.from(new Set([...(availableYears || []), year, 2026, 2025, 2024])).sort((a, b) => b - a);
 
   const isPnlPositive = totalPnl >= 0;
   const isAvgPositive = avgPnlPerDay >= 0;
@@ -59,7 +63,21 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-foreground tracking-tight">Trading Activity</h2>
-          <p className="text-xs text-muted mt-0.5">{totalTradesInYear} trades in {year}</p>
+          <div className="flex items-center gap-1.5 text-xs text-muted mt-0.5">
+            <span>{totalTradesInYear} trades in</span>
+            <select
+              value={year}
+              onChange={e => onYearChange?.(parseInt(e.target.value, 10))}
+              className="px-2 py-0.5 rounded-lg bg-surface-card border border-slate-200 dark:border-white/10 text-foreground font-bold text-xs focus:outline-none focus:border-primary cursor-pointer hover:border-primary/50 transition-colors"
+              title="Select Year"
+            >
+              {yearsList.map(y => (
+                <option key={y} value={y} className="bg-surface text-foreground font-semibold">
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium text-muted self-start sm:self-auto">
           <div className="flex items-center gap-1.5">
@@ -89,7 +107,8 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Monthly Activity ({year})</span>
+            <span>Monthly Activity</span>
+            <span className="text-[11px] font-bold text-primary font-mono">({year})</span>
           </div>
           <div className="flex items-center gap-1">
             <button
