@@ -330,15 +330,9 @@ export function calculateTradingActivity(trades: Trade[]): TradingActivityStats 
     }
   }
 
-  // Monthly Dot Matrix (e.g. past 6 months: Jul, Aug, Sep, Oct, Nov, Dec)
+  // Monthly Dot Matrix (all 12 months of the year for horizontal scrolling)
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const curMonthIdx = new Date().getMonth();
-  // Get last 6 months window
-  const targetMonths: string[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const mIdx = (curMonthIdx - i + 12) % 12;
-    targetMonths.push(monthNames[mIdx]);
-  }
+  const targetMonths = monthNames;
 
   const monthlyDots = targetMonths.map(month => {
     const daysInMonth = daysList.filter(d => {

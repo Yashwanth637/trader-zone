@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { TradingActivityStats } from '../../lib/scoreCalculations';
 import { formatAdaptivePnl } from '../../lib/calculations';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 interface TradingActivityCardProps {
   activityData: TradingActivityStats;
@@ -25,6 +26,32 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
 
   const isPnlPositive = totalPnl >= 0;
   const isAvgPositive = avgPnlPerDay >= 0;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'short' });
+
+  // Auto-scroll to current month or latest month with activity on mount
+  useEffect(() => {
+    if (scrollRef.current) {
+      const activeEl = scrollRef.current.querySelector<HTMLElement>('[data-current-month="true"]');
+      if (activeEl) {
+        const container = scrollRef.current;
+        const scrollTarget = activeEl.offsetLeft - (container.clientWidth / 2) + (activeEl.clientWidth / 2);
+        container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+      } else {
+        scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+      }
+    }
+  }, [monthlyDots]);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 260;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   return (
     <div className="premium-card p-6 flex flex-col justify-between h-full space-y-6">
@@ -56,34 +83,88 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
         </div>
       </div>
 
-      {/* Calendar Activity Dot Matrix (Months columns) */}
-      <div className="w-full">
-        <div className="grid grid-cols-6 gap-2 text-center text-xs font-semibold text-muted mb-2">
-          {monthlyDots.map(m => (
-            <div key={m.month}>{m.month}</div>
-          ))}
+      {/* Calendar Activity Dot Matrix (Months with 3-Column Grids & Horizontal Scrolling) */}
+      <div className="w-full space-y-2">
+        {/* Timeline Header with Navigation Arrows */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Monthly Activity ({year})</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleScroll('left')}
+              className="p-1 rounded-lg border border-border bg-surface-card hover:bg-surface text-muted hover:text-foreground transition-all cursor-pointer"
+              title="Scroll left"
+              type="button"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => handleScroll('right')}
+              className="p-1 rounded-lg border border-border bg-surface-card hover:bg-surface text-muted hover:text-foreground transition-all cursor-pointer"
+              title="Scroll right"
+              type="button"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Dots columns container */}
-        <div className="grid grid-cols-6 gap-2 h-20 items-end pb-2 border-b border-border/60">
-          {monthlyDots.map((m, idx) => {
-            // Stack dots vertically up to 8 max per column
-            const displayDots = m.days.slice(0, 10);
+        {/* Horizontal Scrollable Months Container */}
+        <div
+          ref={scrollRef}
+          className="flex gap-2.5 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-thin scrollbar-thumb-border/60 select-none border-b border-border/60"
+        >
+          {monthlyDots.map((m) => {
+            const isCurrent = m.month === currentMonthName;
             return (
-              <div key={idx} className="flex flex-col items-center gap-1 justify-end h-full">
-                {displayDots.length === 0 ? (
-                  <span className="w-2 h-2 rounded-full bg-border/40 opacity-30" />
-                ) : (
-                  displayDots.map((d, dIdx) => (
-                    <span
-                      key={dIdx}
-                      title={`${d.date}: ${d.pnl >= 0 ? '+' : ''}${formatAdaptivePnl(d.pnl)}`}
-                      className={`w-2.5 h-2.5 rounded-full transition-transform hover:scale-125 cursor-pointer ${
-                        d.status === 'win' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-rose-500 shadow-sm shadow-rose-500/30'
-                      }`}
-                    />
-                  ))
-                )}
+              <div
+                key={m.month}
+                data-current-month={isCurrent ? 'true' : 'false'}
+                className={`flex-shrink-0 min-w-[82px] max-w-[94px] rounded-xl p-2 border transition-all flex flex-col items-center ${
+                  isCurrent
+                    ? 'bg-primary/5 border-primary/40 shadow-sm'
+                    : 'bg-surface-card/40 border-border/60 hover:border-border'
+                }`}
+              >
+                {/* Month Name & Day Count Header */}
+                <div className="flex items-center justify-between w-full mb-1.5">
+                  <span className={`text-[11px] font-bold tracking-tight ${isCurrent ? 'text-primary' : 'text-foreground'}`}>
+                    {m.month}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted font-medium">
+                    {m.days.length > 0 ? `${m.days.length}d` : '—'}
+                  </span>
+                </div>
+
+                {/* 3-Column Dot Matrix */}
+                <div className="w-full h-[105px] overflow-y-auto scrollbar-none flex flex-col justify-start">
+                  {m.days.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-1 opacity-25">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-border" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-border" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-border" />
+                      </div>
+                      <span className="text-[9px] text-muted font-medium">No trades</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5 justify-items-center">
+                      {m.days.map((d, dIdx) => (
+                        <span
+                          key={dIdx}
+                          title={`${d.date}: ${d.pnl >= 0 ? '+' : ''}${formatAdaptivePnl(d.pnl)} (${d.status.toUpperCase()})`}
+                          className={`w-2.5 h-2.5 rounded-full transition-all hover:scale-130 cursor-pointer ${
+                            d.status === 'win'
+                              ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40 hover:ring-2 hover:ring-emerald-400'
+                              : 'bg-rose-500 shadow-sm shadow-rose-500/40 hover:ring-2 hover:ring-rose-400'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
