@@ -118,36 +118,36 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
 
       {/* Filter and Search Bar */}
       <div className="premium-card p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="relative sm:col-span-2 lg:col-span-2">
-            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="relative flex-1 min-w-[200px] sm:min-w-[240px]">
+            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search symbol, ticket, notes..."
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none placeholder:text-muted/60"
+              className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none placeholder:text-muted/60"
             />
           </div>
 
           {/* View by Exact Date */}
-          <div>
+          <div className="w-full sm:w-auto min-w-[145px]">
             <input
               type="date"
               value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
               title="Filter trades by exact date"
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-mono"
+              className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-mono"
             />
           </div>
 
           {/* Year Filter */}
-          <div>
+          <div className="w-full sm:w-auto min-w-[110px]">
             <select
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-medium"
+              className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
             >
               <option value="ALL">Year: All</option>
               {availableYears.map(yr => (
@@ -157,11 +157,11 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
           </div>
 
           {/* Direction */}
-          <div>
+          <div className="w-full sm:w-auto min-w-[125px]">
             <select
               value={directionFilter}
               onChange={e => setDirectionFilter(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none cursor-pointer"
             >
               <option value="ALL">Direction: All</option>
               <option value="BUY">BUY Only</option>
@@ -169,21 +169,25 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             </select>
           </div>
 
-          {/* Status & Outcome */}
-          <div className="flex gap-2">
+          {/* Status */}
+          <div className="w-full sm:w-auto min-w-[120px]">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
-              className="w-full px-2.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none cursor-pointer"
             >
               <option value="ALL">Status: All</option>
               <option value="OPEN">Running</option>
               <option value="CLOSED">Closed</option>
             </select>
+          </div>
+
+          {/* Outcome / Result */}
+          <div className="w-full sm:w-auto min-w-[120px]">
             <select
               value={outcomeFilter}
               onChange={e => setOutcomeFilter(e.target.value as any)}
-              className="w-full px-2.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none"
+              className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none cursor-pointer"
             >
               <option value="ALL">Result: All</option>
               <option value="WIN">Winners</option>

@@ -88,12 +88,16 @@ export const HotTopicsPage: React.FC = () => {
   const loadLiveMarketData = async () => {
     setIsRefreshing(true);
     try {
-      const [newTickers, newHeadlines] = await Promise.all([
+      const [tickersResult, newsResult] = await Promise.allSettled([
         fetchLiveMarketTickers(),
         fetchLiveNewsHeadlines()
       ]);
-      setTickers(newTickers);
-      setHeadlines(newHeadlines);
+      if (tickersResult.status === 'fulfilled' && tickersResult.value.length > 0) {
+        setTickers(tickersResult.value);
+      }
+      if (newsResult.status === 'fulfilled' && newsResult.value.length > 0) {
+        setHeadlines(newsResult.value);
+      }
       setLastRefreshedText('intel just now');
     } catch (err) {
       console.error('Failed to refresh market data', err);

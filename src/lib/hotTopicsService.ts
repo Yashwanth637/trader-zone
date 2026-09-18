@@ -333,10 +333,23 @@ export function getInitialMarketTickers(): MarketTicker[] {
   return [...cachedTickers];
 }
 
+let cachedHeadlines: RawHeadline[] = [];
+
 /**
  * Returns immediate initial headlines so news feeds render instantly on frame 0
  */
 export function getInitialHeadlines(): RawHeadline[] {
+  if (cachedHeadlines.length > 0) return [...cachedHeadlines];
+  try {
+    const saved = localStorage.getItem('HOT_TOPICS_HEADLINES_CACHE');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedHeadlines = parsed;
+        return [...parsed];
+      }
+    }
+  } catch {}
   return [...FALLBACK_HEADLINES];
 }
 
@@ -371,105 +384,107 @@ function parseRssDate(raw: string | undefined): number {
 }
 
 /**
- * Curated fallback headlines if internet RSS is temporarily unreachable
+ * Curated fallback headlines matching the user's primary trading pairs (Gold, Bitcoin, Crypto, Macro)
  */
 export const FALLBACK_HEADLINES: RawHeadline[] = [
   {
     id: 'h1',
-    source: 'COINTELEGRAPH',
-    sourceColor: 'text-orange-400',
-    title: 'Bitcoin coils near $76.5K as US stocks rebound from Fed rate hike',
-    timeAgo: '14m ago',
-    timestamp: Date.now() - 14 * 60000,
-    tags: ['BTCUSD', 'Fed', 'Macro'],
+    source: 'THE BLOCK',
+    sourceColor: 'text-violet-400',
+    title: 'Bitcoin reclaims $80,000, Solana and Hyperliquid rally as crypto markets shrug off Clarity setback',
+    timeAgo: '28m ago',
+    timestamp: Date.now() - 28 * 60000,
+    tags: ['BTCUSD', 'SOLUSD', 'Crypto'],
   },
   {
     id: 'h2',
-    source: 'DECRYPT',
-    sourceColor: 'text-emerald-400',
-    title: 'Financial Data Giant S&P Global Moves Deeper Into Crypto With OpenZeppelin Deal',
-    timeAgo: '22m ago',
-    timestamp: Date.now() - 22 * 60000,
-    tags: ['Institutional', 'Web3'],
+    source: 'COINDESK',
+    sourceColor: 'text-amber-400',
+    title: 'CFTC sends crypto rules to White House to review as Congress stalls on Clarity Act',
+    timeAgo: '42m ago',
+    timestamp: Date.now() - 42 * 60000,
+    tags: ['Regulation', 'CFTC', 'BTCUSD'],
   },
   {
     id: 'h3',
-    source: 'CNBC',
+    source: 'FXSTREET',
     sourceColor: 'text-blue-400',
-    title: 'Bank of England defies Fed rate lead, holding benchmark borrowing rates steady',
-    timeAgo: '35m ago',
-    timestamp: Date.now() - 35 * 60000,
-    tags: ['Rates', 'CentralBanks', 'Macro'],
-  },
-  {
-    id: 'h4',
-    source: 'COINDESK',
-    sourceColor: 'text-amber-400',
-    title: 'Institutional inflows into spot Bitcoin and Ethereum ETFs reach weekly high',
-    timeAgo: '48m ago',
-    timestamp: Date.now() - 48 * 60000,
-    tags: ['BTCUSD', 'ETHUSD', 'ETF'],
-  },
-  {
-    id: 'h5',
-    source: 'BLOOMBERG',
-    sourceColor: 'text-cyan-400',
-    title: 'Gold advances near record peak as safe-haven bid accelerates and yields compress',
-    timeAgo: '1h ago',
-    timestamp: Date.now() - 65 * 60000,
+    title: 'Gold holds near record highs as Treasury yields slip and safe-haven demand accelerates',
+    timeAgo: '55m ago',
+    timestamp: Date.now() - 55 * 60000,
     tags: ['Gold', 'XAUUSD', 'Yields'],
   },
   {
-    id: 'h6',
-    source: 'YAHOO FINANCE',
-    sourceColor: 'text-purple-400',
-    title: 'Mysterious macro trader repositions $120 million ahead of FOMC policy guidance',
+    id: 'h4',
+    source: 'THE BLOCK',
+    sourceColor: 'text-violet-400',
+    title: 'Grayscale’s Zcash ETF plans 3-for-1 split after $233 million inflow surge',
     timeAgo: '1h ago',
-    timestamp: Date.now() - 75 * 60000,
-    tags: ['Fed', 'Rates', 'Macro'],
+    timestamp: Date.now() - 68 * 60000,
+    tags: ['ETF', 'Inflows', 'Crypto'],
+  },
+  {
+    id: 'h5',
+    source: 'FXSTREET',
+    sourceColor: 'text-blue-400',
+    title: 'Euro heads for weekly loss against US Dollar on hawkish Federal Reserve outlook',
+    timeAgo: '1h ago',
+    timestamp: Date.now() - 85 * 60000,
+    tags: ['DXY', 'EURUSD', 'Fed'],
+  },
+  {
+    id: 'h6',
+    source: 'COINTELEGRAPH',
+    sourceColor: 'text-orange-400',
+    title: 'Institutional inflows into spot Bitcoin and Ethereum ETFs reach fresh weekly milestone',
+    timeAgo: '2h ago',
+    timestamp: Date.now() - 110 * 60000,
+    tags: ['BTCUSD', 'ETHUSD', 'ETF'],
   },
   {
     id: 'h7',
-    source: 'OILPRICE',
-    sourceColor: 'text-rose-400',
-    title: 'Crude oil consolidates near $91 as geopolitical tensions and Middle East supply dynamics hold focus',
-    timeAgo: '2h ago',
-    timestamp: Date.now() - 110 * 60000,
-    tags: ['WTIUSD', 'Energy'],
-  },
-  {
-    id: 'h8',
     source: 'DECRYPT',
     sourceColor: 'text-emerald-400',
-    title: 'SEC clears a path for tokenized stock futures as 24/7 institutional trading expands',
+    title: 'SEC clears pathway for tokenized assets as 24/7 institutional liquidity expands',
     timeAgo: '2h ago',
     timestamp: Date.now() - 130 * 60000,
     tags: ['Regulation', 'Markets'],
+  },
+  {
+    id: 'h8',
+    source: 'FXSTREET',
+    sourceColor: 'text-blue-400',
+    title: 'European Central Bank: Quarterly interest rate policy still baseline into year-end',
+    timeAgo: '3h ago',
+    timestamp: Date.now() - 165 * 60000,
+    tags: ['ECB', 'Rates', 'Macro'],
   }
 ];
 
 /**
- * Fetches real live news articles from curated RSS feeds (Cointelegraph, Decrypt, CNBC, CoinDesk, Yahoo Finance)
+ * Fetches real live news articles from fast, verified, high-frequency feeds
+ * (The Block, CoinDesk official, FXStreet for Gold/Dollar, Cointelegraph, Decrypt)
  */
 export async function fetchLiveNewsHeadlines(): Promise<RawHeadline[]> {
   const feedDefs = [
+    { source: 'THE BLOCK', url: 'https://www.theblock.co/rss.xml', color: 'text-violet-400' },
+    { source: 'COINDESK', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', color: 'text-amber-400' },
+    { source: 'FXSTREET', url: 'https://www.fxstreet.com/rss/news', color: 'text-blue-400' },
     { source: 'COINTELEGRAPH', url: 'https://cointelegraph.com/rss', color: 'text-orange-400' },
     { source: 'DECRYPT', url: 'https://decrypt.co/feed', color: 'text-emerald-400' },
-    { source: 'CNBC', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', color: 'text-blue-400' },
-    { source: 'COINDESK', url: 'https://feeds.feedburner.com/CoinDesk', color: 'text-amber-400' },
-    { source: 'YAHOO FINANCE', url: 'https://finance.yahoo.com/news/rssindex', color: 'text-purple-400' },
   ];
 
   const results: RawHeadline[] = [];
-  const cacheBuster = Math.floor(Date.now() / 60000); // 1-minute cache buster
 
+  // Parallel fetch with snappy 3500ms timeout and no cache-busting query parameter
+  // so rss2json serves cached, high-speed responses without rate limits
   const promises = feedDefs.map(async (feed) => {
     try {
-      const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&_t=${cacheBuster}`;
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8500) });
+      const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(3500) });
       if (res.ok) {
         const data = await res.json();
-        if (data?.items && Array.isArray(data.items)) {
+        if (data?.status === 'ok' && Array.isArray(data.items)) {
           data.items.slice(0, 8).forEach((item: any, idx: number) => {
             const title = decodeHtml(item.title || '');
             const desc = decodeHtml(item.description || item.content || '');
@@ -483,15 +498,20 @@ export async function fetchLiveNewsHeadlines(): Promise<RawHeadline[]> {
               lower.includes('heloc') ||
               lower.includes('holiday travel') ||
               lower.includes('flying home') ||
-              lower.includes('renters are gaining') ||
               lower.includes('personal finance')
             ) {
               return;
             }
 
             const pubDate = parseRssDate(item.pubDate);
-            const diffMins = Math.max(1, Math.floor((Date.now() - pubDate) / 60000));
-            const timeAgo = diffMins < 60 ? `${diffMins}m ago` : `${Math.floor(diffMins / 60)}h ago`;
+            const diffMins = Math.max(1, Math.floor(Math.max(0, Date.now() - pubDate) / 60000));
+            const timeAgo = diffMins < 5
+              ? 'just now'
+              : diffMins < 60
+              ? `${diffMins}m ago`
+              : diffMins < 1440
+              ? `${Math.floor(diffMins / 60)}h ago`
+              : `${Math.floor(diffMins / 1440)}d ago`;
 
             results.push({
               id: `rss-${feed.source}-${idx}-${pubDate}`,
@@ -508,23 +528,29 @@ export async function fetchLiveNewsHeadlines(): Promise<RawHeadline[]> {
         }
       }
     } catch {
-      // Feed fetch failed, ignore gracefully
+      // Feed fetch failed gracefully
     }
   });
 
   await Promise.allSettled(promises);
 
   if (results.length > 0) {
-    // Sort descending by timestamp (latest first)
+    // Sort descending by timestamp (freshest first)
     results.sort((a, b) => b.timestamp - a.timestamp);
-    return results.slice(0, 30);
+    const sliced = results.slice(0, 30);
+    cachedHeadlines = sliced;
+    try {
+      localStorage.setItem('HOT_TOPICS_HEADLINES_CACHE', JSON.stringify(sliced));
+    } catch {}
+    return sliced;
   }
 
-  return FALLBACK_HEADLINES;
+  return getInitialHeadlines();
 }
 
 /**
  * Dynamically synthesizes the Top Story Hero Card and 2x2 Grid Cards from live headlines and live tickers!
+ * Prioritizes RECENCY (breaking news in the last 30-90 minutes) and user-traded symbols (Gold, BTC, ETH, SOL, DXY).
  */
 export function generateDynamicCardsFromLiveNews(
   headlines: RawHeadline[],
@@ -548,73 +574,88 @@ export function generateDynamicCardsFromLiveNews(
     return liveTickers.find(t => t.symbol.toUpperCase() === sym.toUpperCase());
   };
 
-  // 1. Process headlines to identify major macroeconomic / market stories
-  const parsedStories: MarketIntelligenceCard[] = [];
+  // 1. Process headlines into structured market cards
+  const parsedStories: (MarketIntelligenceCard & { priorityScore: number })[] = [];
 
-  headlines.forEach((h, index) => {
+  headlines.forEach((h) => {
     const text = `${h.title} ${h.description || ''}`.toLowerCase();
 
     let affectedSymbols: string[] = [];
     let primarySymbol = 'BTCUSD';
-    let sentiment: 'BULLISH' | 'BEARISH' = 'BULLISH';
     let highlightTags: string[] = [];
     let watchCallout = '';
 
-    // Classify symbol
-    if (text.includes('gold') || text.includes('bullion') || text.includes('xau') || text.includes('metal')) {
+    // Classify symbol and market impact
+    if (text.includes('gold') || text.includes('bullion') || text.includes('xau') || text.includes('metal') || text.includes('precious')) {
       affectedSymbols = ['XAUUSD'];
       primarySymbol = 'XAUUSD';
       highlightTags = ['Gold ATH Zone', 'Safe Haven Bid'];
-      watchCallout = 'Watch Treasury yields and real interest rate expectations; monitor gold resistance break above $4,380.';
-    } else if (text.includes('solana') || text.includes('sol')) {
+      watchCallout = 'Watch US Treasury yields and real interest rate expectations; monitor gold resistance break above $4,380.';
+    } else if (text.includes('solana') || text.includes('sol ') || text.includes('hyperliquid')) {
       affectedSymbols = ['SOLUSD', 'BTCUSD'];
       primarySymbol = 'SOLUSD';
-      highlightTags = ['Solana Network Activity', 'DeFi Momentum'];
-      watchCallout = 'Track Solana breakout velocity and network fee accumulation.';
-    } else if (text.includes('xrp') || text.includes('ripple') || text.includes('sec') || text.includes('regulation') || text.includes('etf')) {
+      highlightTags = ['Solana Ecosystem Rally', 'DeFi Momentum'];
+      watchCallout = 'Track Solana breakout velocity, spot volume depth, and decentralized exchange liquidity growth.';
+    } else if (text.includes('xrp') || text.includes('ripple') || text.includes('sec ') || text.includes('cftc') || text.includes('clarity') || text.includes('regulation') || text.includes('white house')) {
       affectedSymbols = ['XRPUSD', 'BTCUSD'];
       primarySymbol = 'XRPUSD';
-      highlightTags = ['Regulatory Clarity', 'Institutional Volume'];
-      watchCallout = 'Monitor regulatory rulings and institutional ETF adoption trends.';
+      highlightTags = ['Regulatory Clarity', 'CFTC Guidance'];
+      watchCallout = 'Monitor administrative rulemaking timelines and institutional compliance developments.';
+    } else if (text.includes('eth') || text.includes('ethereum') || text.includes('vitalik') || text.includes('layer-2') || text.includes('arbitrum')) {
+      affectedSymbols = ['ETHUSD', 'BTCUSD'];
+      primarySymbol = 'ETHUSD';
+      highlightTags = ['Ethereum Staking Flow', 'L2 Settlement'];
+      watchCallout = 'Monitor ETF net absorption rate and Ethereum gas dynamics across layer-2 rollups.';
     } else if (text.includes('bitcoin') || text.includes('btc') || text.includes('crypto')) {
       affectedSymbols = ['BTCUSD', 'ETHUSD'];
       primarySymbol = 'BTCUSD';
       highlightTags = ['BTCUSD Key Resistance', 'ETF Net Inflows'];
       watchCallout = 'Watch for sustained liquidity expansion and institutional buying depth; test of next key high.';
-    } else if (text.includes('fed') || text.includes('powell') || text.includes('rates') || text.includes('inflation') || text.includes('pmi') || text.includes('jobs') || text.includes('nfp') || text.includes('boe') || text.includes('bank')) {
+    } else if (text.includes('fed') || text.includes('powell') || text.includes('ecb') || text.includes('rate') || text.includes('inflation') || text.includes('dollar') || text.includes('dxy') || text.includes('euro') || text.includes('pmi') || text.includes('jobs') || text.includes('bank')) {
       affectedSymbols = ['XAUUSD', 'BTCUSD'];
       primarySymbol = 'XAUUSD';
-      highlightTags = ['Fed Policy Vigilance', 'Global Rate Trajectory'];
-      watchCallout = 'Monitor sovereign bond yields and rate expectations as central banks pivot monetary policy.';
+      highlightTags = ['Central Bank Trajectory', 'Dollar Index Action'];
+      watchCallout = 'Monitor sovereign bond yields and rate expectations as central banks navigate monetary policy.';
     } else if (text.includes('oil') || text.includes('crude') || text.includes('energy') || text.includes('opec') || text.includes('wti')) {
       affectedSymbols = ['WTIUSD'];
       primarySymbol = 'WTIUSD';
-      highlightTags = ['WTI Supply Buffer', 'Energy Sector'];
-      watchCallout = 'Watch Middle East geopolitical developments and weekly EIA crude inventory data.';
+      highlightTags = ['WTI Supply Buffer', 'Energy Complex'];
+      watchCallout = 'Watch Middle East geopolitical developments and weekly EIA crude inventory updates.';
     } else {
-      // General markets
       affectedSymbols = ['BTCUSD', 'XAUUSD'];
       primarySymbol = 'BTCUSD';
-      highlightTags = ['Market Momentum', 'Risk Appetite'];
+      highlightTags = ['Market Breadth', 'Risk Appetite'];
       watchCallout = 'Track broader macro liquidity breadth and cross-asset risk sentiment indicators.';
     }
 
     // Classify sentiment
-    const bullishWords = ['surge', 'rally', 'soar', 'beat', 'jump', 'gain', 'high', 'record', 'bull', 'inflow', 'advance', 'rebound', 'boost', 'all-time'];
-    const bearishWords = ['fall', 'drop', 'slump', 'miss', 'down', 'decline', 'crash', 'cut', 'hike', 'unwind', 'loss', 'sink', 'retreat', 'war', 'probe'];
+    const bullishWords = ['surge', 'rally', 'soar', 'beat', 'jump', 'gain', 'high', 'record', 'bull', 'inflow', 'advance', 'rebound', 'boost', 'all-time', 'reclaim', 'rise', 'buying'];
+    const bearishWords = ['fall', 'drop', 'slump', 'miss', 'down', 'decline', 'crash', 'cut', 'hike', 'unwind', 'loss', 'sink', 'retreat', 'war', 'probe', 'setback', 'stall', 'hack'];
 
     const bullCount = bullishWords.filter(w => text.includes(w)).length;
     const bearCount = bearishWords.filter(w => text.includes(w)).length;
-    sentiment = bearCount > bullCount ? 'BEARISH' : 'BULLISH';
+    const sentiment: 'BULLISH' | 'BEARISH' = bearCount > bullCount ? 'BEARISH' : 'BULLISH';
 
     // Calculate dynamic heat score (65 to 95)
-    let heat = 72;
-    const diffHours = (Date.now() - h.timestamp) / 3600000;
+    let heat = 74;
+    const diffHours = Math.max(0, (Date.now() - h.timestamp) / 3600000);
     if (diffHours < 1) heat += 12;
-    else if (diffHours < 6) heat += 6;
-    if (bullCount + bearCount >= 2) heat += 6;
-    if (text.includes('fed') || text.includes('rate') || text.includes('billion') || text.includes('record')) heat += 5;
-    heat = Math.min(95, Math.max(65, heat));
+    else if (diffHours < 4) heat += 8;
+    else if (diffHours < 8) heat += 4;
+    if (bullCount + bearCount >= 2) heat += 5;
+    if (text.includes('fed') || text.includes('rate') || text.includes('billion') || text.includes('reclaim') || text.includes('record')) heat += 4;
+    heat = Math.min(96, Math.max(68, heat));
+
+    // Calculate Recency Score: stories in the past 60 mins score ~95-100, dropping with age
+    const ageMinutes = Math.max(0, (Date.now() - h.timestamp) / 60000);
+    const recencyScore = Math.max(10, Math.round(100 - (ageMinutes / 60) * 8));
+
+    // User relevance bonus (+25 if directly matches user's active symbols)
+    const isUser = isUserMatch(affectedSymbols);
+    const relevanceBonus = isUser ? 25 : 10;
+
+    // Composite Priority: heavy weight on recency ensures NEWEST breaking story is Top Story!
+    const priorityScore = (recencyScore * 0.65) + (heat * 0.25) + relevanceBonus;
 
     const ticker = getTicker(primarySymbol);
     const relatedAsset = ticker ? {
@@ -628,123 +669,150 @@ export function generateDynamicCardsFromLiveNews(
     parsedStories.push({
       id: `dynamic-${h.id}`,
       heat,
-      impactLevel: heat >= 78 ? 'HIGH' : 'MEDIUM',
+      priorityScore,
+      impactLevel: heat >= 80 ? 'HIGH' : 'MEDIUM',
       sentiment,
-      timeBadge: diffHours < 2 ? 'NOW' : diffHours < 24 ? 'TODAY' : 'WEEK',
+      timeBadge: diffHours < 1.5 ? 'NOW' : diffHours < 24 ? 'TODAY' : 'WEEK',
       title: h.title,
-      description: h.description || `${h.title} has entered active focus as institutional market participants digest cross-asset implications for risk and currency markets.`,
+      description: h.description || `${h.title} has entered active focus across trading desks as market participants evaluate immediate price reaction and volatility implications.`,
       watchCallout,
       highlightTags,
       affectedSymbols,
       relatedAsset,
-      isUserMarket: isUserMatch(affectedSymbols),
+      isUserMarket: isUser,
     });
   });
 
-  // If we have parsed stories, select Top Story and 4 Grid Cards
+  // If we have parsed stories, select Top Story and 4 diverse Grid Cards
   if (parsedStories.length >= 5) {
-    // Sort by heat descending
-    parsedStories.sort((a, b) => b.heat - a.heat);
+    // Sort by priorityScore descending so the newest, most impactful breaking story is #1
+    parsedStories.sort((a, b) => b.priorityScore - a.priorityScore);
 
-    // Top Story is #1
     const top = { ...parsedStories[0], isTopStory: true };
+    const usedSymbols = new Set<string>([top.affectedSymbols[0] || 'BTCUSD']);
 
-    // Select 4 diverse grid cards
-    const grid = parsedStories.slice(1, 5);
+    const grid: MarketIntelligenceCard[] = [];
+    // Select 4 diverse cards across different primary assets
+    for (let i = 1; i < parsedStories.length; i++) {
+      const story = parsedStories[i];
+      const mainSym = story.affectedSymbols[0] || '';
+      if (!usedSymbols.has(mainSym) || grid.length + (parsedStories.length - i) <= 4) {
+        grid.push(story);
+        usedSymbols.add(mainSym);
+        if (grid.length === 4) break;
+      }
+    }
+
+    // Fill remaining if needed
+    for (let i = 1; i < parsedStories.length && grid.length < 4; i++) {
+      if (!grid.some(c => c.id === parsedStories[i].id)) {
+        grid.push(parsedStories[i]);
+      }
+    }
 
     return { topStory: top, gridCards: grid };
   }
 
-  // Otherwise, use fallback reference stories with LIVE real prices bound!
-  const btcTicker = getTicker('BTCUSD') || { symbol: 'BTCUSD', formattedPrice: '$76,420', changePercent: 1.06, isPositive: true };
-  const us500Ticker = getTicker('US500') || { symbol: 'US500', formattedPrice: '7,747.7', changePercent: 1.06, isPositive: true };
-  const jpyTicker = getTicker('USDJPY') || { symbol: 'USDJPY', formattedPrice: '155.94', changePercent: -1.72, isPositive: false };
+  // Fallback cards matching the user's primary pairs (Gold, Bitcoin, Ethereum, Solana)
+  const goldTicker = getTicker('XAUUSD') || { symbol: 'XAUUSD', formattedPrice: '4,361.20', changePercent: 0.34, isPositive: true, sparkline: [40, 42, 50, 55, 62, 60, 68, 74, 82, 85] };
+  const btcTicker = getTicker('BTCUSD') || { symbol: 'BTCUSD', formattedPrice: '$80,050', changePercent: 1.45, isPositive: true, sparkline: [35, 40, 45, 52, 60, 68, 75, 80, 85, 92] };
+  const solTicker = getTicker('SOLUSD') || { symbol: 'SOLUSD', formattedPrice: '$100.87', changePercent: 3.75, isPositive: true, sparkline: [30, 38, 45, 50, 60, 70, 78, 85, 90] };
+  const xrpTicker = getTicker('XRPUSD') || { symbol: 'XRPUSD', formattedPrice: '$1.30', changePercent: 2.57, isPositive: true, sparkline: [45, 48, 52, 55, 62, 68, 72, 75] };
 
   const topStory: MarketIntelligenceCard = {
-    id: 'top-story-ism',
-    heat: 82,
+    id: 'top-story-btc-reclaim',
+    heat: 91,
     isTopStory: true,
     impactLevel: 'HIGH',
-    sentiment: 'BEARISH',
-    timeBadge: 'TODAY',
-    title: headlines[0]?.title || 'ISM Non-Manufacturing PMI beats expectations at 55.4',
-    description: headlines[0]?.description || 'August ISM non-manufacturing PMI printed 55.4 vs 54.2 forecast, signaling stronger US service sector activity. Stronger data may temper Fed rate-cut expectations and support the dollar near-term.',
-    watchCallout: 'Monitor bond yields and rate-cut expectations as jobs report looms Friday; track dollar strength reaction.',
-    affectedSymbols: ['US500', 'EURUSD'],
+    sentiment: 'BULLISH',
+    timeBadge: 'NOW',
+    title: headlines[0]?.title || 'Bitcoin reclaims $80,000 as Solana and Hyperliquid rally on risk rebound',
+    description: headlines[0]?.description || 'Bitcoin rebounded firmly above the $80,000 psychological threshold with altcoins surging in lockstep as broader market participants digest macro liquidity resilience and steady institutional ETF inflows.',
+    watchCallout: 'Monitor sustained price action above $80,000 and institutional ETF buy orders during US market cash open.',
+    affectedSymbols: ['BTCUSD', 'SOLUSD'],
     relatedAsset: {
-      symbol: 'US500',
-      changeText: `${us500Ticker.isPositive ? '+' : ''}${us500Ticker.changePercent.toFixed(2)}%`,
-      isPositive: us500Ticker.isPositive,
-      price: us500Ticker.formattedPrice,
-      sparkline: [40, 45, 48, 55, 62, 58, 70, 76, 82, 88],
+      symbol: 'BTCUSD',
+      changeText: `BTCUSD ${btcTicker.isPositive ? '+' : ''}${btcTicker.changePercent.toFixed(2)}%`,
+      isPositive: btcTicker.isPositive,
+      price: btcTicker.formattedPrice,
+      sparkline: btcTicker.sparkline,
     },
-    isUserMarket: isUserMatch(['US500', 'EURUSD', 'DXY']),
+    isUserMarket: isUserMatch(['BTCUSD', 'CRYPTO']),
   };
 
   const gridCards: MarketIntelligenceCard[] = [
     {
-      id: 'card-btc-surge',
-      heat: 79,
+      id: 'card-gold-record',
+      heat: 88,
+      impactLevel: 'HIGH',
+      sentiment: 'BULLISH',
+      timeBadge: 'TODAY',
+      title: headlines[1]?.title || 'Gold holds near record highs as Treasury yields slip and safe-haven bid accelerates',
+      description: headlines[1]?.description || 'Spot Gold continues to trade near all-time peak levels as sovereign yields compress and safe-haven positioning strengthens across institutional portfolios.',
+      highlightTags: ['Gold ATH Breakout', 'Yield Compression'],
+      watchCallout: 'Track US Dollar Index movements and 10-year Treasury yield support levels.',
+      affectedSymbols: ['XAUUSD'],
+      relatedAsset: {
+        symbol: 'XAUUSD',
+        changeText: `XAUUSD ${goldTicker.isPositive ? '+' : ''}${goldTicker.changePercent.toFixed(2)}%`,
+        isPositive: goldTicker.isPositive,
+        price: goldTicker.formattedPrice,
+        sparkline: goldTicker.sparkline,
+      },
+      isUserMarket: isUserMatch(['XAUUSD', 'GOLD']),
+    },
+    {
+      id: 'card-sol-rally',
+      heat: 82,
       impactLevel: 'HIGH',
       sentiment: 'BULLISH',
       timeBadge: 'NOW',
-      title: headlines[1]?.title || 'Bitcoin surges above $81k as rates fall, dollar weakens',
-      description: headlines[1]?.description || 'Bitcoin jumped as falling bond yields and weakening dollar supported risk appetite. Yen strength is also helping crypto bid, with positions recovering toward key resistance levels.',
-      highlightTags: ['BTCUSD $81,000 breakout', 'BTCUSD $78,000 support'],
-      watchCallout: 'Watch for sustained break above key levels and correlation with USDJPY weakness.',
-      affectedSymbols: ['BTCUSD', 'USDJPY'],
+      title: headlines[2]?.title || 'Solana and DeFi ecosystem tokens gain double digits on network velocity',
+      description: headlines[2]?.description || 'Solana is outperforming broader crypto markets with high decentralized exchange volume and growing protocol fee generation across key decentralized finance platforms.',
+      highlightTags: ['SOLUSD Momentum', 'DEX Volume Surge'],
+      watchCallout: 'Monitor DEX liquidity depth and protocol transaction acceleration.',
+      affectedSymbols: ['SOLUSD', 'BTCUSD'],
       relatedAsset: {
-        symbol: 'BTCUSD',
-        changeText: `BTCUSD ${btcTicker.isPositive ? '+' : ''}${btcTicker.changePercent.toFixed(2)}%`,
-        isPositive: btcTicker.isPositive,
+        symbol: 'SOLUSD',
+        changeText: `SOLUSD ${solTicker.isPositive ? '+' : ''}${solTicker.changePercent.toFixed(2)}%`,
+        isPositive: solTicker.isPositive,
+        price: solTicker.formattedPrice,
+        sparkline: solTicker.sparkline,
       },
-      isUserMarket: isUserMatch(['BTCUSD', 'BTC', 'CRYPTO', 'USDJPY']),
+      isUserMarket: isUserMatch(['SOLUSD', 'SOL']),
     },
     {
-      id: 'card-crypto-institutional',
-      heat: 71,
+      id: 'card-cftc-clarity',
+      heat: 79,
       impactLevel: 'MEDIUM',
       sentiment: 'BULLISH',
-      timeBadge: 'WEEK',
-      title: headlines[2]?.title || 'Crypto institutional onramp surge: Bitget, SoFi, Standard Chartered move',
-      description: headlines[2]?.description || 'Major institutions are racing into crypto distribution. Retail sentiment shows trending volumes as retail chases institutional adoption.',
-      watchCallout: 'Monitor further announcements on institutional partnerships and exchange fee generator momentum.',
-      affectedSymbols: ['BTCUSD', 'COIN', 'HOOD'],
-      relatedAsset: {
-        symbol: 'BTCUSD',
-        changeText: `BTCUSD ${btcTicker.isPositive ? '+' : ''}${btcTicker.changePercent.toFixed(2)}%`,
-        isPositive: btcTicker.isPositive,
-      },
-      isUserMarket: isUserMatch(['BTCUSD', 'BTC', 'COIN', 'HOOD']),
-    },
-    {
-      id: 'card-fed-waller',
-      heat: 78,
-      impactLevel: 'HIGH',
-      sentiment: 'BULLISH',
-      timeBadge: 'WEEK',
-      title: headlines[3]?.title || 'Waller tempers Fed rate-hike bets; focus shifts to NFP',
-      description: headlines[3]?.description || 'Fed official pushes back on rate-hike narrative, taking pressure off rates and boosting risk sentiment. Market now laser-focused on upcoming non-farm payrolls print.',
-      watchCallout: "Watch Friday's non-farm payrolls print versus expectations; any disappointment could trigger fresh rate rally.",
-      affectedSymbols: ['EURUSD', 'GBPUSD'],
-      isUserMarket: isUserMatch(['EURUSD', 'GBPUSD', 'DXY', 'XAUUSD']),
-    },
-    {
-      id: 'card-jpy-surge',
-      heat: 75,
-      impactLevel: 'HIGH',
-      sentiment: 'BEARISH',
       timeBadge: 'TODAY',
-      title: headlines[4]?.title || 'Japanese yen surges second day in a row',
-      description: headlines[4]?.description || 'JPY has surged for consecutive sessions, reflecting broad risk-off sentiment and potential carry unwind. Strength pressures USDJPY lower.',
-      watchCallout: 'Track USDJPY break below key support levels; monitor if yen strength persists.',
-      affectedSymbols: ['USDJPY', 'EURUSD'],
+      title: headlines[3]?.title || 'CFTC advances crypto rules to White House as institutional framework matures',
+      description: headlines[3]?.description || 'Regulators are pressing forward with clear institutional guidelines for digital asset market structures and spot derivatives clearing.',
+      highlightTags: ['CFTC Policy', 'Institutional Framework'],
+      watchCallout: 'Watch for White House review commentary and institutional market structure updates.',
+      affectedSymbols: ['XRPUSD', 'BTCUSD'],
       relatedAsset: {
-        symbol: 'USDJPY',
-        changeText: `USDJPY ${jpyTicker.isPositive ? '+' : ''}${jpyTicker.changePercent.toFixed(2)}%`,
-        isPositive: jpyTicker.isPositive,
+        symbol: 'XRPUSD',
+        changeText: `XRPUSD ${xrpTicker.isPositive ? '+' : ''}${xrpTicker.changePercent.toFixed(2)}%`,
+        isPositive: xrpTicker.isPositive,
+        price: xrpTicker.formattedPrice,
+        sparkline: xrpTicker.sparkline,
       },
-      isUserMarket: isUserMatch(['USDJPY', 'EURUSD', 'JPY']),
+      isUserMarket: isUserMatch(['XRPUSD', 'XRP']),
+    },
+    {
+      id: 'card-macro-rates',
+      heat: 76,
+      impactLevel: 'MEDIUM',
+      sentiment: 'BEARISH',
+      timeBadge: 'WEEK',
+      title: headlines[4]?.title || 'European Central Bank confirms quarterly rate trajectory as Fed policy looms',
+      description: headlines[4]?.description || 'Central banks are calibrating their interest rate paths, keeping currency markets and sovereign debt yields tightly focused on macroeconomic data releases.',
+      highlightTags: ['Central Bank Policy', 'Dollar Index'],
+      watchCallout: 'Monitor upcoming central bank rate statements and global bond spread dynamics.',
+      affectedSymbols: ['XAUUSD', 'BTCUSD'],
+      isUserMarket: isUserMatch(['XAUUSD', 'DXY', 'EURUSD']),
     },
   ];
 
