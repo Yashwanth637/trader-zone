@@ -12,15 +12,20 @@ import {
   RefreshCw,
   Wallet,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Pencil
 } from 'lucide-react';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { DeltaStorage } from '../lib/deltaIndiaApi';
+import { TradingAccount } from '../types/trade';
 
 export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpenCsvImport }) => {
-  const { accounts, addAccount, deleteAccount, activeAccountId, setActiveAccountId } = useTrading();
+  const { accounts, addAccount, updateAccount, deleteAccount, activeAccountId, setActiveAccountId } = useTrading();
   const [modalOpen, setModalOpen] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
+  const [editBalanceModalOpen, setEditBalanceModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<TradingAccount | null>(null);
+  const [newStartingBalance, setNewStartingBalance] = useState('');
 
   const [accName, setAccName] = useState('');
   const [broker, setBroker] = useState('Delta Exchange India');
@@ -44,6 +49,25 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
     setAccName('');
     setBalance('100000');
     setModalOpen(false);
+  };
+
+  const handleOpenEditBalance = (acc: TradingAccount) => {
+    setEditingAccount(acc);
+    setNewStartingBalance(acc.initialBalance.toString());
+    setEditBalanceModalOpen(true);
+  };
+
+  const handleSaveStartingBalance = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+    const parsed = parseFloat(newStartingBalance);
+    if (isNaN(parsed) || parsed < 0) return;
+
+    updateAccount(editingAccount.id, {
+      initialBalance: parsed
+    });
+    setEditBalanceModalOpen(false);
+    setEditingAccount(null);
   };
 
   return (
@@ -181,8 +205,19 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                   </div>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Initial Balance</span>
-                  <div className="text-xl font-black text-slate-400 font-mono mt-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">Initial Balance</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditBalance(acc)}
+                      className="text-[11px] text-primary hover:text-primary-light font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Update starting balance"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Update</span>
+                    </button>
+                  </div>
+                  <div className="text-xl font-black text-slate-300 font-mono mt-0.5">
                     {formatCurrency(acc.initialBalance)}
                   </div>
                 </div>
@@ -289,6 +324,83 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
           isOpen={deltaModalOpen}
           onClose={() => setDeltaModalOpen(false)}
         />
+      )}
+
+      {/* Update Starting Balance Modal */}
+      {editBalanceModalOpen && editingAccount && (
+        <Modal
+          isOpen={editBalanceModalOpen}
+          onClose={() => {
+            setEditBalanceModalOpen(false);
+            setEditingAccount(null);
+          }}
+          title={`Update Starting Balance · ${editingAccount.name}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleSaveStartingBalance} className="space-y-4">
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Set the base capital or initial deposit for this account. Your current balance, equity curves, drawdown calculations, and ROI % will automatically re-calculate based on this starting figure.
+            </p>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Starting / Initial Balance ({editingAccount.currency || 'USD'})
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  required
+                  autoFocus
+                  value={newStartingBalance}
+                  onChange={e => setNewStartingBalance(e.target.value)}
+                  placeholder="e.g. 100000"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-card border border-border text-white text-sm font-mono font-bold focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Quick Capital Presets */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Quick Presets
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {[5000, 10000, 25000, 50000, 100000, 200000].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setNewStartingBalance(val.toString())}
+                    className={`py-1.5 px-1 text-[11px] font-mono font-bold rounded-lg border transition-all ${
+                      newStartingBalance === val.toString()
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-surface border-border text-slate-300 hover:text-white hover:border-slate-600'
+                    }`}
+                  >
+                    ${(val / 1000)}k
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditBalanceModalOpen(false);
+                  setEditingAccount(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                Save Starting Balance
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

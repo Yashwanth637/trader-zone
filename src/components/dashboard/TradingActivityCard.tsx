@@ -94,7 +94,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleScroll('left')}
-              className="p-1 rounded-lg border border-border bg-surface-card hover:bg-surface text-muted hover:text-foreground transition-all cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 hover:dark:bg-white/[0.08] text-muted hover:text-foreground transition-all cursor-pointer"
               title="Scroll left"
               type="button"
             >
@@ -102,7 +102,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
             </button>
             <button
               onClick={() => handleScroll('right')}
-              className="p-1 rounded-lg border border-border bg-surface-card hover:bg-surface text-muted hover:text-foreground transition-all cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 hover:dark:bg-white/[0.08] text-muted hover:text-foreground transition-all cursor-pointer"
               title="Scroll right"
               type="button"
             >
@@ -114,7 +114,7 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
         {/* Horizontal Scrollable Months Container */}
         <div
           ref={scrollRef}
-          className="flex gap-2.5 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-thin scrollbar-thumb-border/60 select-none border-b border-border/60"
+          className="flex gap-2.5 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-thin scrollbar-thumb-border/60 select-none border-b border-slate-200/80 dark:border-white/10"
         >
           {monthlyDots.map((m) => {
             const isCurrent = m.month === currentMonthName;
@@ -124,8 +124,8 @@ export const TradingActivityCard: React.FC<TradingActivityCardProps> = ({ activi
                 data-current-month={isCurrent ? 'true' : 'false'}
                 className={`flex-shrink-0 min-w-[82px] max-w-[94px] rounded-xl p-2 border transition-all flex flex-col items-center ${
                   isCurrent
-                    ? 'bg-primary/5 border-primary/40 shadow-sm'
-                    : 'bg-surface-card/40 border-border/60 hover:border-border'
+                    ? 'bg-primary/5 dark:bg-primary/10 border-primary/40 shadow-sm'
+                    : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-slate-300 hover:dark:border-white/20'
                 }`}
               >
                 {/* Month Name & Day Count Header */}
