@@ -45,8 +45,8 @@ export const EventCalendarPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth()); // 0-based
 
-  // Horizon tab: 'month' (All Month, as requested) | 'this_week' | 'next_week' | 'today'
-  const [horizon, setHorizon] = useState<TimeHorizon>('month');
+  // Horizon tab: 'this_week' (Default as requested) | 'month' | 'next_week' | 'today'
+  const [horizon, setHorizon] = useState<TimeHorizon>('this_week');
 
   // Filters
   const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL');
@@ -118,34 +118,35 @@ export const EventCalendarPage: React.FC = () => {
     });
   }, [selectedYear, selectedMonth]);
 
-  // Calculate week ranges for 'this_week' and 'next_week'
+  // Calculate week ranges for 'this_week' and 'next_week' in Indian Standard Time (IST, UTC +5:30)
   const weekRanges = useMemo(() => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sun
-    const sunThisWeek = new Date(today);
-    sunThisWeek.setDate(today.getDate() - currentDay);
-    sunThisWeek.setHours(0, 0, 0, 0);
+    const getIstYMD = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+    const now = new Date();
+    const todayStr = getIstYMD(now);
+
+    const dayName = now.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' });
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const currentDay = dayMap[dayName] ?? now.getDay();
+
+    const sunThisWeek = new Date(now);
+    sunThisWeek.setDate(now.getDate() - currentDay);
 
     const satThisWeek = new Date(sunThisWeek);
     satThisWeek.setDate(sunThisWeek.getDate() + 6);
-    satThisWeek.setHours(23, 59, 59, 999);
 
     const sunNextWeek = new Date(satThisWeek);
     sunNextWeek.setDate(satThisWeek.getDate() + 1);
-    sunNextWeek.setHours(0, 0, 0, 0);
 
     const satNextWeek = new Date(sunNextWeek);
     satNextWeek.setDate(sunNextWeek.getDate() + 6);
-    satNextWeek.setHours(23, 59, 59, 999);
-
-    const todayStr = today.toISOString().split('T')[0];
 
     return {
       todayStr,
-      thisWeekStart: sunThisWeek.toISOString().split('T')[0],
-      thisWeekEnd: satThisWeek.toISOString().split('T')[0],
-      nextWeekStart: sunNextWeek.toISOString().split('T')[0],
-      nextWeekEnd: satNextWeek.toISOString().split('T')[0]
+      thisWeekStart: getIstYMD(sunThisWeek),
+      thisWeekEnd: getIstYMD(satThisWeek),
+      nextWeekStart: getIstYMD(sunNextWeek),
+      nextWeekEnd: getIstYMD(satNextWeek)
     };
   }, [nowUtc]);
 
@@ -228,9 +229,20 @@ export const EventCalendarPage: React.FC = () => {
             <CalendarIcon className="w-7 h-7 text-red-500" />
             <span>High-Impact Event Calendar</span>
           </h1>
-          <p className="text-xs sm:text-sm text-muted mt-1">
-            Institutional economic calendar displaying Tier-1 market-moving events with authentic Forex Factory specifications, folder details, and consensus metrics.
-          </p>
+          <div className="flex items-center gap-2 text-xs text-muted mt-1 font-mono flex-wrap">
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              {nowUtc.toLocaleTimeString('en-US', {
+                timeZone: 'Asia/Kolkata',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              })} IST (UTC +5:30)
+            </span>
+            <span className="hidden sm:inline text-muted">•</span>
+            <span className="text-xs text-muted">Tier-1 Forex Factory Macro Economic Calendar</span>
+          </div>
         </div>
 
         {/* Top-Right Toggle Navigation */}
@@ -273,7 +285,7 @@ export const EventCalendarPage: React.FC = () => {
                   Next High-Impact Catalyst
                 </span>
                 <span className="text-xs font-bold font-mono text-muted">
-                  {upcomingEvent.date} @ {upcomingEvent.time}
+                  {upcomingEvent.date} @ {upcomingEvent.time} IST (UTC +5:30)
                 </span>
               </div>
               <div className="text-base sm:text-lg font-black text-foreground mt-0.5 flex items-center gap-2">
@@ -407,7 +419,7 @@ export const EventCalendarPage: React.FC = () => {
                   onClick={() => setSelectedCurrency(curr)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
                     isSelected
-                      ? 'bg-white/20 text-foreground border border-white/30 dark:bg-white/15'
+                      ? 'bg-primary/15 text-primary border border-primary/30 font-extrabold shadow-sm'
                       : 'text-muted hover:text-foreground bg-black/5 dark:bg-white/5 border border-transparent'
                   }`}
                 >
@@ -518,7 +530,7 @@ export const EventCalendarPage: React.FC = () => {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-border/50 text-[10px] uppercase font-bold text-muted bg-black/[0.01] dark:bg-white/[0.01]">
-                        <th className="py-2.5 px-4 w-24">Time</th>
+                        <th className="py-2.5 px-4 w-28">Time (IST)</th>
                         <th className="py-2.5 px-3 w-20">Currency</th>
                         <th className="py-2.5 px-2 w-14 text-center">Impact</th>
                         <th className="py-2.5 px-2 w-12 text-center">Detail</th>
@@ -537,9 +549,9 @@ export const EventCalendarPage: React.FC = () => {
                             key={evt.id}
                             className="hover:bg-black/5 dark:hover:bg-white/[0.03] transition-colors group"
                           >
-                            {/* Time */}
-                            <td className="py-3 px-4 font-mono text-muted text-xs whitespace-nowrap">
-                              {evt.time}
+                            {/* Time (IST) */}
+                            <td className="py-3 px-4 font-mono text-xs whitespace-nowrap">
+                              <span className="text-foreground font-semibold">{evt.time}</span>
                             </td>
 
                             {/* Currency */}

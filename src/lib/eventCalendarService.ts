@@ -348,112 +348,112 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
 
   // --- WEEK 1 ---
   // ISM Manufacturing PMI (First business day)
-  events.push(createEvent(1, '10:00am', 'USD', 'ISM Manufacturing PMI', 'High', '48.2', '46.8', '47.9'));
+  events.push(createEvent(1, '07:30pm', 'USD', 'ISM Manufacturing PMI', 'High', '48.2', '46.8', '47.9'));
 
   // RBA Rate Decision (First Tuesday)
   if (tuesdays.length > 0) {
-    events.push(createEvent(tuesdays[0], '02:30am', 'AUD', 'RBA Cash Rate Statement', 'High', '4.35%', '4.35%', '4.35%'));
+    events.push(createEvent(tuesdays[0], '10:00am', 'AUD', 'RBA Cash Rate Statement', 'High', '4.35%', '4.35%', '4.35%'));
   }
 
   // ISM Services PMI (Day 3 or around first Wednesday)
-  events.push(createEvent(3, '10:00am', 'USD', 'ISM Services PMI', 'High', '51.5', '51.4', '51.5'));
+  events.push(createEvent(3, '07:30pm', 'USD', 'ISM Services PMI', 'High', '51.5', '51.4', '51.5'));
 
   // ADP Non-Farm Employment (First Wednesday)
   if (wednesdays.length > 0) {
-    events.push(createEvent(wednesdays[0], '08:15am', 'USD', 'ADP Non-Farm Employment Change', 'High', '142K', '111K', '99K'));
+    events.push(createEvent(wednesdays[0], '05:45pm', 'USD', 'ADP Non-Farm Employment Change', 'High', '142K', '111K', '99K'));
   }
 
   // NFP & Unemployment Rate (First Friday)
   if (fridays.length > 0) {
     const firstFri = fridays[0];
-    events.push(createEvent(firstFri, '08:30am', 'USD', 'Non-Farm Employment Change (NFP)', 'High', '164K', '114K', '142K'));
-    events.push(createEvent(firstFri, '08:30am', 'USD', 'Unemployment Rate', 'High', '4.2%', '4.3%', '4.2%'));
-    events.push(createEvent(firstFri, '08:30am', 'USD', 'Average Hourly Earnings m/m', 'High', '0.3%', '0.2%', '0.4%'));
-    events.push(createEvent(firstFri, '08:30am', 'CAD', 'Employment Change', 'High', '25.0K', '-2.8K', '-22.1K'));
-    events.push(createEvent(firstFri, '08:30am', 'CAD', 'Unemployment Rate', 'High', '6.5%', '6.4%', '6.6%'));
+    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Non-Farm Employment Change (NFP)', 'High', '164K', '114K', '142K'));
+    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Unemployment Rate', 'High', '4.2%', '4.3%', '4.2%'));
+    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Average Hourly Earnings m/m', 'High', '0.3%', '0.2%', '0.4%'));
+    events.push(createEvent(firstFri, '06:00pm', 'CAD', 'Employment Change', 'High', '25.0K', '-2.8K', '-22.1K'));
+    events.push(createEvent(firstFri, '06:00pm', 'CAD', 'Unemployment Rate', 'High', '6.5%', '6.4%', '6.6%'));
   }
 
   // --- WEEK 2 ---
   // US CPI, Core CPI (Around day 11 to 13)
-  events.push(createEvent(11, '08:30am', 'USD', 'CPI m/m', 'High', '0.2%', '0.2%', '0.2%'));
-  events.push(createEvent(11, '08:30am', 'USD', 'CPI y/y', 'High', '2.6%', '2.9%', '2.5%'));
-  events.push(createEvent(11, '08:30am', 'USD', 'Core CPI m/m', 'High', '0.2%', '0.2%', '0.3%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'CPI m/m', 'High', '0.2%', '0.2%', '0.2%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'CPI y/y', 'High', '2.6%', '2.9%', '2.5%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'Core CPI m/m', 'High', '0.2%', '0.2%', '0.3%'));
 
   // ECB Interest Rate Decision & Press Conference (Around second Thursday)
   if (thursdays.length > 1) {
     const ecbDay = thursdays[1];
-    events.push(createEvent(ecbDay, '08:15am', 'EUR', 'Main Refinancing Rate', 'High', '3.65%', '4.25%', '3.65%'));
-    events.push(createEvent(ecbDay, '08:15am', 'EUR', 'Monetary Policy Statement', 'High', '-', '-', '-'));
-    events.push(createEvent(ecbDay, '08:45am', 'EUR', 'ECB Press Conference', 'High', '-', '-', '-'));
+    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Main Refinancing Rate', 'High', '3.65%', '4.25%', '3.65%'));
+    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Monetary Policy Statement', 'High', '-', '-', '-'));
+    events.push(createEvent(ecbDay, '06:15pm', 'EUR', 'ECB Press Conference', 'High', '-', '-', '-'));
   }
 
   // PPI (Around day 12)
-  events.push(createEvent(12, '08:30am', 'USD', 'PPI m/m', 'High', '0.1%', '0.1%', '0.2%'));
-  events.push(createEvent(12, '08:30am', 'USD', 'Core PPI m/m', 'High', '0.2%', '0.0%', '0.3%'));
+  events.push(createEvent(12, '06:00pm', 'USD', 'PPI m/m', 'High', '0.1%', '0.1%', '0.2%'));
+  events.push(createEvent(12, '06:00pm', 'USD', 'Core PPI m/m', 'High', '0.2%', '0.0%', '0.3%'));
 
   // Prelim UoM Consumer Sentiment (Second Friday)
   if (fridays.length > 1) {
-    events.push(createEvent(fridays[1], '10:00am', 'USD', 'Prelim UoM Consumer Sentiment', 'High', '68.5', '67.9', '69.0'));
+    events.push(createEvent(fridays[1], '07:30pm', 'USD', 'Prelim UoM Consumer Sentiment', 'High', '68.5', '67.9', '69.0'));
   }
 
   // --- WEEK 3 ---
   // US Retail Sales (Around day 16-17)
-  events.push(createEvent(17, '08:30am', 'USD', 'Retail Sales m/m', 'High', '-0.2%', '1.0%', '0.1%'));
-  events.push(createEvent(17, '08:30am', 'USD', 'Core Retail Sales m/m', 'High', '0.2%', '0.4%', '0.1%'));
+  events.push(createEvent(17, '06:00pm', 'USD', 'Retail Sales m/m', 'High', '-0.2%', '1.0%', '0.1%'));
+  events.push(createEvent(17, '06:00pm', 'USD', 'Core Retail Sales m/m', 'High', '0.2%', '0.4%', '0.1%'));
 
   // UK CPI (Around third Wednesday)
   if (wednesdays.length > 2) {
-    events.push(createEvent(wednesdays[2], '02:00am', 'GBP', 'CPI y/y', 'High', '2.2%', '2.2%', '2.2%'));
+    events.push(createEvent(wednesdays[2], '11:30am', 'GBP', 'CPI y/y', 'High', '2.2%', '2.2%', '2.2%'));
   }
 
   // FOMC Federal Funds Rate & Economic Projections & Press Conference (Mid/Late month Wednesday)
   if (wednesdays.length > 2) {
     const fomcDay = wednesdays[2];
-    events.push(createEvent(fomcDay, '02:00pm', 'USD', 'Federal Funds Rate', 'High', '5.00%', '5.50%', '5.00%'));
-    events.push(createEvent(fomcDay, '02:00pm', 'USD', 'FOMC Statement', 'High', '-', '-', '-'));
-    events.push(createEvent(fomcDay, '02:00pm', 'USD', 'FOMC Economic Projections', 'High', '-', '-', '-'));
-    events.push(createEvent(fomcDay, '02:30pm', 'USD', 'FOMC Press Conference', 'High', '-', '-', '-'));
+    events.push(createEvent(fomcDay, '11:30pm', 'USD', 'Federal Funds Rate', 'High', '5.00%', '5.50%', '5.00%'));
+    events.push(createEvent(fomcDay, '11:30pm', 'USD', 'FOMC Statement', 'High', '-', '-', '-'));
+    events.push(createEvent(fomcDay, '11:30pm', 'USD', 'FOMC Economic Projections', 'High', '-', '-', '-'));
+    events.push(createEvent(fomcDay, '12:00am', 'USD', 'FOMC Press Conference', 'High', '-', '-', '-'));
   }
 
   // Bank of England Official Bank Rate (Third Thursday)
   if (thursdays.length > 2) {
     const boeDay = thursdays[2];
-    events.push(createEvent(boeDay, '07:00am', 'GBP', 'Official Bank Rate', 'High', '5.00%', '5.00%', '5.00%'));
-    events.push(createEvent(boeDay, '07:00am', 'GBP', 'Monetary Policy Summary', 'High', '-', '-', '-'));
-    events.push(createEvent(boeDay, '07:00am', 'GBP', 'MPC Official Bank Rate Votes', 'High', '8-1', '5-4', '8-1'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Official Bank Rate', 'High', '5.00%', '5.00%', '5.00%'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Monetary Policy Summary', 'High', '-', '-', '-'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'MPC Official Bank Rate Votes', 'High', '8-1', '5-4', '8-1'));
   }
 
   // Bank of Japan Policy Rate & Outlook Report (Third Friday)
   if (fridays.length > 2) {
     const bojDay = fridays[2];
-    events.push(createEvent(bojDay, '11:00pm', 'JPY', 'BOJ Policy Rate', 'High', '0.25%', '0.25%', '0.25%'));
-    events.push(createEvent(bojDay, '02:30am', 'JPY', 'BOJ Press Conference', 'High', '-', '-', '-'));
+    events.push(createEvent(bojDay, '08:30am', 'JPY', 'BOJ Policy Rate', 'High', '0.25%', '0.25%', '0.25%'));
+    events.push(createEvent(bojDay, '12:00pm', 'JPY', 'BOJ Press Conference', 'High', '-', '-', '-'));
   }
 
   // --- WEEK 4 & 5 ---
   // Flash Manufacturing & Services PMIs (Around 21st-23rd)
-  events.push(createEvent(23, '03:15am', 'EUR', 'French Flash Manufacturing PMI', 'High', '44.2', '43.9', '44.0'));
-  events.push(createEvent(23, '03:30am', 'EUR', 'German Flash Manufacturing PMI', 'High', '42.4', '42.4', '40.6'));
-  events.push(createEvent(23, '04:30am', 'GBP', 'Flash Manufacturing PMI', 'High', '52.3', '52.5', '51.5'));
-  events.push(createEvent(23, '04:30am', 'GBP', 'Flash Services PMI', 'High', '53.5', '53.7', '52.4'));
-  events.push(createEvent(23, '09:45am', 'USD', 'Flash Manufacturing PMI', 'High', '47.9', '47.9', '47.0'));
-  events.push(createEvent(23, '09:45am', 'USD', 'Flash Services PMI', 'High', '55.3', '55.7', '55.2'));
+  events.push(createEvent(23, '12:45pm', 'EUR', 'French Flash Manufacturing PMI', 'High', '44.2', '43.9', '44.0'));
+  events.push(createEvent(23, '01:00pm', 'EUR', 'German Flash Manufacturing PMI', 'High', '42.4', '42.4', '40.6'));
+  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Manufacturing PMI', 'High', '52.3', '52.5', '51.5'));
+  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Services PMI', 'High', '53.5', '53.7', '52.4'));
+  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Manufacturing PMI', 'High', '47.9', '47.9', '47.0'));
+  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Services PMI', 'High', '55.3', '55.7', '55.2'));
 
   // US Final / Advance GDP q/q (Fourth Thursday)
   if (thursdays.length > 3) {
     const gdpDay = thursdays[3];
-    events.push(createEvent(gdpDay, '08:30am', 'USD', 'Final GDP q/q', 'High', '3.0%', '3.0%', '3.0%'));
+    events.push(createEvent(gdpDay, '06:00pm', 'USD', 'Final GDP q/q', 'High', '3.0%', '3.0%', '3.0%'));
   }
 
   // Core PCE Price Index m/m (Federal Reserve's preferred inflation gauge, Fourth Friday)
   if (fridays.length > 3) {
     const pceDay = fridays[3];
-    events.push(createEvent(pceDay, '08:30am', 'USD', 'Core PCE Price Index m/m', 'High', '0.2%', '0.2%', '0.2%'));
+    events.push(createEvent(pceDay, '06:00pm', 'USD', 'Core PCE Price Index m/m', 'High', '0.2%', '0.2%', '0.2%'));
   }
 
   // Add Weekly Unemployment Claims for every Thursday
   thursdays.forEach(thu => {
-    events.push(createEvent(thu, '08:30am', 'USD', 'Unemployment Claims', 'High', '230K', '231K', '219K'));
+    events.push(createEvent(thu, '06:00pm', 'USD', 'Unemployment Claims', 'High', '230K', '231K', '219K'));
   });
 
   // Sort chronologically by date and time
@@ -469,8 +469,8 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
  * Cached in localStorage with a 20-minute TTL to prevent 429 rate limit issues.
  */
 export async function fetchLiveForexFactoryCalendar(): Promise<EconomicEvent[]> {
-  const CACHE_KEY = 'forex_factory_live_cache_v2';
-  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v2';
+  const CACHE_KEY = 'forex_factory_live_cache_v3';
+  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v3';
 
   // Check cache first
   try {
@@ -522,19 +522,19 @@ export async function fetchLiveForexFactoryCalendar(): Promise<EconomicEvent[]> 
         const impact: ImpactLevel = item.impact === 'High' ? 'High' : item.impact === 'Medium' ? 'Medium' : 'Low';
         const specs = getSpecsForEvent(item.title || '', country);
         
-        // Parse date
+        // Parse date and time in IST (UTC +5:30)
         let dateStr = '';
         let timeStr = 'All Day';
         if (item.date) {
           const d = new Date(item.date);
           if (!isNaN(d.getTime())) {
-            dateStr = d.toISOString().split('T')[0];
-            const hours = d.getHours();
-            const mins = d.getMinutes();
-            const ampm = hours >= 12 ? 'pm' : 'am';
-            const formattedHour = hours % 12 || 12;
-            const formattedMins = String(mins).padStart(2, '0');
-            timeStr = `${formattedHour}:${formattedMins}${ampm}`;
+            dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            timeStr = d.toLocaleTimeString('en-US', {
+              timeZone: 'Asia/Kolkata',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }).toLowerCase();
           }
         }
 
