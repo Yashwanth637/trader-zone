@@ -21,7 +21,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Target,
-  Flame
+  Flame,
+  CalendarDays
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -246,6 +247,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Flame className="w-4 h-4 shrink-0 text-orange-500" />
           {!collapsed && <span>Hot Topics</span>}
+        </NavLink>
+
+        {/* Event Calendar */}
+        <NavLink
+          to="/calendar"
+          onClick={onMobileClose}
+          className={({ isActive }) => navClass(isActive)}
+          title={collapsed ? "Event Calendar" : undefined}
+        >
+          <CalendarDays className="w-4 h-4 shrink-0 text-red-500" />
+          {!collapsed && (
+            <div className="flex items-center justify-between w-full">
+              <span>Event Calendar</span>
+              <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                LIVE
+              </span>
+            </div>
+          )}
         </NavLink>
 
         {/* Progress Tracker */}

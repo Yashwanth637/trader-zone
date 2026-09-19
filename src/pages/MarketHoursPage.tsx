@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Globe, Zap, AlertCircle, Flame } from 'lucide-react';
+import { Clock, Globe, Zap, AlertCircle, Flame, Calendar } from 'lucide-react';
 
 interface MarketSession {
   name: string;
@@ -55,14 +55,22 @@ export const MarketHoursPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Top-Right Toggle Navigation: Hot Topics vs Market Hours */}
-        <div className="flex items-center gap-2.5">
+        {/* Top-Right Toggle Navigation: Hot Topics vs Event Calendar vs Market Hours */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => navigate('/hot-topics')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#12131a] hover:bg-black/5 dark:hover:bg-white/5 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#12131a] hover:bg-black/5 dark:hover:bg-white/5 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all shadow-sm cursor-pointer"
           >
             <Flame className="w-4 h-4 text-orange-500 dark:text-orange-400" />
             <span>Hot Topics</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/calendar')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#12131a] hover:bg-black/5 dark:hover:bg-white/5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all shadow-sm cursor-pointer"
+          >
+            <Calendar className="w-4 h-4 text-red-500" />
+            <span>Event Calendar</span>
           </button>
 
           <button

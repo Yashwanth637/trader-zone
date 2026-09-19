@@ -30,6 +30,7 @@ import { AIPage } from './pages/AIPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { ProgressTrackerPage } from './pages/ProgressTrackerPage';
 import { HotTopicsPage } from './pages/HotTopicsPage';
+import { EventCalendarPage } from './pages/EventCalendarPage';
 import { ShareCardsPage } from './pages/ShareCardsPage';
 import { MarketHoursPage } from './pages/MarketHoursPage';
 import { BrokerHubPage } from './pages/BrokerHubPage';
@@ -120,6 +121,8 @@ const AppLayout: React.FC = () => {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/ai-2" element={<AIPage />} />
           <Route path="/hot-topics" element={<HotTopicsPage />} />
+          <Route path="/calendar" element={<EventCalendarPage />} />
+          <Route path="/event-calendar" element={<EventCalendarPage />} />
           <Route path="/progress-tracker" element={<ProgressTrackerPage />} />
           <Route path="/progress" element={<ProgressTrackerPage />} />
           <Route path="/discipline-rules" element={<ProgressPage />} />
