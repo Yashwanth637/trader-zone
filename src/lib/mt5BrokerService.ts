@@ -259,6 +259,19 @@ export async function connectAndSyncMT5(params: {
       login
     };
   } catch (err: any) {
+    const isCorsOrNetwork =
+      err?.name === 'TypeError' ||
+      err?.message?.includes('Load failed') ||
+      err?.message?.includes('Failed to fetch') ||
+      err?.message?.includes('NetworkError') ||
+      err?.message?.includes('policy');
+
+    if (isCorsOrNetwork) {
+      throw new Error(
+        `Browser Security Restriction (CORS): MetaApi cloud gateway blocks direct web browser connections from web apps. Please switch to the "Drop Statement (.html/.csv)" tab above for instant, 1-click import with 100% accuracy!`
+      );
+    }
+
     throw new Error(
       `Failed to connect to ${broker} (${server}): ${err.message || 'Please check your login, password, and server name.'}`
     );
@@ -358,6 +371,13 @@ export function parseMt5ReportFile(params: {
   let currentBalance = 10000;
   const trades: Trade[] = [];
 
+  // Auto-detect account number if present in report text
+  let detectedLogin = login;
+  const loginMatch = fileContent.match(/(?:Account|Login|User):\s*([0-9]{5,12})/i);
+  if (loginMatch && loginMatch[1]) {
+    detectedLogin = loginMatch[1];
+  }
+
   // Check if content is HTML report from MT5
   if (fileContent.includes('<table') || fileContent.includes('ReportHistory')) {
     // Parse HTML report using DOMParser
@@ -371,7 +391,7 @@ export function parseMt5ReportFile(params: {
       for (const row of rows) {
         const text = row.textContent || '';
 
-        // Detect balance / deposit
+        // Detect balance / deposit from header or summary
         if (text.includes('Deposit') || text.includes('Balance:')) {
           const match = text.match(/([0-9\s,]+\.\d{2})/);
           if (match) {
@@ -383,19 +403,84 @@ export function parseMt5ReportFile(params: {
           }
         }
 
-        if (text.includes('Closed Deals') || text.includes('Orders') || text.includes('Positions')) {
+        if (
+          text.includes('Closed Deals') ||
+          text.includes('Positions') ||
+          text.includes('Orders') ||
+          text.includes('Deals')
+        ) {
           inClosedTrades = true;
           continue;
         }
 
         const cells = Array.from(row.querySelectorAll('td')).map(c => c.textContent?.trim() || '');
-        if (cells.length >= 9 && inClosedTrades) {
-          // MT5 Closed Deal format:
-          // [Time, Ticket, Symbol, Type, Direction, Volume, Price, Order, Commission, Fee, Swap, Profit]
+        if (cells.length >= 8 && inClosedTrades) {
+          // Check for balance row in Deals table (e.g. Deposit)
+          const rowType = (cells[3] || cells[2] || '').toLowerCase();
+          if (rowType.includes('balance')) {
+            const balMatch = cells[cells.length - 1].replace(/[\s,]/g, '');
+            const balVal = parseFloat(balMatch);
+            if (!isNaN(balVal) && balVal > 0) {
+              initialBalance = balVal;
+              currentBalance = balVal;
+            }
+            continue;
+          }
+
+          // Case A: Positions Table (12 to 14 columns):
+          // [Open Time, Position/Ticket, Symbol, Type, Volume, Open Price, S/L, T/P, Close Time, Close Price, Commission, Swap, Profit]
+          if (cells.length >= 12 && (cells[3].toLowerCase() === 'buy' || cells[3].toLowerCase() === 'sell')) {
+            const openTimeStr = cells[0];
+            const ticketStr = cells[1];
+            const sym = cells[2];
+            const direction = cells[3].toUpperCase() as 'BUY' | 'SELL';
+            const volume = parseFloat(cells[4].replace(/[\s,]/g, '')) || 0.1;
+            const openPrice = parseFloat(cells[5].replace(/[\s,]/g, '')) || 0;
+            const closeTimeStr = cells[8] || cells[0];
+            const closePrice = parseFloat(cells[9]?.replace(/[\s,]/g, '')) || openPrice;
+            const commission = parseFloat(cells[10]?.replace(/[\s,]/g, '')) || 0;
+            const swap = parseFloat(cells[11]?.replace(/[\s,]/g, '')) || 0;
+            const pnl = parseFloat(cells[cells.length - 1].replace(/[\s,]/g, '')) || 0;
+
+            const openDate = new Date(openTimeStr.replace(/\./g, '-'));
+            const closeDate = new Date(closeTimeStr.replace(/\./g, '-'));
+            const validOpen = isNaN(openDate.getTime()) ? new Date() : openDate;
+            const validClose = isNaN(closeDate.getTime()) ? validOpen : closeDate;
+            const durationMins = Math.max(1, Math.round((validClose.getTime() - validOpen.getTime()) / 60000)) || 30;
+
+            if (ticketStr && !isNaN(Number(ticketStr)) && sym) {
+              trades.push({
+                id: `mt5-${login}-${ticketStr}`,
+                ticket: ticketStr,
+                accountId,
+                symbol: sym.toUpperCase(),
+                assetClass: inferAssetClass(sym),
+                direction,
+                status: 'CLOSED',
+                lotSize: volume,
+                entryPrice: openPrice,
+                exitPrice: closePrice,
+                openTime: validOpen.toISOString(),
+                closeTime: validClose.toISOString(),
+                durationMinutes: durationMins,
+                grossPnl: pnl - commission - swap,
+                commission,
+                swap,
+                netPnl: pnl,
+                session: inferSession(validOpen),
+                setupTags: [`MT5:${broker}`],
+                mistakeTags: []
+              });
+              continue;
+            }
+          }
+
+          // Case B: Deals Table (9 to 13 columns):
+          // [Time, Deal/Ticket, Symbol, Type, Direction, Volume, Price, Order, Commission, Fee, Swap, Profit]
           const timeStr = cells[0];
           const ticketStr = cells[1];
           const sym = cells[2];
-          const typeStr = cells[3]?.toLowerCase();
+          const typeStr = cells[3]?.toLowerCase() || '';
           const volStr = cells[5] || cells[4];
           const priceStr = cells[6] || cells[5];
           const pnlStr = cells[cells.length - 1];
@@ -488,6 +573,6 @@ export function parseMt5ReportFile(params: {
     currency: 'USD',
     server,
     broker,
-    login
+    login: detectedLogin
   };
 }

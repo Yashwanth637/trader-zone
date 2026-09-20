@@ -189,21 +189,21 @@ export const Mt5ConnectModal: React.FC<Mt5ConnectModalProps> = ({
       if (!content) return;
 
       try {
-        const accountLogin = login.trim() || 'Imported';
-        const accountName = `${selectedBroker} MT5 (${accountLogin})`;
-
-        let targetAccount = accounts.find(
-          a => a.name.toLowerCase() === accountName.toLowerCase() || (a.mt5Login && a.mt5Login === accountLogin)
-        );
-
-        const tempAccId = targetAccount?.id || `acc-mt5-${Date.now()}`;
+        const tempAccId = `acc-mt5-${Date.now()}`;
         const result = parseMt5ReportFile({
           fileContent: content,
           accountId: tempAccId,
           broker: selectedBroker,
           server: selectedServer,
-          login: accountLogin
+          login: login.trim() || 'Imported'
         });
+
+        const accountLogin = result.login && result.login !== 'Imported' ? result.login : (login.trim() || 'Imported');
+        const accountName = `${selectedBroker} MT5 (#${accountLogin})`;
+
+        let targetAccount = accounts.find(
+          a => a.name.toLowerCase() === accountName.toLowerCase() || (a.mt5Login && a.mt5Login === accountLogin)
+        );
 
         const initBal = result.initialBalance || 10000;
         const curBal = result.currentBalance || initBal;
@@ -463,18 +463,34 @@ export const Mt5ConnectModal: React.FC<Mt5ConnectModalProps> = ({
           {/* Status Message */}
           {statusMsg && (
             <div
-              className={`p-3 rounded-xl border text-xs flex items-center gap-2 transition-all ${
+              className={`p-3 rounded-xl border text-xs flex flex-col gap-2 transition-all ${
                 statusMsg.type === 'success'
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                   : statusMsg.type === 'error'
-                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                   : 'bg-primary/10 border-primary/30 text-primary-light'
               }`}
             >
-              {statusMsg.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-              {statusMsg.type === 'error' && <AlertCircle className="w-4 h-4 shrink-0" />}
-              {statusMsg.type === 'info' && <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />}
-              <span>{statusMsg.text}</span>
+              <div className="flex items-start gap-2">
+                {statusMsg.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />}
+                {statusMsg.type === 'error' && <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />}
+                {statusMsg.type === 'info' && <RefreshCw className="w-4 h-4 shrink-0 animate-spin mt-0.5" />}
+                <span className="leading-relaxed">{statusMsg.text}</span>
+              </div>
+              {statusMsg.type === 'error' && (
+                <div className="pl-6 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusMsg(null);
+                      setActiveTab('file');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs font-semibold transition-colors border border-rose-500/30 cursor-pointer"
+                  >
+                    <span>Use Instant Drop Statement Tab &rarr;</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
