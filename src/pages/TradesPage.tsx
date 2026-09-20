@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { formatCurrency, sortTradesDescending, formatDurationHours } from '../lib/calculations';
+import { formatCurrency, sortTradesDescending } from '../lib/calculations';
 import {
   History,
   Search,
@@ -340,13 +340,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                       <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
 
                       <td className="py-3 text-muted font-mono whitespace-nowrap">
-                        <div>{new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                        {t.durationMinutes !== undefined && t.durationMinutes > 0 && (
-                          <div className="text-[10px] text-muted/80 font-sans mt-0.5 flex items-center gap-1">
-                            <span>⏱</span>
-                            <span>{formatDurationHours(t.durationMinutes)}</span>
-                          </div>
-                        )}
+                        {new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
                       </td>
 
                       <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>

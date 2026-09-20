@@ -16,7 +16,7 @@ import {
 export const TradeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { accountTrades, updateTrade, deleteTrade, accounts } = useTrading();
+  const { accountTrades, updateTrade, deleteTrade } = useTrading();
 
   const trade = accountTrades.find(t => t.id === id);
 
@@ -118,22 +118,6 @@ export const TradeDetailPage: React.FC = () => {
             <span>Lot Size: <strong className="text-foreground font-mono">{trade.lotSize}</strong></span>
             <span>Duration: <strong className="text-foreground font-semibold">{formatDurationHours(trade.durationMinutes)}</strong></span>
             <span>Session: <strong className="text-foreground">{trade.session}</strong></span>
-            {accounts.length > 1 && (
-              <span className="flex items-center gap-1.5">
-                <span>Account:</span>
-                <select
-                  value={trade.accountId}
-                  onChange={(e) => updateTrade(trade.id, { accountId: e.target.value })}
-                  className="px-2 py-0.5 rounded-lg bg-surface border border-border text-foreground font-semibold text-xs focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({acc.broker})
-                    </option>
-                  ))}
-                </select>
-              </span>
-            )}
           </div>
         </div>
 
