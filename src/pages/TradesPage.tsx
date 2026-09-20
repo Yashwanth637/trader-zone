@@ -109,10 +109,10 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
 
         <div className="flex items-center gap-3">
           <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-purple-400" />} onClick={() => setMt5ModalOpen(true)}>
-            Sync MT5
+            Import MT5 CSV
           </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
-            Import CSV / Broker
+            Import Delta CSV
           </Button>
           <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={onOpenAddTrade}>
             Log Trade

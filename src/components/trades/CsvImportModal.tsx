@@ -57,10 +57,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Broker Statement / CSV" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Import Delta Exchange CSV" maxWidth="lg">
       <div className="space-y-4">
         <p className="text-xs text-slate-400">
-          Upload statements from <strong>Delta Exchange India</strong>, <strong>MetaTrader 4/5</strong>, Exness, Vantage, XM, or generic CSV. All trades are automatically audited and normalized into your journal.
+          Upload trade statements and execution fills exported from <strong>Delta Exchange India</strong> (or international). All contracts, lot sizes, trading fees, and realized P&L are automatically calculated and imported into your journal.
         </p>
 
         <div>

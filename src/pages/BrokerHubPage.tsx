@@ -121,10 +121,10 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
             icon={<Zap className="w-4 h-4 text-amber-300" />}
             onClick={() => setMt5ModalOpen(true)}
           >
-            Connect MT5 Broker
+            Import MT5 CSV
           </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
-            Import CSV
+            Import Delta CSV
           </Button>
           <Button size="sm" variant="outline" icon={<Plus className="w-4 h-4" />} onClick={() => setModalOpen(true)}>
             Add Account
@@ -146,65 +146,6 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
           <button onClick={() => setCleanNotification(null)} className="hover:opacity-70 font-bold ml-4">✕</button>
         </div>
       )}
-
-      {/* MetaTrader 5 (MT5) Brokers Direct Account Sync Card */}
-      {(() => {
-        const mt5Accounts = accounts.filter(
-          a => a.broker.toLowerCase().includes('metatrader') || a.broker.toLowerCase().includes('mt5') || a.mt5Login
-        );
-        const hasMt5 = mt5Accounts.length > 0;
-        const lastMt5Sync = mt5Accounts[0]?.lastSynced || (hasMt5 ? new Date().toISOString() : null);
-
-        return (
-          <div className="premium-card p-5 border border-purple-500/40 bg-gradient-to-r from-purple-500/10 via-surface to-surface flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
-                <Zap className="w-6 h-6 text-purple-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-bold text-foreground tracking-wide">MetaTrader 5 (MT5) — Direct Broker Sync</h3>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      hasMt5
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-muted/20 text-muted border border-border'
-                    }`}
-                  >
-                    {hasMt5 ? `${mt5Accounts.length} Connected` : 'Ready to Connect'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  {['Elefin', 'XM', 'Vantage', 'Exness', 'WinPro'].map(brk => (
-                    <span key={brk} className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface border border-border text-foreground">
-                      {brk}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-muted mt-1.5">
-                  Direct 1-click sync with your MT5 Login & Password. Automatically creates an isolated account and synchronizes balance and trades.
-                </p>
-                {lastMt5Sync && (
-                  <span className="text-[10.5px] text-muted mt-1 block">
-                    Last Synced: <span className="text-foreground font-mono">{new Date(lastMt5Sync).toLocaleString()}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Button
-                size="sm"
-                variant="primary"
-                icon={<RefreshCw className="w-4 h-4" />}
-                onClick={() => setMt5ModalOpen(true)}
-              >
-                {hasMt5 ? 'Sync Trades' : 'Connect Broker'}
-              </Button>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Connected Accounts Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
