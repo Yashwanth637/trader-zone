@@ -50,7 +50,7 @@ interface TradingContextType {
   updateTrade: (id: string, updates: Partial<Trade>) => void;
   deleteTrade: (id: string) => void;
   closeTrade: (id: string, exitPrice: number, closeTime?: string) => void;
-  importTrades: (newTrades: Trade[]) => void;
+  importTrades: (newTrades: Trade[], targetAccounts?: TradingAccount[]) => void;
   cleanDuplicateTrades: () => number;
   
   addAccount: (account: Omit<TradingAccount, 'id' | 'createdAt'>) => TradingAccount;
@@ -106,8 +106,8 @@ export function deduplicateAndSanitizeTrades(
 
   for (const rawTrade of tradeList) {
     const t: Trade = { ...rawTrade };
-    // Ensure valid accountId
-    if (!t.accountId || !accountIds.has(t.accountId)) {
+    // Ensure valid accountId: only fall back to defaultAccId if accountId is completely missing
+    if (!t.accountId) {
       t.accountId = defaultAccId;
     }
 
@@ -152,7 +152,14 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [trades, setTrades] = useState<Trade[]>(() => {
     const rawTrades = Storage.getTrades();
     const initialAccs = Storage.getAccounts();
-    const { sanitized } = deduplicateAndSanitizeTrades(rawTrades, initialAccs);
+    // Clean out any rogue mock trades generated during MT5 connection test
+    const filteredRaw = rawTrades.filter(t => {
+      if (t.id?.startsWith('mt5-') && (t.ticket?.endsWith('01') || t.ticket?.endsWith('02')) && t.notes?.includes('Synced automatically from')) {
+        return false;
+      }
+      return true;
+    });
+    const { sanitized } = deduplicateAndSanitizeTrades(filteredRaw, initialAccs);
 
     const normalized = sanitized.map(t => {
       let mod = { ...t };
@@ -371,10 +378,11 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     })));
   };
 
-  const importTrades = (newTrades: Trade[]) => {
+  const importTrades = (newTrades: Trade[], targetAccounts?: TradingAccount[]) => {
     setTrades(prev => {
+      const activeAccs = targetAccounts || accounts;
       const combined = [...newTrades, ...prev];
-      const { sanitized } = deduplicateAndSanitizeTrades(combined, accounts);
+      const { sanitized } = deduplicateAndSanitizeTrades(combined, activeAccs);
       return sortTradesDescending(sanitized);
     });
   };

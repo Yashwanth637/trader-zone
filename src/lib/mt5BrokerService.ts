@@ -63,6 +63,7 @@ export interface MT5Credentials {
 
 const MT5_CREDS_PREFIX = 'tz_mt5_creds_';
 const MT5_ACCOUNTS_KEY = 'tz_mt5_accounts_list';
+const MT5_CLOUD_TOKEN_KEY = 'tz_mt5_cloud_token';
 
 export const MT5Storage = {
   saveCredentials: (creds: MT5Credentials, accountId?: string) => {
@@ -117,6 +118,22 @@ export const MT5Storage = {
     } catch (e) {
       console.error('Failed to delete MT5 credentials', e);
     }
+  },
+
+  saveCloudToken: (token: string) => {
+    try {
+      localStorage.setItem(MT5_CLOUD_TOKEN_KEY, token.trim());
+    } catch (e) {
+      console.error('Failed to save cloud token', e);
+    }
+  },
+
+  getCloudToken: (): string => {
+    try {
+      return localStorage.getItem(MT5_CLOUD_TOKEN_KEY) || '';
+    } catch {
+      return '';
+    }
   }
 };
 
@@ -148,8 +165,8 @@ export interface MT5SyncResult {
 }
 
 /**
- * Connects to the MT5 broker and synchronizes closed trades and live balance.
- * Connects directly using the cloud bridge protocol.
+ * Connects to the MT5 broker and synchronizes closed trades and live balance
+ * using the MetaApi Cloud Forex Gateway.
  */
 export async function connectAndSyncMT5(params: {
   broker: 'Elefin' | 'XM' | 'Vantage' | 'Exness' | 'WinPro';
@@ -159,82 +176,93 @@ export async function connectAndSyncMT5(params: {
   targetAccountId?: string;
   metaApiToken?: string;
 }): Promise<MT5SyncResult> {
-  const { broker, server, login, password, metaApiToken } = params;
+  const { broker, server, login, password } = params;
 
   if (!login.trim()) {
-    throw new Error('Please enter your MT5 Login ID / Account number.');
+    throw new Error(`Please enter your ${broker} MT5 Login ID / Account number.`);
   }
   if (!password.trim()) {
     throw new Error('Please enter your MT5 Password (Investor or Master).');
   }
 
-  // If a MetaApi cloud token is available or provided, communicate with MetaApi Cloud Forex REST API
-  if (metaApiToken && metaApiToken.trim()) {
-    try {
-      const authHeader = { 'auth-token': metaApiToken.trim() };
+  const token = params.metaApiToken?.trim() || MT5Storage.getCloudToken();
 
-      // 1. Check or Provision Account
-      const provRes = await fetch('https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeader
-        },
-        body: JSON.stringify({
-          name: `${broker} MT5 (${login})`,
-          login: login.trim(),
-          password: password.trim(),
-          server: server.trim(),
-          platform: 'mt5',
-          magic: 0
-        })
-      });
-
-      const provData = await provRes.json();
-      const accountId = provData.id || provData._id;
-
-      if (accountId) {
-        // 2. Fetch Account Information (Balance, Equity, Currency)
-        const infoRes = await fetch(`https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/account-information`, {
-          headers: authHeader
-        });
-        const infoData = await infoRes.json();
-
-        // 3. Fetch History Deals
-        const now = new Date();
-        const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days
-        const dealsRes = await fetch(
-          `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/history-deals/time/${past.toISOString()}/${now.toISOString()}`,
-          { headers: authHeader }
-        );
-        const dealsData = await dealsRes.json();
-
-        if (Array.isArray(dealsData)) {
-          return parseMetaApiDeals({
-            deals: dealsData,
-            accountInfo: infoData,
-            broker,
-            server,
-            login,
-            targetAccountId: params.targetAccountId
-          });
-        }
-      }
-    } catch (err: any) {
-      console.warn('MetaApi cloud connection attempt noted, falling back to direct secure sync engine:', err);
-    }
+  if (!token) {
+    throw new Error(
+      `To connect directly to ${broker} in the cloud without running local scripts, enter your free MetaApi Cloud Token below, or use the "Drop MT5 Statement" tab for instant 1-click import.`
+    );
   }
 
-  // Direct High-Reliability MT5 Sync Engine:
-  // Simulates cloud handshake verification and pulls the verified broker state
-  await new Promise(resolve => setTimeout(resolve, 1400)); // Realistic connection handshake latency
+  const authHeader = {
+    'auth-token': token,
+    'Content-Type': 'application/json'
+  };
 
-  return generateDirectMt5SyncResult({
-    broker,
-    server,
-    login,
-    targetAccountId: params.targetAccountId
-  });
+  try {
+    // 1. Provision / Register account with MetaApi Cloud Gateway
+    const provRes = await fetch('https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts', {
+      method: 'POST',
+      headers: authHeader,
+      body: JSON.stringify({
+        name: `${broker} MT5 (${login})`,
+        login: login.trim(),
+        password: password.trim(),
+        server: server.trim(),
+        platform: 'mt5',
+        magic: 0
+      })
+    });
+
+    const provData = await provRes.json();
+    const accountId = provData.id || provData._id;
+
+    if (!accountId) {
+      const errMsg = provData.message || provData.error || 'Failed to authenticate with MT5 cloud gateway.';
+      throw new Error(errMsg);
+    }
+
+    // 2. Fetch Account Information (Balance, Equity, Currency)
+    const infoRes = await fetch(
+      `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/account-information`,
+      { headers: { 'auth-token': token } }
+    );
+    const infoData = await infoRes.json();
+
+    // 3. Fetch History Deals (Past 90 days)
+    const now = new Date();
+    const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const dealsRes = await fetch(
+      `https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}/history-deals/time/${past.toISOString()}/${now.toISOString()}`,
+      { headers: { 'auth-token': token } }
+    );
+    const dealsData = await dealsRes.json();
+
+    if (Array.isArray(dealsData)) {
+      return parseMetaApiDeals({
+        deals: dealsData,
+        accountInfo: infoData,
+        broker,
+        server,
+        login,
+        targetAccountId: params.targetAccountId
+      });
+    }
+
+    // If deals array wasn't returned, return clean account with balance
+    return {
+      trades: [],
+      initialBalance: Number(infoData.balance) || 10000,
+      currentBalance: Number(infoData.balance) || 10000,
+      currency: infoData.currency || 'USD',
+      server,
+      broker,
+      login
+    };
+  } catch (err: any) {
+    throw new Error(
+      `Failed to connect to ${broker} (${server}): ${err.message || 'Please check your login, password, and server name.'}`
+    );
+  }
 }
 
 /**
@@ -255,7 +283,6 @@ function parseMetaApiDeals(params: {
   let totalNetPnl = 0;
   const trades: Trade[] = [];
 
-  // Group deals by position or process individual closed deals
   for (const d of deals) {
     if (d.type === 'DEAL_TYPE_BALANCE') {
       if (d.profit > 0 && initialBalance === 10000) {
@@ -315,81 +342,147 @@ function parseMetaApiDeals(params: {
 }
 
 /**
- * Direct MT5 Engine: Generates accurate broker-calibrated initial state and history
- * when cloud gateway token is not yet configured, allowing instant, zero-friction usage!
+ * Parses MT5 Statement File (HTML or CSV report directly exported from MT5)
+ * Allows instant, 100% free import of real trades & balance with zero tokens or setup.
  */
-function generateDirectMt5SyncResult(params: {
+export function parseMt5ReportFile(params: {
+  fileContent: string;
+  accountId: string;
   broker: string;
   server: string;
   login: string;
-  targetAccountId?: string;
 }): MT5SyncResult {
-  const { broker, server, login, targetAccountId } = params;
-  const accId = targetAccountId || `acc-mt5-${broker.toLowerCase()}-${login}`;
+  const { fileContent, accountId, broker, server, login } = params;
 
-  // Starting balance based on typical broker tier
-  const initialBalance = 10000;
-  const now = Date.now();
+  let initialBalance = 10000;
+  let currentBalance = 10000;
+  const trades: Trade[] = [];
 
-  // Create clean initial baseline trade for this MT5 account
-  const sampleTrades: Trade[] = [
-    {
-      id: `mt5-${login}-1001`,
-      ticket: `${login.slice(-4)}01`,
-      accountId: accId,
-      symbol: 'XAUUSD',
-      assetClass: 'Commodities',
-      direction: 'BUY',
-      status: 'CLOSED',
-      lotSize: 0.05,
-      entryPrice: 2634.50,
-      exitPrice: 2642.80,
-      openTime: new Date(now - 86400000 * 2).toISOString(),
-      closeTime: new Date(now - 86400000 * 2 + 3600000 * 3).toISOString(),
-      durationMinutes: 180,
-      grossPnl: 41.50,
-      commission: 0.35,
-      swap: -0.15,
-      netPnl: 41.00,
-      realizedRR: 2.1,
-      plannedRR: 2.0,
-      session: 'London',
-      setupTags: [`${broker} Sync`, 'Breakout'],
-      mistakeTags: [],
-      notes: `Synced automatically from ${broker} MT5 (${server})`
-    },
-    {
-      id: `mt5-${login}-1002`,
-      ticket: `${login.slice(-4)}02`,
-      accountId: accId,
-      symbol: 'EURUSD',
-      assetClass: 'Forex',
-      direction: 'SELL',
-      status: 'CLOSED',
-      lotSize: 0.10,
-      entryPrice: 1.1120,
-      exitPrice: 1.1095,
-      openTime: new Date(now - 86400000).toISOString(),
-      closeTime: new Date(now - 86400000 + 3600000 * 2).toISOString(),
-      durationMinutes: 120,
-      grossPnl: 25.00,
-      commission: 0.70,
-      swap: 0,
-      netPnl: 24.30,
-      realizedRR: 1.8,
-      plannedRR: 1.5,
-      session: 'New York',
-      setupTags: [`${broker} Sync`, 'Trend Following'],
-      mistakeTags: [],
-      notes: `Synced automatically from ${broker} MT5 (${server})`
+  // Check if content is HTML report from MT5
+  if (fileContent.includes('<table') || fileContent.includes('ReportHistory')) {
+    // Parse HTML report using DOMParser
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fileContent, 'text/html');
+      const rows = Array.from(doc.querySelectorAll('tr'));
+
+      let inClosedTrades = false;
+
+      for (const row of rows) {
+        const text = row.textContent || '';
+
+        // Detect balance / deposit
+        if (text.includes('Deposit') || text.includes('Balance:')) {
+          const match = text.match(/([0-9\s,]+\.\d{2})/);
+          if (match) {
+            const val = parseFloat(match[1].replace(/[\s,]/g, ''));
+            if (!isNaN(val) && val > 0) {
+              initialBalance = val;
+              currentBalance = val;
+            }
+          }
+        }
+
+        if (text.includes('Closed Deals') || text.includes('Orders') || text.includes('Positions')) {
+          inClosedTrades = true;
+          continue;
+        }
+
+        const cells = Array.from(row.querySelectorAll('td')).map(c => c.textContent?.trim() || '');
+        if (cells.length >= 9 && inClosedTrades) {
+          // MT5 Closed Deal format:
+          // [Time, Ticket, Symbol, Type, Direction, Volume, Price, Order, Commission, Fee, Swap, Profit]
+          const timeStr = cells[0];
+          const ticketStr = cells[1];
+          const sym = cells[2];
+          const typeStr = cells[3]?.toLowerCase();
+          const volStr = cells[5] || cells[4];
+          const priceStr = cells[6] || cells[5];
+          const pnlStr = cells[cells.length - 1];
+
+          if (ticketStr && !isNaN(Number(ticketStr)) && sym && (typeStr.includes('buy') || typeStr.includes('sell'))) {
+            const pnl = parseFloat(pnlStr.replace(/[\s,]/g, '')) || 0;
+            const volume = parseFloat(volStr.replace(/[\s,]/g, '')) || 0.1;
+            const price = parseFloat(priceStr.replace(/[\s,]/g, '')) || 0;
+            const date = new Date(timeStr.replace(/\./g, '-'));
+            const validDate = isNaN(date.getTime()) ? new Date() : date;
+
+            trades.push({
+              id: `mt5-${login}-${ticketStr}`,
+              ticket: ticketStr,
+              accountId,
+              symbol: sym.toUpperCase(),
+              assetClass: inferAssetClass(sym),
+              direction: typeStr.includes('buy') ? 'BUY' : 'SELL',
+              status: 'CLOSED',
+              lotSize: volume,
+              entryPrice: price,
+              exitPrice: price,
+              openTime: validDate.toISOString(),
+              closeTime: validDate.toISOString(),
+              durationMinutes: 30,
+              grossPnl: pnl,
+              commission: 0,
+              swap: 0,
+              netPnl: pnl,
+              session: inferSession(validDate),
+              setupTags: [`MT5:${broker}`],
+              mistakeTags: []
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing MT5 HTML report', e);
     }
-  ];
+  } else {
+    // CSV / TSV fallback parsing
+    const lines = fileContent.split(/\r?\n/);
+    for (const line of lines) {
+      const parts = line.split(/[,\t]/).map(p => p.trim().replace(/^["']|["']$/g, ''));
+      if (parts.length >= 8) {
+        const ticket = parts[1] || parts[0];
+        const sym = parts[2] || parts[1];
+        const dir = parts[3]?.toUpperCase();
+        if (ticket && !isNaN(Number(ticket)) && (dir === 'BUY' || dir === 'SELL')) {
+          const vol = parseFloat(parts[4]) || 0.1;
+          const price = parseFloat(parts[5]) || 0;
+          const pnl = parseFloat(parts[parts.length - 1]) || 0;
+          const openDate = new Date(parts[0]);
+          const validDate = isNaN(openDate.getTime()) ? new Date() : openDate;
 
-  const totalPnl = sampleTrades.reduce((sum, t) => sum + t.netPnl, 0);
-  const currentBalance = initialBalance + totalPnl;
+          trades.push({
+            id: `mt5-${login}-${ticket}`,
+            ticket,
+            accountId,
+            symbol: sym.toUpperCase(),
+            assetClass: inferAssetClass(sym),
+            direction: dir === 'BUY' ? 'BUY' : 'SELL',
+            status: 'CLOSED',
+            lotSize: vol,
+            entryPrice: price,
+            exitPrice: price,
+            openTime: validDate.toISOString(),
+            closeTime: validDate.toISOString(),
+            durationMinutes: 30,
+            grossPnl: pnl,
+            commission: 0,
+            swap: 0,
+            netPnl: pnl,
+            session: inferSession(validDate),
+            setupTags: [`MT5:${broker}`],
+            mistakeTags: []
+          });
+        }
+      }
+    }
+  }
+
+  const totalPnl = trades.reduce((sum, t) => sum + t.netPnl, 0);
+  currentBalance = initialBalance + totalPnl;
 
   return {
-    trades: sampleTrades,
+    trades,
     initialBalance,
     currentBalance,
     currency: 'USD',
