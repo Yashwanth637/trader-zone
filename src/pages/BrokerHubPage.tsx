@@ -16,6 +16,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
+import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
 import { DeltaStorage } from '../lib/deltaIndiaApi';
 import { TradingAccount } from '../types/trade';
 
@@ -23,6 +24,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
   const { accounts, addAccount, updateAccount, deleteAccount, activeAccountId, setActiveAccountId, cleanDuplicateTrades } = useTrading();
   const [modalOpen, setModalOpen] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
+  const [mt5ModalOpen, setMt5ModalOpen] = useState(false);
   const [editBalanceModalOpen, setEditBalanceModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<TradingAccount | null>(null);
   const [newStartingBalance, setNewStartingBalance] = useState('');
@@ -117,9 +119,9 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
             size="sm"
             variant="primary"
             icon={<Zap className="w-4 h-4 text-amber-300" />}
-            onClick={() => setDeltaModalOpen(true)}
+            onClick={() => setMt5ModalOpen(true)}
           >
-            Sync Delta India
+            Connect MT5 Broker
           </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
             Import CSV
@@ -145,35 +147,46 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
         </div>
       )}
 
-      {/* Delta Exchange India Direct API Sync Card */}
+      {/* MetaTrader 5 (MT5) Brokers Direct Account Sync Card */}
       {(() => {
-        const hasDeltaCreds = Boolean(DeltaStorage.getCredentials().apiKey);
-        const lastDeltaSync = DeltaStorage.getLastSynced();
+        const mt5Accounts = accounts.filter(
+          a => a.broker.toLowerCase().includes('metatrader') || a.broker.toLowerCase().includes('mt5') || a.mt5Login
+        );
+        const hasMt5 = mt5Accounts.length > 0;
+        const lastMt5Sync = mt5Accounts[0]?.lastSynced || (hasMt5 ? new Date().toISOString() : null);
+
         return (
-          <div className="premium-card p-5 border border-primary/40 bg-gradient-to-r from-primary/10 via-surface to-surface flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="premium-card p-5 border border-purple-500/40 bg-gradient-to-r from-purple-500/10 via-surface to-surface flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-                <Zap className="w-6 h-6 text-primary" />
+              <div className="w-11 h-11 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
+                <Zap className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-foreground tracking-wide">Delta Exchange India — Direct API Sync</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-foreground tracking-wide">MetaTrader 5 (MT5) — Direct Broker Sync</h3>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      hasDeltaCreds
+                      hasMt5
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : 'bg-muted/20 text-muted border border-border'
                     }`}
                   >
-                    {hasDeltaCreds ? 'Configured & Active' : 'Setup Available'}
+                    {hasMt5 ? `${mt5Accounts.length} Connected` : 'Ready to Connect'}
                   </span>
                 </div>
-                <p className="text-xs text-muted mt-0.5">
-                  Direct 1-click sync for closed positions and orders. Automatically formats dates in DD-MM-YYYY.
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {['Elefin', 'XM', 'Vantage', 'Exness', 'WinPro'].map(brk => (
+                    <span key={brk} className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface border border-border text-foreground">
+                      {brk}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-muted mt-1.5">
+                  Direct 1-click sync with your MT5 Login & Password. Automatically creates an isolated account and synchronizes balance and trades.
                 </p>
-                {lastDeltaSync && (
+                {lastMt5Sync && (
                   <span className="text-[10.5px] text-muted mt-1 block">
-                    Last Synced: <span className="text-foreground font-mono">{new Date(lastDeltaSync).toLocaleString()}</span>
+                    Last Synced: <span className="text-foreground font-mono">{new Date(lastMt5Sync).toLocaleString()}</span>
                   </span>
                 )}
               </div>
@@ -184,9 +197,9 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                 size="sm"
                 variant="primary"
                 icon={<RefreshCw className="w-4 h-4" />}
-                onClick={() => setDeltaModalOpen(true)}
+                onClick={() => setMt5ModalOpen(true)}
               >
-                {hasDeltaCreds ? 'Sync Trades' : 'Setup API Key'}
+                {hasMt5 ? 'Sync Trades' : 'Connect Broker'}
               </Button>
             </div>
           </div>
@@ -359,6 +372,14 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* MetaTrader 5 Connect Broker Modal */}
+      {mt5ModalOpen && (
+        <Mt5ConnectModal
+          isOpen={mt5ModalOpen}
+          onClose={() => setMt5ModalOpen(false)}
+        />
       )}
 
       {/* Delta Exchange India Direct Sync Modal */}

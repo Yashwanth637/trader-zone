@@ -18,6 +18,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
+import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
 
 interface TradesPageProps {
   onOpenAddTrade: () => void;
@@ -27,6 +28,7 @@ interface TradesPageProps {
 export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCsvImport }) => {
   const { accountTrades, deleteTrade, closeTrade, strategies, accounts, activeAccountId } = useTrading();
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
+  const [mt5ModalOpen, setMt5ModalOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
@@ -106,8 +108,8 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         </div>
 
         <div className="flex items-center gap-3">
-          <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-amber-400" />} onClick={() => setDeltaModalOpen(true)}>
-            Sync Delta
+          <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-purple-400" />} onClick={() => setMt5ModalOpen(true)}>
+            Sync MT5
           </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
             Import CSV / Broker
@@ -437,6 +439,14 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* MetaTrader 5 Connect Broker Modal */}
+      {mt5ModalOpen && (
+        <Mt5ConnectModal
+          isOpen={mt5ModalOpen}
+          onClose={() => setMt5ModalOpen(false)}
+        />
       )}
 
       {/* Delta Exchange India Direct Sync Modal */}

@@ -83,6 +83,9 @@ export interface TradingAccount {
   currentBalance: number;
   isDefault: boolean;
   createdAt: string;
+  mt5Login?: string;
+  mt5Server?: string;
+  lastSynced?: string;
 }
 
 export interface TradingStrategy {
