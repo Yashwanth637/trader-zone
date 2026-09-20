@@ -14,12 +14,15 @@ import {
 } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
-  const { accountTrades, activeAccount, profile } = useTrading();
+  const { accountTrades, activeAccount, accounts, profile } = useTrading();
   const [period, setPeriod] = useState<string>('all');
   const printRef = useRef<HTMLDivElement>(null);
 
   const filtered = filterTradesByPeriod(accountTrades, period);
-  const repStats = calculateSummaryStats(filtered, activeAccount ? activeAccount.initialBalance : 100000);
+  const repInitialBal = activeAccount
+    ? activeAccount.initialBalance
+    : accounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0);
+  const repStats = calculateSummaryStats(filtered, repInitialBal);
 
   const handleDownloadPDF = () => {
     generateExecutiveReportPDF({

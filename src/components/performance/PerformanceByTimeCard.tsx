@@ -10,6 +10,22 @@ interface PerformanceByTimeCardProps {
 export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ data }) => {
   const { hourlyStats, bestHour, worstHour, mostActiveHour, advice } = data;
   const [hoveredHour, setHoveredHour] = useState<typeof hourlyStats[0] | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredHour(null);
+    setMousePos(null);
+  };
 
   // SVG dimensions
   const svgW = 500;
@@ -66,11 +82,15 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
       </div>
 
       {/* Hourly Bar Chart */}
-      <div className="relative w-full overflow-visible py-1">
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="relative w-full overflow-visible py-1 cursor-crosshair"
+      >
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           className="w-full h-52 overflow-visible select-none"
-          onMouseLeave={() => setHoveredHour(null)}
         >
           {/* Y Axis Grid lines & Ticks */}
           {yTicks.map((val, idx) => {
@@ -99,6 +119,20 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
             );
           })}
 
+          {/* Vertical Guide Line on Hover */}
+          {hoveredHour && (
+            <line
+              x1={padLeft + (hourlyStats.findIndex(h => h.hourStr === hoveredHour.hourStr) + 0.5) * slotW}
+              y1={padTop}
+              x2={padLeft + (hourlyStats.findIndex(h => h.hourStr === hoveredHour.hourStr) + 0.5) * slotW}
+              y2={svgH - padBottom}
+              stroke="currentColor"
+              strokeOpacity={0.35}
+              strokeDasharray="3 3"
+              className="text-primary pointer-events-none"
+            />
+          )}
+
           {/* Vertical Hourly Bars */}
           {hourlyStats.map((item, idx) => {
             const isPos = item.netPnl >= 0;
@@ -106,6 +140,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
             const pnlY = getY(item.netPnl);
             const barY = isPos ? pnlY : zeroY;
             const barHeight = item.netPnl !== 0 ? Math.max(4, Math.abs(pnlY - zeroY)) : 0;
+            const isHovered = hoveredHour?.hourStr === item.hourStr;
 
             return (
               <g key={item.hourStr}>
@@ -116,8 +151,10 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
                   width={barW}
                   height={barHeight}
                   rx={3}
-                  className={`transition-all duration-300 cursor-pointer ${
-                    isPos
+                  className={`transition-all duration-200 cursor-pointer ${
+                    isHovered
+                      ? isPos ? 'fill-emerald-400 filter drop-shadow(0 0 6px rgba(16,185,129,0.4))' : 'fill-rose-400 filter drop-shadow(0 0 6px rgba(244,63,94,0.4))'
+                      : isPos
                       ? 'fill-emerald-500 hover:fill-emerald-400'
                       : 'fill-rose-500 hover:fill-rose-400'
                   }`}
@@ -129,7 +166,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
                   x={padLeft + (idx + 0.5) * slotW}
                   y={svgH - padBottom + 16}
                   textAnchor="middle"
-                  className="text-[9px] font-mono fill-muted"
+                  className={`text-[9px] font-mono transition-colors ${isHovered ? 'fill-foreground font-bold' : 'fill-muted'}`}
                 >
                   {item.hourStr}
                 </text>
@@ -138,18 +175,37 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
           })}
         </svg>
 
-        {/* Floating Tooltip when hovering over a bar */}
-        {hoveredHour && (
-          <div className="absolute top-2 right-4 px-3 py-1.5 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl text-xs text-white z-20 pointer-events-none">
-            <div className="font-bold text-slate-300">{hoveredHour.hourStr}</div>
-            <div className={`font-mono ${hoveredHour.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              Net P&L: {hoveredHour.netPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.netPnl)}
+        {/* Floating Tooltip moving dynamically with cursor (Image 2) */}
+        {hoveredHour && mousePos && (() => {
+          const containerWidth = containerRef.current ? containerRef.current.offsetWidth : svgW;
+          const tooltipWidth = 160;
+          const isRight = mousePos.x > containerWidth * 0.55;
+          const left = isRight
+            ? Math.max(10, mousePos.x - tooltipWidth - 14)
+            : Math.min(containerWidth - tooltipWidth - 10, mousePos.x + 14);
+          const top = Math.max(8, Math.min(125, mousePos.y - 70));
+
+          return (
+            <div
+              style={{
+                left: `${left}px`,
+                top: `${top}px`
+              }}
+              className="absolute px-3 py-2 rounded-xl bg-slate-900/95 dark:bg-black/90 border border-slate-700/80 shadow-2xl text-xs text-white z-30 pointer-events-none transition-all duration-75 ease-out backdrop-blur-md min-w-[150px]"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1 mb-1">
+                <span className="font-bold text-slate-200 font-mono text-xs">{hoveredHour.hourStr}</span>
+                <span className="text-[10px] text-slate-400 font-medium">{hoveredHour.tradeCount} trades</span>
+              </div>
+              <div className={`font-mono font-bold text-sm ${hoveredHour.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                Net P&L: {hoveredHour.netPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.netPnl)}
+              </div>
+              <div className="text-[10px] text-slate-300 font-mono mt-0.5">
+                Avg P&L: {hoveredHour.avgPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.avgPnl)} avg
+              </div>
             </div>
-            <div className="text-[10px] text-slate-400">
-              {hoveredHour.tradeCount} trades · {hoveredHour.avgPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.avgPnl)} avg
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* 3 Metrics Subcards */}
@@ -163,8 +219,8 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
           <div className="text-lg font-mono font-black text-emerald-500 mt-1">
             {bestHour ? bestHour.hourStr : '--:--'}
           </div>
-          <div className="text-xs text-muted mt-0.5 font-medium">
-            {bestHour ? `+${formatAdaptivePnl(bestHour.avgPnl)} avg` : 'No data'}
+          <div className="text-xs text-muted mt-0.5 font-medium font-mono">
+            {bestHour ? `+${formatAdaptivePnl(bestHour.avgPnl)} avg (${formatAdaptivePnl(bestHour.totalPnl)} net)` : 'No data'}
           </div>
         </div>
 
@@ -177,8 +233,8 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
           <div className="text-lg font-mono font-black text-rose-500 mt-1">
             {worstHour ? worstHour.hourStr : '--:--'}
           </div>
-          <div className="text-xs text-muted mt-0.5 font-medium">
-            {worstHour ? `${formatAdaptivePnl(worstHour.avgPnl)} avg` : 'No losses'}
+          <div className="text-xs text-muted mt-0.5 font-medium font-mono">
+            {worstHour ? `${formatAdaptivePnl(worstHour.avgPnl)} avg (${formatAdaptivePnl(worstHour.totalPnl)} net)` : 'No losses'}
           </div>
         </div>
 

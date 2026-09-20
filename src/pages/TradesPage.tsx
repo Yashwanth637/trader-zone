@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { formatCurrency, sortTradesDescending } from '../lib/calculations';
+import { formatCurrency, sortTradesDescending, formatDurationHours } from '../lib/calculations';
 import {
   History,
   Search,
@@ -25,7 +25,7 @@ interface TradesPageProps {
 }
 
 export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCsvImport }) => {
-  const { accountTrades, deleteTrade, closeTrade, strategies } = useTrading();
+  const { accountTrades, deleteTrade, closeTrade, strategies, accounts, activeAccountId } = useTrading();
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -33,6 +33,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'WIN' | 'LOSS'>('ALL');
   const [strategyFilter, setStrategyFilter] = useState('ALL');
+  const [accountFilter, setAccountFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
 
@@ -64,6 +65,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
       if (outcomeFilter === 'WIN' && t.netPnl <= 0) return false;
       if (outcomeFilter === 'LOSS' && t.netPnl >= 0) return false;
       if (strategyFilter !== 'ALL' && t.strategyId !== strategyFilter) return false;
+      if (accountFilter !== 'ALL' && t.accountId !== accountFilter) return false;
 
       const tradeDate = new Date(t.openTime);
       if (yearFilter !== 'ALL') {
@@ -79,7 +81,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
       return true;
     });
     return sortTradesDescending(list);
-  }, [accountTrades, search, directionFilter, statusFilter, outcomeFilter, strategyFilter, yearFilter, dateFilter]);
+  }, [accountTrades, search, directionFilter, statusFilter, outcomeFilter, strategyFilter, accountFilter, yearFilter, dateFilter]);
 
   const handleCloseSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +184,22 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             </select>
           </div>
 
+          {/* Account Filter (when in All Accounts Combined mode) */}
+          {activeAccountId === 'all' && accounts.length > 1 && (
+            <div className="w-full sm:w-auto min-w-[130px]">
+              <select
+                value={accountFilter}
+                onChange={e => setAccountFilter(e.target.value)}
+                className="w-full sm:w-auto h-10 px-3 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none font-medium cursor-pointer"
+              >
+                <option value="ALL">Account: All</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Outcome / Result */}
           <div className="w-full sm:w-auto min-w-[120px]">
             <select
@@ -197,10 +215,16 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         </div>
 
         {/* Active filter pills / reset row if any filter active */}
-        {(dateFilter || yearFilter !== 'ALL' || directionFilter !== 'ALL' || statusFilter !== 'ALL' || outcomeFilter !== 'ALL' || search) && (
+        {(dateFilter || yearFilter !== 'ALL' || directionFilter !== 'ALL' || statusFilter !== 'ALL' || outcomeFilter !== 'ALL' || accountFilter !== 'ALL' || search) && (
           <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-muted text-[11px] font-medium">Active Filters:</span>
+              {accountFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20">
+                  Account: {accounts.find(a => a.id === accountFilter)?.name || accountFilter}
+                  <button onClick={() => setAccountFilter('ALL')} className="hover:text-primary-hover ml-1 font-bold">×</button>
+                </span>
+              )}
               {dateFilter && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20">
                   <Calendar className="w-3 h-3" />
@@ -241,6 +265,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                 setDirectionFilter('ALL');
                 setStatusFilter('ALL');
                 setOutcomeFilter('ALL');
+                setAccountFilter('ALL');
               }}
               className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-foreground transition-colors font-medium ml-auto"
             >
@@ -288,13 +313,18 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                   return (
                     <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                       <td className="py-3 font-bold text-foreground">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Link to={`/trades/${t.id}`} className="hover:text-primary transition-colors">
                             {t.symbol}
                           </Link>
                           {t.strategyName && (
                             <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-surface border border-border text-muted">
                               {t.strategyName}
+                            </span>
+                          )}
+                          {activeAccountId === 'all' && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                              {accounts.find(a => a.id === t.accountId)?.name || 'Account'}
                             </span>
                           )}
                         </div>
@@ -310,7 +340,13 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                       <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
 
                       <td className="py-3 text-muted font-mono whitespace-nowrap">
-                        {new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                        <div>{new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                        {t.durationMinutes !== undefined && t.durationMinutes > 0 && (
+                          <div className="text-[10px] text-muted/80 font-sans mt-0.5 flex items-center gap-1">
+                            <span>⏱</span>
+                            <span>{formatDurationHours(t.durationMinutes)}</span>
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>

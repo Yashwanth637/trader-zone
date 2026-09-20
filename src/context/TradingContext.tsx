@@ -51,6 +51,7 @@ interface TradingContextType {
   deleteTrade: (id: string) => void;
   closeTrade: (id: string, exitPrice: number, closeTime?: string) => void;
   importTrades: (newTrades: Trade[]) => void;
+  cleanDuplicateTrades: () => number;
   
   addAccount: (account: Omit<TradingAccount, 'id' | 'createdAt'>) => TradingAccount;
   updateAccount: (id: string, updates: Partial<TradingAccount>) => void;
@@ -80,19 +81,84 @@ interface TradingContextType {
   resetAllData: () => void;
 }
 
+export function normalizeTicket(ticket?: string): string {
+  if (!ticket) return '';
+  return ticket.trim().replace(/^DELTA-/i, '').replace(/^CSV-/i, '');
+}
+
+/**
+ * Deduplicates and sanitizes trades:
+ * 1. Guarantees every trade has a valid accountId belonging to an existing account.
+ * 2. Merges duplicate trade entries matching normalized ticket or composite signature.
+ */
+export function deduplicateAndSanitizeTrades(
+  tradeList: Trade[],
+  availableAccounts: TradingAccount[]
+): { sanitized: Trade[]; removedCount: number } {
+  const accountIds = new Set(availableAccounts.map(a => a.id));
+  const defaultAccId = availableAccounts.find(a => a.isDefault)?.id || availableAccounts[0]?.id || 'acc-1';
+
+  const seenTicketsByAccount = new Map<string, Trade>();
+  const seenSignaturesByAccount = new Map<string, Trade>();
+
+  const result: Trade[] = [];
+  let removedCount = 0;
+
+  for (const rawTrade of tradeList) {
+    const t: Trade = { ...rawTrade };
+    // Ensure valid accountId
+    if (!t.accountId || !accountIds.has(t.accountId)) {
+      t.accountId = defaultAccId;
+    }
+
+    const normTicket = normalizeTicket(t.ticket);
+    const dateMin = t.openTime ? new Date(t.openTime).toISOString().slice(0, 16) : '';
+    const sym = (t.symbol || '').toUpperCase().trim();
+    const dir = (t.direction || '').toUpperCase().trim();
+    const lot = (Number(t.lotSize) || 0).toFixed(4);
+    const entry = (Number(t.entryPrice) || 0).toFixed(4);
+
+    const ticketKey = normTicket ? `${t.accountId}::${normTicket}` : null;
+    const sigKey = `${t.accountId}::${sym}::${dir}::${lot}::${entry}::${dateMin}`;
+
+    const existingMatch = (ticketKey && seenTicketsByAccount.get(ticketKey)) || seenSignaturesByAccount.get(sigKey);
+
+    if (existingMatch) {
+      removedCount++;
+      // Merge richer info into existing trade
+      if (!existingMatch.stopLoss && t.stopLoss) existingMatch.stopLoss = t.stopLoss;
+      if (!existingMatch.takeProfit && t.takeProfit) existingMatch.takeProfit = t.takeProfit;
+      if (!existingMatch.plannedRR && t.plannedRR) existingMatch.plannedRR = t.plannedRR;
+      if (!existingMatch.realizedRR && t.realizedRR) existingMatch.realizedRR = t.realizedRR;
+      if ((!existingMatch.notes || existingMatch.notes.length < (t.notes || '').length) && t.notes) existingMatch.notes = t.notes;
+      if ((!existingMatch.setupTags || existingMatch.setupTags.length === 0) && t.setupTags?.length) existingMatch.setupTags = t.setupTags;
+      if (!existingMatch.executionRating && t.executionRating) existingMatch.executionRating = t.executionRating;
+      continue;
+    }
+
+    result.push(t);
+    if (ticketKey) seenTicketsByAccount.set(ticketKey, t);
+    seenSignaturesByAccount.set(sigKey, t);
+  }
+
+  return { sanitized: result, removedCount };
+}
+
 const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
   const [trades, setTrades] = useState<Trade[]>(() => {
     const rawTrades = Storage.getTrades();
-    let updated = false;
-    const normalized = rawTrades.map(t => {
+    const initialAccs = Storage.getAccounts();
+    const { sanitized } = deduplicateAndSanitizeTrades(rawTrades, initialAccs);
+
+    const normalized = sanitized.map(t => {
       let mod = { ...t };
       // If an imported trade currently has lotSize >= 10 (e.g. 50 from CSV), convert to true lot size (0.05)
       const isImported = t.id?.startsWith('imported') || t.notes?.toLowerCase().includes('delta') || t.ticket?.startsWith('CSV');
       if (isImported && t.lotSize >= 10) {
-        updated = true;
         mod.lotSize = parseFloat((t.lotSize / 1000).toFixed(5));
       }
       // Compute plannedRR if SL and TP exist
@@ -101,7 +167,6 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const reward = Math.abs(mod.takeProfit - mod.entryPrice);
         if (risk > 0) {
           mod.plannedRR = parseFloat((reward / risk).toFixed(2));
-          updated = true;
         }
       }
       // Compute realizedRR if SL and exit exist
@@ -110,7 +175,6 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (risk > 0) {
           const gain = mod.direction === 'BUY' ? (mod.exitPrice - mod.entryPrice) : (mod.entryPrice - mod.exitPrice);
           mod.realizedRR = parseFloat((gain / risk).toFixed(2));
-          updated = true;
         }
       }
       return mod;
@@ -120,7 +184,6 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     Storage.saveTrades(sorted);
     return sorted;
   });
-  const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
   const [activeAccountId, setActiveAccountIdState] = useState<string>(() => Storage.getActiveAccountId());
   const [strategies, setStrategies] = useState<TradingStrategy[]>(() => Storage.getStrategies());
   const [rules, setRules] = useState<TradingRule[]>(() => Storage.getRules());
@@ -228,10 +291,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const computedAccounts = useMemo(() => {
     return accounts.map(acc => {
       // Find all trades for this account
-      // (If a trade doesn't have an accountId or if there is only 1 account, associate with it)
-      const accTrades = trades.filter(
-        t => t.accountId === acc.id || (!t.accountId && (acc.isDefault || accounts.length === 1))
-      );
+      const accTrades = trades.filter(t => t.accountId === acc.id);
       const netPnl = accTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
       return {
         ...acc,
@@ -253,9 +313,11 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [trades, activeAccountId]);
 
   const stats = useMemo(() => {
-    const startBalance = activeAccount ? activeAccount.initialBalance : 100000;
+    const startBalance = activeAccount
+      ? activeAccount.initialBalance
+      : computedAccounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0);
     return calculateSummaryStats(accountTrades, startBalance);
-  }, [accountTrades, activeAccount]);
+  }, [accountTrades, activeAccount, computedAccounts]);
 
   const behavioralAlerts = useMemo(() => {
     return detectBehavioralPatterns(accountTrades);
@@ -263,12 +325,16 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Actions
   const addTrade = (tradeData: Omit<Trade, 'id'>): Trade => {
+    const targetAccountId = tradeData.accountId || (activeAccountId !== 'all' ? activeAccountId : (accounts[0]?.id || 'acc-1'));
     const newTrade: Trade = {
       ...tradeData,
       id: `trade-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      accountId: tradeData.accountId || (activeAccount?.id || 'acc-1')
+      accountId: targetAccountId
     };
-    setTrades(prev => sortTradesDescending([newTrade, ...prev]));
+    setTrades(prev => {
+      const { sanitized } = deduplicateAndSanitizeTrades([newTrade, ...prev], accounts);
+      return sortTradesDescending(sanitized);
+    });
     return newTrade;
   };
 
@@ -306,7 +372,21 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const importTrades = (newTrades: Trade[]) => {
-    setTrades(prev => sortTradesDescending([...newTrades, ...prev]));
+    setTrades(prev => {
+      const combined = [...newTrades, ...prev];
+      const { sanitized } = deduplicateAndSanitizeTrades(combined, accounts);
+      return sortTradesDescending(sanitized);
+    });
+  };
+
+  const cleanDuplicateTrades = (): number => {
+    let removed = 0;
+    setTrades(prev => {
+      const { sanitized, removedCount } = deduplicateAndSanitizeTrades(prev, accounts);
+      removed = removedCount;
+      return sortTradesDescending(sanitized);
+    });
+    return removed;
   };
 
   const addAccount = (accData: Omit<TradingAccount, 'id' | 'createdAt'>): TradingAccount => {
@@ -479,6 +559,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteTrade,
         closeTrade,
         importTrades,
+        cleanDuplicateTrades,
         addAccount,
         updateAccount,
         deleteAccount,

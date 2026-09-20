@@ -14,10 +14,16 @@ interface CsvImportModalProps {
 export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
   const { importTrades, activeAccountId, accounts } = useTrading();
   const [csvText, setCsvText] = useState('');
-  const [targetAccount, setTargetAccount] = useState(activeAccountId === 'all' ? accounts[0]?.id : activeAccountId);
+  const [targetAccount, setTargetAccount] = useState(activeAccountId === 'all' ? (accounts[0]?.id || 'acc-1') : activeAccountId);
   const [parsedCount, setParsedCount] = useState<number | null>(null);
   const [isDelta, setIsDelta] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTargetAccount(activeAccountId === 'all' ? (accounts[0]?.id || 'acc-1') : activeAccountId);
+    }
+  }, [isOpen, activeAccountId, accounts]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -51,17 +51,9 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
-  // Load saved credentials on modal open
+  // Default target account selection on modal open
   useEffect(() => {
     if (isOpen) {
-      const saved = DeltaStorage.getCredentials();
-      setApiKey(saved.apiKey);
-      setApiSecret(saved.apiSecret);
-      setProxyMode(saved.proxyMode === 'cors-bridge' ? 'direct' : saved.proxyMode);
-      setCustomProxyUrl(saved.customProxyUrl || '');
-      setLastSynced(DeltaStorage.getLastSynced());
-
-      // Default target account
       if (!selectedAccountId) {
         const deltaAcc = accounts.find(a => a.broker.toLowerCase().includes('delta'));
         if (deltaAcc) {
@@ -75,13 +67,25 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
     }
   }, [isOpen, accounts, activeAccountId, selectedAccountId]);
 
+  // Load saved credentials when selectedAccountId is available
+  useEffect(() => {
+    if (isOpen && selectedAccountId) {
+      const saved = DeltaStorage.getCredentials(selectedAccountId);
+      setApiKey(saved.apiKey);
+      setApiSecret(saved.apiSecret);
+      setProxyMode(saved.proxyMode === 'cors-bridge' ? 'direct' : saved.proxyMode);
+      setCustomProxyUrl(saved.customProxyUrl || '');
+      setLastSynced(DeltaStorage.getLastSynced(selectedAccountId));
+    }
+  }, [isOpen, selectedAccountId]);
+
   const handleSave = () => {
     DeltaStorage.saveCredentials({
       apiKey,
       apiSecret,
       proxyMode,
       customProxyUrl
-    });
+    }, selectedAccountId);
   };
 
   const handleTestConnection = async () => {
@@ -149,7 +153,7 @@ export const DeltaSyncModal: React.FC<DeltaSyncModalProps> = ({
       if (newCount > 0) {
         importTrades(newTrades);
         const nowIso = new Date().toISOString();
-        DeltaStorage.setLastSynced(nowIso);
+        DeltaStorage.setLastSynced(nowIso, targetAccId);
         setLastSynced(nowIso);
 
         setStatusMsg({

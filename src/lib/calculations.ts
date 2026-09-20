@@ -92,6 +92,18 @@ export function formatSignedPnl(
   return `${isNeg ? '-' : '+'}${sym}${abs}`;
 }
 
+/**
+ * Format duration in minutes into clear hours display across trade history (e.g. 619 mins -> 10.3 hrs)
+ */
+export function formatDurationHours(durationMinutes?: number): string {
+  if (!durationMinutes || durationMinutes <= 0) return 'Open';
+  const hours = durationMinutes / 60;
+  if (hours < 1) {
+    return `${hours.toFixed(1)} hrs (${durationMinutes}m)`;
+  }
+  return `${hours.toFixed(1)} hrs`;
+}
+
 export function detectTradingSession(isoTime: string): TradingSession {
   const date = new Date(isoTime);
   const hour = date.getUTCHours();

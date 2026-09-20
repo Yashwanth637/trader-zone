@@ -20,18 +20,37 @@ import { DeltaStorage } from '../lib/deltaIndiaApi';
 import { TradingAccount } from '../types/trade';
 
 export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpenCsvImport }) => {
-  const { accounts, addAccount, updateAccount, deleteAccount, activeAccountId, setActiveAccountId } = useTrading();
+  const { accounts, addAccount, updateAccount, deleteAccount, activeAccountId, setActiveAccountId, cleanDuplicateTrades } = useTrading();
   const [modalOpen, setModalOpen] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [editBalanceModalOpen, setEditBalanceModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<TradingAccount | null>(null);
   const [newStartingBalance, setNewStartingBalance] = useState('');
+  const [cleanNotification, setCleanNotification] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
 
   const [accName, setAccName] = useState('');
   const [broker, setBroker] = useState('Delta Exchange India');
   const [accType, setAccType] = useState<'Prop Firm' | 'Live' | 'Demo' | 'Challenge'>('Live');
   const [balance, setBalance] = useState('100000');
   const [currency, setCurrency] = useState('USD');
+
+  const handleCleanDuplicates = () => {
+    const removed = cleanDuplicateTrades();
+    if (removed > 0) {
+      setCleanNotification({
+        type: 'success',
+        text: `Cleaned up ${removed} duplicate/confluent trade${removed > 1 ? 's' : ''}! Multi-account sync and aggregated balance have been refreshed.`
+      });
+    } else {
+      setCleanNotification({
+        type: 'info',
+        text: 'All trades and accounts are fully synchronized. Zero duplicate trades detected.'
+      });
+    }
+    setTimeout(() => {
+      setCleanNotification(null);
+    }, 6000);
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,16 +94,25 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2.5">
             <Layers className="w-6 h-6 text-purple-400" />
             <span>Broker Hub & Account Connections</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Link, organize, and synchronize multiple MT4/MT5 accounts, prop firms, and broker statements.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            onClick={handleCleanDuplicates}
+            title="Scan and eliminate duplicate trades or cross-account conflicts"
+          >
+            Deduplicate
+          </Button>
           <Button
             size="sm"
             variant="primary"
@@ -94,13 +122,28 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
             Sync Delta India
           </Button>
           <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
-            Import Statement CSV
+            Import CSV
           </Button>
           <Button size="sm" variant="outline" icon={<Plus className="w-4 h-4" />} onClick={() => setModalOpen(true)}>
-            Connect Account
+            Add Account
           </Button>
         </div>
       </div>
+
+      {/* Clean Duplicates Alert Banner */}
+      {cleanNotification && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between text-xs font-medium transition-all ${
+          cleanNotification.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            : 'bg-primary/10 border-primary/30 text-primary-light'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{cleanNotification.text}</span>
+          </div>
+          <button onClick={() => setCleanNotification(null)} className="hover:opacity-70 font-bold ml-4">✕</button>
+        </div>
+      )}
 
       {/* Delta Exchange India Direct API Sync Card */}
       {(() => {
@@ -114,23 +157,23 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white tracking-wide">Delta Exchange India — Direct API Sync</h3>
+                  <h3 className="text-sm font-bold text-foreground tracking-wide">Delta Exchange India — Direct API Sync</h3>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                       hasDeltaCreds
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border border-border'
+                        : 'bg-muted/20 text-muted border border-border'
                     }`}
                   >
                     {hasDeltaCreds ? 'Configured & Active' : 'Setup Available'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   Direct 1-click sync for closed positions and orders. Automatically formats dates in DD-MM-YYYY.
                 </p>
                 {lastDeltaSync && (
-                  <span className="text-[10.5px] text-slate-400 mt-1 block">
-                    Last Synced: <span className="text-slate-300 font-mono">{new Date(lastDeltaSync).toLocaleString()}</span>
+                  <span className="text-[10.5px] text-muted mt-1 block">
+                    Last Synced: <span className="text-foreground font-mono">{new Date(lastDeltaSync).toLocaleString()}</span>
                   </span>
                 )}
               </div>
@@ -164,15 +207,15 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white">{acc.name}</h3>
+                    <h3 className="text-base font-bold text-foreground">{acc.name}</h3>
                     {isActive && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-white font-bold">
                         ACTIVE
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    {acc.broker} · <span className="font-semibold text-slate-300">{acc.type}</span>
+                  <div className="text-xs text-muted mt-0.5">
+                    {acc.broker} · <span className="font-semibold text-foreground">{acc.type}</span>
                   </div>
                 </div>
 
@@ -189,7 +232,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                           deleteAccount(acc.id);
                         }
                       }}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400"
+                      className="p-1.5 rounded-lg text-muted hover:text-rose-500"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -199,33 +242,33 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
 
               <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-surface border border-border">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Current Balance</span>
-                  <div className="text-xl font-black text-white font-mono mt-0.5">
+                  <span className="text-[10px] text-muted uppercase font-bold">Current Balance</span>
+                  <div className="text-xl font-black text-foreground font-mono mt-0.5">
                     {formatCurrency(acc.currentBalance)}
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">Initial Balance</span>
+                    <span className="text-[10px] text-muted uppercase font-bold">Initial Balance</span>
                     <button
                       type="button"
                       onClick={() => handleOpenEditBalance(acc)}
-                      className="text-[11px] text-primary hover:text-primary-light font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      className="text-[11px] text-primary hover:text-primary-hover font-bold flex items-center gap-1 cursor-pointer transition-colors"
                       title="Update starting balance"
                     >
                       <Pencil className="w-3 h-3" />
                       <span>Update</span>
                     </button>
                   </div>
-                  <div className="text-xl font-black text-slate-300 font-mono mt-0.5">
+                  <div className="text-xl font-black text-foreground font-mono mt-0.5">
                     {formatCurrency(acc.initialBalance)}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+              <div className="flex items-center justify-between text-xs text-muted pt-1">
                 <span>Created: {new Date(acc.createdAt).toLocaleDateString()}</span>
-                <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="text-emerald-500 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Synced & Ready
                 </span>
               </div>
@@ -239,24 +282,24 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
         <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Trading Account" maxWidth="md">
           <form onSubmit={handleAdd} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Account Label</label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Account Label</label>
               <input
                 type="text"
                 required
                 value={accName}
                 onChange={e => setAccName(e.target.value)}
                 placeholder="e.g. FTMO 100k Challenge, Exness Live"
-                className="w-full px-3.5 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
+                className="w-full px-3.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Broker Platform</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Broker Platform</label>
                 <select
                   value={broker}
                   onChange={e => setBroker(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 >
                   <option value="Delta Exchange India">Delta Exchange India</option>
                   <option value="MetaTrader 5">MetaTrader 5</option>
@@ -269,11 +312,11 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Account Type</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Account Type</label>
                 <select
                   value={accType}
                   onChange={e => setAccType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 >
                   <option value="Prop Firm">Prop Firm</option>
                   <option value="Challenge">Evaluation Challenge</option>
@@ -285,22 +328,22 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Starting Balance</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Starting Balance</label>
                 <input
                   type="number"
                   required
                   value={balance}
                   onChange={e => setBalance(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Currency</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Currency</label>
                 <select
                   value={currency}
                   onChange={e => setCurrency(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-card border border-border text-white text-xs focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -338,12 +381,12 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
           maxWidth="md"
         >
           <form onSubmit={handleSaveStartingBalance} className="space-y-4">
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Set the base capital or initial deposit for this account. Your current balance, equity curves, drawdown calculations, and ROI % will automatically re-calculate based on this starting figure.
             </p>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Starting / Initial Balance ({editingAccount.currency || 'USD'})
               </label>
               <div className="relative">
@@ -356,14 +399,14 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                   value={newStartingBalance}
                   onChange={e => setNewStartingBalance(e.target.value)}
                   placeholder="e.g. 100000"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-card border border-border text-white text-sm font-mono font-bold focus:outline-none focus:border-primary"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-sm font-mono font-bold focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
 
             {/* Quick Capital Presets */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
                 Quick Presets
               </label>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
@@ -375,7 +418,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                     className={`py-1.5 px-1 text-[11px] font-mono font-bold rounded-lg border transition-all ${
                       newStartingBalance === val.toString()
                         ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-surface border-border text-slate-300 hover:text-white hover:border-slate-600'
+                        : 'bg-surface border-border text-muted hover:text-foreground hover:border-primary/40'
                     }`}
                   >
                     ${(val / 1000)}k

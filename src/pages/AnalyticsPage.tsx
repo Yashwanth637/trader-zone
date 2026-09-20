@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 export const AnalyticsPage: React.FC = () => {
-  const { accountTrades, activeAccount, stats } = useTrading();
+  const { accountTrades, activeAccount, accounts, stats } = useTrading();
   const [tab, setTab] = useState<'overview' | 'sessions' | 'symbols' | 'direction'>('overview');
 
   // Enforce page top positioning whenever Performance page is opened
@@ -49,7 +49,9 @@ export const AnalyticsPage: React.FC = () => {
   const profitDistData = useMemo(() => calculateProfitDistribution(accountTrades), [accountTrades]);
   const hourlyData = useMemo(() => calculateHourlyPerformance(accountTrades), [accountTrades]);
   const symbolData = useMemo(() => calculateSymbolPerformance(accountTrades), [accountTrades]);
-  const currentInitialBal = activeAccount ? activeAccount.initialBalance : 100000;
+  const currentInitialBal = activeAccount
+    ? activeAccount.initialBalance
+    : accounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0);
   const drawdownData = useMemo(() => calculateDrawdownAnalysis(accountTrades, currentInitialBal), [accountTrades, currentInitialBal]);
   const streakData = useMemo(() => calculateStreakTracking(accountTrades), [accountTrades]);
   const avgHoldTimeData = useMemo(() => calculateAvgHoldTime(accountTrades), [accountTrades]);
@@ -169,7 +171,7 @@ export const AnalyticsPage: React.FC = () => {
           <div className="premium-card p-5">
             <EquityCurveChart
               trades={accountTrades}
-              initialBalance={activeAccount ? activeAccount.initialBalance : 100000}
+              initialBalance={currentInitialBal}
             />
           </div>
 

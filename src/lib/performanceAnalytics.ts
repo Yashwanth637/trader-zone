@@ -297,9 +297,9 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
   let mostActiveHour: HourlyPerformanceData['mostActiveHour'] = null;
 
   hoursWithTrades.forEach(h => {
-    // Best Hour (highest positive average P&L)
-    if (h.avgPnl > 0) {
-      if (!bestHour || h.avgPnl > bestHour.avgPnl) {
+    // Best Hour: Hour with the highest total net profit (matching the peak green bar on the chart)
+    if (h.netPnl > 0) {
+      if (!bestHour || h.netPnl > (bestHour.totalPnl || 0)) {
         bestHour = {
           hourStr: h.hourStr,
           avgPnl: h.avgPnl,
@@ -309,9 +309,9 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
       }
     }
 
-    // Worst Hour (lowest negative average P&L)
-    if (h.avgPnl < 0) {
-      if (!worstHour || h.avgPnl < worstHour.avgPnl) {
+    // Worst Hour: Hour with the deepest total net loss (matching the lowest red bar on the chart)
+    if (h.netPnl < 0) {
+      if (!worstHour || h.netPnl < (worstHour.totalPnl || 0)) {
         worstHour = {
           hourStr: h.hourStr,
           avgPnl: h.avgPnl,
@@ -321,7 +321,7 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
       }
     }
 
-    // Most Active (highest trade count)
+    // Most Active: Hour with the highest number of trades
     if (!mostActiveHour || h.tradeCount > mostActiveHour.tradeCount) {
       mostActiveHour = {
         hourStr: h.hourStr,
@@ -331,6 +331,31 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
     }
   });
 
+  // Fallbacks if no positive or negative total PnL
+  if (!bestHour) {
+    const positiveAvg = hoursWithTrades.filter(h => h.avgPnl > 0).sort((a, b) => b.avgPnl - a.avgPnl);
+    if (positiveAvg.length > 0) {
+      bestHour = {
+        hourStr: positiveAvg[0].hourStr,
+        avgPnl: positiveAvg[0].avgPnl,
+        tradeCount: positiveAvg[0].tradeCount,
+        totalPnl: positiveAvg[0].netPnl
+      };
+    }
+  }
+
+  if (!worstHour) {
+    const negativeAvg = hoursWithTrades.filter(h => h.avgPnl < 0).sort((a, b) => a.avgPnl - b.avgPnl);
+    if (negativeAvg.length > 0) {
+      worstHour = {
+        hourStr: negativeAvg[0].hourStr,
+        avgPnl: negativeAvg[0].avgPnl,
+        tradeCount: negativeAvg[0].tradeCount,
+        totalPnl: negativeAvg[0].netPnl
+      };
+    }
+  }
+
   // Generate actionable advice
   let advice = {
     title: 'Optimal Execution Throughout the Day',
@@ -338,16 +363,17 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
     isWarning: false
   };
 
-  if (worstHour && worstHour.avgPnl < -50) {
+  if (worstHour && (worstHour.totalPnl < 0 || worstHour.avgPnl < 0)) {
+    const absAvg = Math.abs(worstHour.avgPnl);
     advice = {
-      title: `Consider avoiding trades at ${worstHour.hourStr}`,
-      description: `You have an average loss of -$${Math.abs(Math.round(worstHour.avgPnl)).toLocaleString()} per trade during this hour`,
+      title: `Caution around ${worstHour.hourStr}`,
+      description: `Your highest loss concentration is at ${worstHour.hourStr} with -$${absAvg >= 1 ? absAvg.toFixed(2) : absAvg.toFixed(2)} avg loss per trade across ${worstHour.tradeCount} trades.`,
       isWarning: true
     };
-  } else if (bestHour && bestHour.avgPnl > 100) {
+  } else if (bestHour && (bestHour.totalPnl > 0 || bestHour.avgPnl > 0)) {
     advice = {
       title: `Prime Performance Window: ${bestHour.hourStr}`,
-      description: `Your highest edge is concentrated here with +$${Math.round(bestHour.avgPnl).toLocaleString()} avg return per trade`,
+      description: `Your highest edge is concentrated here with +$${bestHour.avgPnl.toFixed(2)} avg return per trade across ${bestHour.tradeCount} trades.`,
       isWarning: false
     };
   }

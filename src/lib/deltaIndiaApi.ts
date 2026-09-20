@@ -20,23 +20,29 @@ const STORAGE_KEYS = {
 };
 
 export const DeltaStorage = {
-  getCredentials(): DeltaCredentials {
-    const rawMode = localStorage.getItem(STORAGE_KEYS.PROXY_MODE);
-    // Delta Exchange India natively supports CORS with Access-Control-Allow-Origin: *
-    // Default to 'direct' connection for maximum reliability and exact IP matching.
+  getCredentials(accountId?: string): DeltaCredentials {
+    const accPrefix = accountId ? `_${accountId}` : '';
+    const rawMode = (accountId && localStorage.getItem(`${STORAGE_KEYS.PROXY_MODE}${accPrefix}`)) || localStorage.getItem(STORAGE_KEYS.PROXY_MODE);
     const proxyMode: ProxyMode = (!rawMode || rawMode === 'cors-bridge') ? 'direct' : (rawMode as ProxyMode);
-    if (rawMode === 'cors-bridge') {
-      localStorage.setItem(STORAGE_KEYS.PROXY_MODE, 'direct');
-    }
     return {
-      apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
-      apiSecret: localStorage.getItem(STORAGE_KEYS.API_SECRET) || '',
+      apiKey: (accountId && localStorage.getItem(`${STORAGE_KEYS.API_KEY}${accPrefix}`)) || localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
+      apiSecret: (accountId && localStorage.getItem(`${STORAGE_KEYS.API_SECRET}${accPrefix}`)) || localStorage.getItem(STORAGE_KEYS.API_SECRET) || '',
       proxyMode,
-      customProxyUrl: localStorage.getItem(STORAGE_KEYS.CUSTOM_PROXY) || ''
+      customProxyUrl: (accountId && localStorage.getItem(`${STORAGE_KEYS.CUSTOM_PROXY}${accPrefix}`)) || localStorage.getItem(STORAGE_KEYS.CUSTOM_PROXY) || ''
     };
   },
 
-  saveCredentials(creds: DeltaCredentials): void {
+  saveCredentials(creds: DeltaCredentials, accountId?: string): void {
+    if (accountId) {
+      const accPrefix = `_${accountId}`;
+      localStorage.setItem(`${STORAGE_KEYS.API_KEY}${accPrefix}`, creds.apiKey.trim());
+      localStorage.setItem(`${STORAGE_KEYS.API_SECRET}${accPrefix}`, creds.apiSecret.trim());
+      localStorage.setItem(`${STORAGE_KEYS.PROXY_MODE}${accPrefix}`, creds.proxyMode);
+      if (creds.customProxyUrl) {
+        localStorage.setItem(`${STORAGE_KEYS.CUSTOM_PROXY}${accPrefix}`, creds.customProxyUrl.trim());
+      }
+    }
+    // Also store as default/global
     localStorage.setItem(STORAGE_KEYS.API_KEY, creds.apiKey.trim());
     localStorage.setItem(STORAGE_KEYS.API_SECRET, creds.apiSecret.trim());
     localStorage.setItem(STORAGE_KEYS.PROXY_MODE, creds.proxyMode);
@@ -45,7 +51,15 @@ export const DeltaStorage = {
     }
   },
 
-  clearCredentials(): void {
+  clearCredentials(accountId?: string): void {
+    if (accountId) {
+      const accPrefix = `_${accountId}`;
+      localStorage.removeItem(`${STORAGE_KEYS.API_KEY}${accPrefix}`);
+      localStorage.removeItem(`${STORAGE_KEYS.API_SECRET}${accPrefix}`);
+      localStorage.removeItem(`${STORAGE_KEYS.PROXY_MODE}${accPrefix}`);
+      localStorage.removeItem(`${STORAGE_KEYS.CUSTOM_PROXY}${accPrefix}`);
+      localStorage.removeItem(`${STORAGE_KEYS.LAST_SYNCED}${accPrefix}`);
+    }
     localStorage.removeItem(STORAGE_KEYS.API_KEY);
     localStorage.removeItem(STORAGE_KEYS.API_SECRET);
     localStorage.removeItem(STORAGE_KEYS.PROXY_MODE);
@@ -53,11 +67,15 @@ export const DeltaStorage = {
     localStorage.removeItem(STORAGE_KEYS.LAST_SYNCED);
   },
 
-  getLastSynced(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.LAST_SYNCED);
+  getLastSynced(accountId?: string): string | null {
+    const accPrefix = accountId ? `_${accountId}` : '';
+    return (accountId && localStorage.getItem(`${STORAGE_KEYS.LAST_SYNCED}${accPrefix}`)) || localStorage.getItem(STORAGE_KEYS.LAST_SYNCED);
   },
 
-  setLastSynced(isoString: string): void {
+  setLastSynced(isoString: string, accountId?: string): void {
+    if (accountId) {
+      localStorage.setItem(`${STORAGE_KEYS.LAST_SYNCED}_${accountId}`, isoString);
+    }
     localStorage.setItem(STORAGE_KEYS.LAST_SYNCED, isoString);
   }
 };
@@ -348,12 +366,19 @@ export function normalizeDeltaOrders(
   // Sort chronologically (oldest first)
   parsedList.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
 
-  // Existing tickets / IDs set for deduplication
-  const existingTickets = new Set(
-    existingTrades.map(t => t.ticket).filter(Boolean).concat(
-      existingTrades.map(t => t.id)
-    )
-  );
+  // Existing tickets / IDs set for deduplication (scoped to this account)
+  const existingTickets = new Set<string>();
+  existingTrades.forEach(t => {
+    if (t.accountId === accountId) {
+      if (t.ticket) {
+        existingTickets.add(t.ticket);
+        existingTickets.add(t.ticket.replace(/^DELTA-/i, ''));
+      }
+      if (t.id) {
+        existingTickets.add(t.id);
+      }
+    }
+  });
 
   const openLongs: Record<string, ParsedOrder[]> = {};
   const openShorts: Record<string, ParsedOrder[]> = {};
@@ -381,8 +406,9 @@ export function normalizeDeltaOrders(
         if (matchIdx === -1) matchIdx = 0;
         const openOrder = openShorts[sym].splice(matchIdx, 1)[0];
 
-        const ticket = `DELTA-${order.orderId}`;
-        if (existingTickets.has(ticket)) {
+        const rawOrderId = String(order.orderId);
+        const ticket = `DELTA-${rawOrderId}`;
+        if (existingTickets.has(ticket) || existingTickets.has(rawOrderId)) {
           duplicatesCount++;
           continue;
         }
@@ -442,8 +468,9 @@ export function normalizeDeltaOrders(
         if (matchIdx === -1) matchIdx = 0;
         const openOrder = openLongs[sym].splice(matchIdx, 1)[0];
 
-        const ticket = `DELTA-${order.orderId}`;
-        if (existingTickets.has(ticket)) {
+        const rawOrderId = String(order.orderId);
+        const ticket = `DELTA-${rawOrderId}`;
+        if (existingTickets.has(ticket) || existingTickets.has(rawOrderId)) {
           duplicatesCount++;
           continue;
         }
