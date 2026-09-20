@@ -35,7 +35,7 @@ export const Mt5ConnectModal: React.FC<Mt5ConnectModalProps> = ({
   const { accounts, addAccount, updateAccount, importTrades, setActiveAccountId } = useTrading();
 
   const [selectedBroker, setSelectedBroker] = useState<'Elefin' | 'XM' | 'Vantage' | 'Exness' | 'WinPro'>('Elefin');
-  const [selectedServer, setSelectedServer] = useState<string>('ElefinMarkets-Live');
+  const [selectedServer, setSelectedServer] = useState<string>('ElefinTrade-Server');
   const [login, setLogin] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -191,23 +191,46 @@ export const Mt5ConnectModal: React.FC<Mt5ConnectModalProps> = ({
 
         {/* Server Selection */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Server className="w-3.5 h-3.5 text-purple-400" />
-            <span>{selectedBroker} Server</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Server className="w-3.5 h-3.5 text-purple-400" />
+              <span>{selectedBroker} Server</span>
+            </label>
+            <span className="text-[10.5px] text-muted">Select or paste exact server</span>
+          </div>
           <div className="relative">
-            <select
+            <input
+              type="text"
+              required
+              list="mt5-server-suggestions"
               value={selectedServer}
               onChange={e => setSelectedServer(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs font-medium focus:outline-none focus:border-primary cursor-pointer appearance-none"
-            >
+              placeholder="e.g. ElefinTrade-Server"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs font-mono font-semibold focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+            />
+            <datalist id="mt5-server-suggestions">
               {brokerConfig.servers.map(srv => (
-                <option key={srv} value={srv}>
-                  {srv}
-                </option>
+                <option key={srv} value={srv} />
               ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-muted absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </datalist>
+          </div>
+
+          {/* Quick Server Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {brokerConfig.servers.map(srv => (
+              <button
+                key={srv}
+                type="button"
+                onClick={() => setSelectedServer(srv)}
+                className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all font-mono ${
+                  selectedServer === srv
+                    ? 'bg-purple-500/20 border-purple-500 text-purple-300 font-bold'
+                    : 'bg-surface border-border text-muted hover:text-foreground hover:border-purple-500/40'
+                }`}
+              >
+                {srv}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -223,7 +246,7 @@ export const Mt5ConnectModal: React.FC<Mt5ConnectModalProps> = ({
               required
               value={login}
               onChange={e => setLogin(e.target.value)}
-              placeholder="e.g. 12345767168"
+              placeholder="e.g. 12345806865"
               className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs font-mono focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 pr-10"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">

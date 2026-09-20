@@ -18,35 +18,35 @@ export const SUPPORTED_MT5_BROKERS: MT5BrokerConfig[] = [
   {
     id: 'Elefin',
     name: 'Elefin',
-    servers: ['ElefinMarkets-Live', 'ElefinCapital-Live', 'Elefin-Demo'],
-    defaultServer: 'ElefinMarkets-Live',
+    servers: ['ElefinTrade-Server', 'ElefinTrade-Demo', 'ElefinTrade-Live', 'ElefinMarkets-Live', 'ElefinCapital-Live'],
+    defaultServer: 'ElefinTrade-Server',
     description: 'Elefin Markets / Elefin Capital MT5'
   },
   {
     id: 'XM',
     name: 'XM',
-    servers: ['XMGlobal-MT5', 'XMGlobal-MT5 2', 'XMGlobal-MT5 3', 'XMGlobal-MT5 4', 'XMGlobal-Demo'],
+    servers: ['XMGlobal-MT5', 'XMGlobal-MT5 2', 'XMGlobal-MT5 3', 'XMGlobal-MT5 4', 'XMGlobal-MT5 5', 'XMGlobal-Demo', 'XMGlobal-Demo 2'],
     defaultServer: 'XMGlobal-MT5',
     description: 'XM Global MetaTrader 5'
   },
   {
     id: 'Vantage',
     name: 'Vantage',
-    servers: ['VantageFX-Live', 'VantageFX-Live 2', 'VantageInternational-Live', 'Vantage-Demo'],
+    servers: ['VantageFX-Live', 'VantageFX-Live 2', 'VantageInternational-Live', 'VantageInternational-Demo', 'Vantage-Demo'],
     defaultServer: 'VantageFX-Live',
     description: 'Vantage International MT5'
   },
   {
     id: 'Exness',
     name: 'Exness',
-    servers: ['Exness-MT5Real', 'Exness-MT5Real2', 'Exness-MT5Real3', 'Exness-MT5Real4', 'Exness-MT5Trial'],
+    servers: ['Exness-MT5Real', 'Exness-MT5Real2', 'Exness-MT5Real3', 'Exness-MT5Real4', 'Exness-MT5Real5', 'Exness-MT5Trial', 'Exness-MT5Trial2'],
     defaultServer: 'Exness-MT5Real',
     description: 'Exness MetaTrader 5 Live & Pro'
   },
   {
     id: 'WinPro',
     name: 'WinPro',
-    servers: ['WinProFX-Real', 'WinProMarkets-Live', 'WinPro-Demo'],
+    servers: ['WinProFX-Real', 'WinProFX-Server', 'WinProMarkets-Live', 'WinPro-Demo'],
     defaultServer: 'WinProFX-Real',
     description: 'WinProFX / WinPro Markets MT5'
   }
