@@ -23,9 +23,8 @@ import {
   Minimize2,
   Loader2,
   RefreshCw,
-  ChevronDown,
-  Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  PenTool
 } from 'lucide-react';
 
 export const BacktestStudio: React.FC = () => {
@@ -46,7 +45,8 @@ export const BacktestStudio: React.FC = () => {
   const [speed, setSpeed] = useState<number>(1);
   const [isCutMode, setIsCutMode] = useState<boolean>(false);
 
-  // Drawings State
+  // Drawings State & Toolbar Visibility (Item 5)
+  const [isToolbarVisible, setIsToolbarVisible] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<DrawingType>('cursor');
   const [drawings, setDrawings] = useState<BacktestDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
@@ -132,11 +132,10 @@ export const BacktestStudio: React.FC = () => {
         setCandles(res.candles);
         setDataSource(res.source);
 
-        // Start replay around 300 bars from the end (or 20% into the dataset)
+        // Start replay around 300 bars into the dataset
         const startIndex = Math.max(10, Math.min(300, res.candles.length - 100));
         setCurrentIndex(startIndex);
 
-        // Feed candles up to start index into engine
         engineRef.current.symbol = selectedAssetId;
         engineRef.current.timeframe = selectedTimeframe;
         engineRef.current.strategyName = strategyName;
@@ -260,6 +259,17 @@ export const BacktestStudio: React.FC = () => {
     syncEngineState();
   };
 
+  // On-Chart Trade Modification Handlers (Item 7)
+  const handleModifyPosition = (params: { stopLoss?: number; takeProfit?: number }) => {
+    engineRef.current.updatePositionSlTp(params.stopLoss, params.takeProfit);
+    syncEngineState();
+  };
+
+  const handleModifyLimitOrder = (orderId: string, price: number) => {
+    engineRef.current.updateLimitOrderPrice(orderId, price);
+    syncEngineState();
+  };
+
   // Position Management Handlers
   const handleClosePosition = () => {
     engineRef.current.closePositionAtMarket();
@@ -319,12 +329,13 @@ export const BacktestStudio: React.FC = () => {
   return (
     <div
       ref={studioContainerRef}
-      className={`flex flex-col space-y-4 bg-background min-h-screen text-slate-100 ${
-        isFullscreen ? 'p-6 fixed inset-0 z-50 overflow-y-auto bg-slate-950' : ''
+      className={`flex flex-col space-y-4 bg-background min-h-screen text-foreground ${
+        isFullscreen ? 'p-6 fixed inset-0 z-50 overflow-y-auto bg-background' : ''
       }`}
+      style={{ fontFamily: 'Arial, sans-serif' }}
     >
       {/* Top Header & Strategy Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border/80 shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border/40 dark:border-white/[0.08] shadow-xl">
         <div className="flex flex-wrap items-center gap-3">
           {/* Strategy Title & Selector */}
           <div className="flex items-center gap-2">
@@ -337,22 +348,22 @@ export const BacktestStudio: React.FC = () => {
                   type="text"
                   value={strategyName}
                   onChange={e => setStrategyName(e.target.value)}
-                  className="text-base font-black text-white bg-transparent border-b border-dashed border-border hover:border-primary focus:border-primary focus:outline-none transition-colors"
+                  className="text-base font-black text-foreground bg-transparent border-b border-dashed border-border/40 hover:border-primary focus:border-primary focus:outline-none transition-colors"
                   title="Click to rename strategy"
                 />
               </div>
-              <div className="text-[10px] text-slate-400">TradeZella Backtesting Studio</div>
+              <div className="text-[10px] text-muted">TradeZella Backtesting Studio</div>
             </div>
           </div>
 
-          <div className="hidden sm:block h-6 w-px bg-border mx-1" />
+          <div className="hidden sm:block h-6 w-px bg-border/40 dark:bg-white/[0.08] mx-1" />
 
           {/* Asset Selector */}
           <div className="flex items-center gap-1.5">
             <select
               value={selectedAssetId}
               onChange={e => setSelectedAssetId(e.target.value)}
-              className="px-3 py-1.5 bg-surface rounded-xl border border-border text-white text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
+              className="px-3 py-1.5 bg-surface rounded-xl border border-border/40 dark:border-white/[0.08] text-foreground text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
             >
               {SUPPORTED_ASSETS.map(asset => (
                 <option key={asset.id} value={asset.id}>
@@ -363,7 +374,7 @@ export const BacktestStudio: React.FC = () => {
           </div>
 
           {/* Timeframe Selector */}
-          <div className="flex items-center bg-surface p-1 rounded-xl border border-border">
+          <div className="flex items-center bg-surface p-1 rounded-xl border border-border/40 dark:border-white/[0.08]">
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf.value}
@@ -372,7 +383,7 @@ export const BacktestStudio: React.FC = () => {
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                   selectedTimeframe === tf.value
                     ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {tf.label}
@@ -382,7 +393,7 @@ export const BacktestStudio: React.FC = () => {
 
           {/* Data Source Badge */}
           {dataSource && (
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px]">
               <CheckCircle2 className="w-3 h-3" />
               <span>{dataSource}</span>
             </div>
@@ -395,7 +406,7 @@ export const BacktestStudio: React.FC = () => {
             type="button"
             onClick={() => loadMarketData()}
             title="Reload Real Market Historical Data"
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-surface hover:bg-surface-elevated border border-border transition-colors"
+            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-primary' : ''}`} />
           </button>
@@ -404,7 +415,7 @@ export const BacktestStudio: React.FC = () => {
             type="button"
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-surface hover:bg-surface-elevated border border-border transition-colors"
+            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -416,19 +427,19 @@ export const BacktestStudio: React.FC = () => {
         {/* Chart Column (3 cols on large screens) */}
         <div className="lg:col-span-3 flex flex-col space-y-3">
           {loading ? (
-            <div className="w-full h-[540px] rounded-2xl border border-border/80 bg-surface flex flex-col items-center justify-center space-y-3">
+            <div className="w-full h-[540px] rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <div className="text-sm font-bold text-white">
+              <div className="text-sm font-bold text-foreground">
                 Fetching Real Market Historical Candles...
               </div>
-              <p className="text-xs text-slate-400 max-w-sm text-center">
+              <p className="text-xs text-muted max-w-sm text-center">
                 Querying live exchange feeds for {selectedAssetId} ({selectedTimeframe}) over 1+ year of authentic market history.
               </p>
             </div>
           ) : loadError ? (
             <div className="w-full h-[540px] rounded-2xl border border-rose-500/30 bg-surface flex flex-col items-center justify-center space-y-3 p-6 text-center">
               <div className="text-rose-400 font-bold text-base">Historical Data Fetch Error</div>
-              <p className="text-xs text-slate-400 max-w-md">{loadError}</p>
+              <p className="text-xs text-muted max-w-md">{loadError}</p>
               <button
                 type="button"
                 onClick={() => loadMarketData()}
@@ -439,32 +450,45 @@ export const BacktestStudio: React.FC = () => {
             </div>
           ) : (
             <div className="relative w-full h-[540px]">
-              {/* Drawing Toolbar Overlay on Left */}
-              <div className="absolute top-4 left-4 z-30">
-                <DrawingToolbar
-                  activeTool={activeTool}
-                  onSelectTool={tool => {
-                    setActiveTool(tool);
-                    if (tool !== 'cursor') {
+              {/* Drawing Toolbar Overlay on Left with Hide Option (Items 2 & 5) */}
+              <div className="absolute top-3 left-3 z-20">
+                {isToolbarVisible ? (
+                  <DrawingToolbar
+                    activeTool={activeTool}
+                    onSelectTool={tool => {
+                      setActiveTool(tool);
+                      if (tool !== 'cursor') {
+                        setSelectedDrawingId(null);
+                      }
+                    }}
+                    onDeleteSelected={() => {
+                      if (selectedDrawingId) {
+                        handleUpdateDrawings(drawings.filter(d => d.id !== selectedDrawingId));
+                        setSelectedDrawingId(null);
+                      }
+                    }}
+                    onClearAll={() => {
+                      handleUpdateDrawings([]);
                       setSelectedDrawingId(null);
-                    }
-                  }}
-                  onDeleteSelected={() => {
-                    if (selectedDrawingId) {
-                      handleUpdateDrawings(drawings.filter(d => d.id !== selectedDrawingId));
-                      setSelectedDrawingId(null);
-                    }
-                  }}
-                  onClearAll={() => {
-                    handleUpdateDrawings([]);
-                    setSelectedDrawingId(null);
-                  }}
-                  canDelete={!!selectedDrawingId}
-                  drawingCount={drawings.length}
-                />
+                    }}
+                    canDelete={!!selectedDrawingId}
+                    drawingCount={drawings.length}
+                    onHide={() => setIsToolbarVisible(false)}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsToolbarVisible(true)}
+                    title="Show Drawing Tools"
+                    className="p-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground shadow-lg flex items-center gap-1.5 text-xs font-semibold hover:border-primary/40 transition-all"
+                  >
+                    <PenTool className="w-4 h-4 text-primary" />
+                    <span>Tools</span>
+                  </button>
+                )}
               </div>
 
-              {/* Chart with Candles, Price Lines, and SVG Drawing Overlay */}
+              {/* Chart with Candles, Draggable Price Lines, and SVG Drawing Overlay */}
               <BacktestChart
                 candles={candles}
                 currentIndex={currentIndex}
@@ -479,6 +503,8 @@ export const BacktestStudio: React.FC = () => {
                 isCutMode={isCutMode}
                 onCutAtBar={handleCutAtBar}
                 onApplyPositionToOrder={handleApplyPositionToOrder}
+                onModifyPosition={handleModifyPosition}
+                onModifyLimitOrder={handleModifyLimitOrder}
               />
             </div>
           )}

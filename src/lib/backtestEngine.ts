@@ -274,6 +274,29 @@ export class BacktestEngine {
   }
 
   /**
+   * Update Stop Loss and/or Take Profit on active position (e.g. via on-chart drag)
+   */
+  public updatePositionSlTp(stopLoss?: number, takeProfit?: number): void {
+    if (!this.openPosition) return;
+    if (stopLoss !== undefined) {
+      this.openPosition.stopLoss = parseFloat(stopLoss.toFixed(4));
+    }
+    if (takeProfit !== undefined) {
+      this.openPosition.takeProfit = parseFloat(takeProfit.toFixed(4));
+    }
+  }
+
+  /**
+   * Update Limit Order price (e.g. via on-chart drag)
+   */
+  public updateLimitOrderPrice(orderId: string, price: number): void {
+    const order = this.pendingOrders.find(o => o.id === orderId);
+    if (order) {
+      order.price = parseFloat(price.toFixed(4));
+    }
+  }
+
+  /**
    * Reset session with new or existing starting balance
    */
   public resetSession(initialBalance?: number): void {

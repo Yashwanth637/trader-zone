@@ -9,7 +9,9 @@ import {
   ArrowDownRight,
   Ruler,
   Trash2,
-  Undo2
+  Undo2,
+  ChevronLeft,
+  EyeOff
 } from 'lucide-react';
 
 interface DrawingToolbarProps {
@@ -19,6 +21,7 @@ interface DrawingToolbarProps {
   onClearAll: () => void;
   canDelete: boolean;
   drawingCount: number;
+  onHide?: () => void;
 }
 
 export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
@@ -27,7 +30,8 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onDeleteSelected,
   onClearAll,
   canDelete,
-  drawingCount
+  drawingCount,
+  onHide
 }) => {
   const tools: { id: DrawingType; label: string; icon: React.ReactNode; tooltip: string }[] = [
     {
@@ -75,7 +79,22 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   ];
 
   return (
-    <div className="flex flex-col gap-1.5 p-1.5 bg-surface-card/95 backdrop-blur-md border border-border/80 rounded-xl shadow-2xl z-20">
+    <div className="flex flex-col gap-1 p-1.5 bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] rounded-xl shadow-xl z-20 transition-all">
+      {/* Optional Hide / Collapse Header */}
+      {onHide && (
+        <button
+          type="button"
+          onClick={onHide}
+          title="Hide Drawing Toolbar"
+          className="w-8 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors mb-0.5 group relative"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          <div className="absolute left-full ml-2.5 px-2 py-0.5 bg-surface border border-border/60 text-foreground text-[10px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+            Hide Toolbar
+          </div>
+        </button>
+      )}
+
       {tools.map(tool => {
         const isActive = activeTool === tool.id;
         return (
@@ -84,7 +103,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             type="button"
             onClick={() => onSelectTool(tool.id)}
             title={tool.tooltip}
-            className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150 relative group ${
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150 relative group ${
               isActive
                 ? 'bg-primary text-white shadow-md shadow-primary/30'
                 : 'text-slate-400 hover:text-white hover:bg-surface-elevated'
@@ -93,14 +112,14 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             {tool.icon}
             
             {/* Tooltip */}
-            <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+            <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-surface border border-border/60 text-foreground text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
               {tool.label}
             </div>
           </button>
         );
       })}
 
-      <div className="w-full h-px bg-border/80 my-1" />
+      <div className="w-full h-px bg-border/40 dark:bg-white/[0.08] my-0.5" />
 
       {/* Delete Selected */}
       <button
@@ -108,14 +127,14 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         disabled={!canDelete}
         onClick={onDeleteSelected}
         title="Delete Selected Drawing (Del/Backspace)"
-        className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors relative group ${
+        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative group ${
           canDelete
             ? 'text-rose-400 hover:bg-rose-500/15'
             : 'text-slate-600 cursor-not-allowed'
         }`}
       >
-        <Trash2 className="w-4 h-4" />
-        <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+        <Trash2 className="w-3.5 h-3.5" />
+        <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-surface border border-border/60 text-foreground text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
           Delete Selected
         </div>
       </button>
@@ -130,10 +149,10 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             }
           }}
           title={`Clear All Drawings (${drawingCount})`}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors relative group"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors relative group"
         >
-          <Undo2 className="w-4 h-4" />
-          <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+          <Undo2 className="w-3.5 h-3.5" />
+          <div className="absolute left-full ml-2.5 px-2.5 py-1 bg-surface border border-border/60 text-foreground text-[11px] font-medium rounded shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
             Clear All ({drawingCount})
           </div>
         </button>

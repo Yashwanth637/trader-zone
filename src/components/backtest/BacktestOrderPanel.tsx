@@ -12,11 +12,7 @@ import {
   TrendingDown,
   ShieldCheck,
   XCircle,
-  DollarSign,
-  Percent,
-  Layers,
-  CheckCircle2,
-  Sliders
+  DollarSign
 } from 'lucide-react';
 
 interface BacktestOrderPanelProps {
@@ -58,7 +54,6 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
   onMoveToBreakeven,
   onCancelOrder,
   onResetCapital,
-  symbol,
   presetOrderParams
 }) => {
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
@@ -67,7 +62,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
   const [stopLoss, setStopLoss] = useState<string>('');
   const [takeProfit, setTakeProfit] = useState<string>('');
   const [sizingMode, setSizingMode] = useState<'risk' | 'quantity'>('risk');
-  const [riskPercent, setRiskPercent] = useState<number>(1); // 1% default
+  const [riskPercent, setRiskPercent] = useState<number>(1);
   const [quantity, setQuantity] = useState<string>('1');
   const [showCapitalModal, setShowCapitalModal] = useState<boolean>(false);
 
@@ -84,6 +79,18 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
       }
     }
   }, [presetOrderParams, orderType]);
+
+  // Sync live dragged SL / TP from chart (Item 7)
+  useEffect(() => {
+    if (openPosition) {
+      if (openPosition.stopLoss !== undefined) {
+        setStopLoss(openPosition.stopLoss.toString());
+      }
+      if (openPosition.takeProfit !== undefined) {
+        setTakeProfit(openPosition.takeProfit.toString());
+      }
+    }
+  }, [openPosition?.stopLoss, openPosition?.takeProfit]);
 
   // Set default SL/TP when switching side if empty
   useEffect(() => {
@@ -143,11 +150,11 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface-card border border-border/80 rounded-2xl p-4 space-y-4 shadow-xl text-slate-200 select-none">
+    <div className="flex flex-col h-full bg-surface-card border border-border/40 dark:border-white/[0.08] rounded-2xl p-4 space-y-4 shadow-xl text-foreground select-none">
       {/* Account Balance Widget */}
-      <div className="bg-surface-elevated/70 p-3 rounded-xl border border-border/60">
+      <div className="bg-surface-elevated/70 p-3 rounded-xl border border-border/40 dark:border-white/[0.06]">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
             <DollarSign className="w-3.5 h-3.5 text-primary" />
             Virtual Capital
           </span>
@@ -162,10 +169,16 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
 
         <div className="flex items-baseline justify-between">
           <div>
-            <div className="text-xl font-mono font-black text-white">
+            <div
+              className="text-xl font-black text-foreground"
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
               {formatCurrency(virtualEquity)}
             </div>
-            <div className="text-[10px] text-slate-400 font-mono">
+            <div
+              className="text-[10px] text-muted"
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
               Bal: {formatCurrency(virtualBalance)}
             </div>
           </div>
@@ -173,14 +186,18 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
           {openPosition && (
             <div className="text-right">
               <div
-                className={`text-sm font-mono font-bold ${
+                className={`text-sm font-bold ${
                   openPosition.currentPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
+                style={{ fontFamily: 'Arial, sans-serif' }}
               >
                 {openPosition.currentPnl >= 0 ? '+' : ''}
                 {formatCurrency(openPosition.currentPnl)}
               </div>
-              <div className="text-[10px] font-mono text-slate-400">
+              <div
+                className="text-[10px] text-muted"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
                 ({openPosition.currentR >= 0 ? '+' : ''}{openPosition.currentR}R)
               </div>
             </div>
@@ -189,7 +206,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
 
         {/* Quick Capital Preset Dropdown */}
         {showCapitalModal && (
-          <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between gap-1">
+          <div className="mt-2 pt-2 border-t border-border/40 dark:border-white/[0.08] flex items-center justify-between gap-1">
             {[10000, 25000, 50000, 100000].map(amt => (
               <button
                 key={amt}
@@ -201,8 +218,9 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
                 className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-colors ${
                   virtualBalance === amt
                     ? 'bg-primary text-white'
-                    : 'bg-surface text-slate-300 hover:bg-surface-card'
+                    : 'bg-surface text-muted hover:text-foreground'
                 }`}
+                style={{ fontFamily: 'Arial, sans-serif' }}
               >
                 ${amt / 1000}k
               </button>
@@ -225,33 +243,52 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               >
                 {openPosition.side === 'BUY' ? 'LONG' : 'SHORT'}
               </span>
-              <span className="text-xs font-mono font-bold text-white">
+              <span
+                className="text-xs font-bold text-foreground"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
                 {openPosition.quantity} units
               </span>
             </div>
 
             <div
-              className={`text-xs font-mono font-bold ${
+              className={`text-xs font-bold ${
                 openPosition.currentPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
+              style={{ fontFamily: 'Arial, sans-serif' }}
             >
               {openPosition.currentPnl >= 0 ? '+' : ''}
               {formatCurrency(openPosition.currentPnl)}
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono text-slate-400 bg-surface/80 p-2 rounded-lg border border-border/50">
+          <div className="grid grid-cols-3 gap-1.5 text-[10px] text-muted bg-surface/80 p-2 rounded-lg border border-border/40 dark:border-white/[0.06]">
             <div>
-              <div className="text-slate-500">Entry</div>
-              <div className="text-white font-semibold">{openPosition.entryPrice}</div>
+              <div className="text-muted">Entry</div>
+              <div
+                className="text-foreground font-semibold"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
+                {openPosition.entryPrice}
+              </div>
             </div>
             <div>
-              <div className="text-slate-500">Stop Loss</div>
-              <div className="text-rose-400 font-semibold">{openPosition.stopLoss || 'None'}</div>
+              <div className="text-muted">Stop Loss</div>
+              <div
+                className="text-rose-400 font-semibold"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
+                {openPosition.stopLoss || 'None'}
+              </div>
             </div>
             <div>
-              <div className="text-slate-500">Take Profit</div>
-              <div className="text-emerald-400 font-semibold">{openPosition.takeProfit || 'None'}</div>
+              <div className="text-muted">Take Profit</div>
+              <div
+                className="text-emerald-400 font-semibold"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
+                {openPosition.takeProfit || 'None'}
+              </div>
             </div>
           </div>
 
@@ -261,7 +298,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               onClick={onMoveToBreakeven}
               disabled={openPosition.isBreakEven}
               title="Move Stop Loss to Entry Price"
-              className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-surface hover:bg-surface-elevated border border-border text-slate-300 hover:text-white disabled:opacity-40 transition-colors flex items-center justify-center gap-1"
+              className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground disabled:opacity-40 transition-colors flex items-center justify-center gap-1"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
               <span>{openPosition.isBreakEven ? 'At BE' : 'Breakeven'}</span>
@@ -282,12 +319,12 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
       {/* Order Placement Form */}
       <div className="space-y-3">
         {/* Order Type Toggle */}
-        <div className="grid grid-cols-2 p-1 bg-surface-elevated rounded-xl border border-border/60">
+        <div className="grid grid-cols-2 p-1 bg-surface-elevated rounded-xl border border-border/40 dark:border-white/[0.08]">
           <button
             type="button"
             onClick={() => setOrderType('MARKET')}
             className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-              orderType === 'MARKET' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              orderType === 'MARKET' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'
             }`}
           >
             Market Order
@@ -296,7 +333,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
             type="button"
             onClick={() => setOrderType('LIMIT')}
             className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-              orderType === 'LIMIT' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              orderType === 'LIMIT' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'
             }`}
           >
             Limit Order
@@ -306,7 +343,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
         {/* Limit Price Input if Limit Order */}
         {orderType === 'LIMIT' && (
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+            <label className="block text-[11px] font-semibold text-muted mb-1">
               Limit Entry Price
             </label>
             <input
@@ -315,21 +352,22 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               value={limitPrice}
               onChange={e => setLimitPrice(e.target.value)}
               placeholder={currentPrice.toString()}
-              className="w-full px-3 py-1.5 rounded-xl bg-surface border border-border text-white text-xs font-mono focus:outline-none focus:border-primary"
+              className="w-full px-3 py-1.5 rounded-xl bg-surface border border-border/40 dark:border-white/[0.08] text-foreground text-xs focus:outline-none focus:border-primary"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             />
           </div>
         )}
 
         {/* Sizing & Risk Controls */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <div className="flex items-center justify-between text-[11px] text-muted">
             <span className="font-semibold">Position Sizing</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSizingMode('risk')}
                 className={`text-[10px] font-bold ${
-                  sizingMode === 'risk' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'
+                  sizingMode === 'risk' ? 'text-primary' : 'text-muted hover:text-foreground'
                 }`}
               >
                 % Risk
@@ -339,7 +377,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
                 type="button"
                 onClick={() => setSizingMode('quantity')}
                 className={`text-[10px] font-bold ${
-                  sizingMode === 'quantity' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'
+                  sizingMode === 'quantity' ? 'text-primary' : 'text-muted hover:text-foreground'
                 }`}
               >
                 Fixed Units
@@ -354,16 +392,20 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
                   key={pct}
                   type="button"
                   onClick={() => setRiskPercent(pct)}
-                  className={`flex-1 py-1 text-xs font-mono font-bold rounded-lg border transition-colors ${
+                  className={`flex-1 py-1 text-xs font-bold rounded-lg border transition-colors ${
                     riskPercent === pct
                       ? 'bg-primary/20 border-primary text-primary-light'
-                      : 'bg-surface border-border text-slate-400 hover:text-white'
+                      : 'bg-surface border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground'
                   }`}
+                  style={{ fontFamily: 'Arial, sans-serif' }}
                 >
                   {pct}%
                 </button>
               ))}
-              <span className="text-[11px] font-mono text-slate-400 ml-1">
+              <span
+                className="text-[11px] text-muted ml-1"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
                 (${riskAmount.toFixed(0)})
               </span>
             </div>
@@ -374,12 +416,16 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               value={quantity}
               onChange={e => setQuantity(e.target.value)}
               placeholder="Quantity"
-              className="w-full px-3 py-1.5 rounded-xl bg-surface border border-border text-white text-xs font-mono focus:outline-none focus:border-primary"
+              className="w-full px-3 py-1.5 rounded-xl bg-surface border border-border/40 dark:border-white/[0.08] text-foreground text-xs focus:outline-none focus:border-primary"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             />
           )}
 
-          <div className="text-[10px] font-mono text-slate-500 text-right">
-            Calc Units: <span className="text-slate-300 font-bold">{calculatedQuantity}</span>
+          <div
+            className="text-[10px] text-muted text-right"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
+            Calc Units: <span className="text-foreground font-bold">{calculatedQuantity}</span>
           </div>
         </div>
 
@@ -393,7 +439,8 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               value={stopLoss}
               onChange={e => setStopLoss(e.target.value)}
               placeholder="SL Price"
-              className="w-full px-2.5 py-1.5 rounded-xl bg-surface border border-rose-500/40 text-rose-300 text-xs font-mono focus:outline-none focus:border-rose-500"
+              className="w-full px-2.5 py-1.5 rounded-xl bg-surface border border-rose-500/40 text-rose-400 text-xs focus:outline-none focus:border-rose-500"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             />
           </div>
 
@@ -405,20 +452,22 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               value={takeProfit}
               onChange={e => setTakeProfit(e.target.value)}
               placeholder="TP Price"
-              className="w-full px-2.5 py-1.5 rounded-xl bg-surface border border-emerald-500/40 text-emerald-300 text-xs font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full px-2.5 py-1.5 rounded-xl bg-surface border border-emerald-500/40 text-emerald-400 text-xs focus:outline-none focus:border-emerald-500"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             />
           </div>
         </div>
 
         {/* Quick R:R Presets */}
         <div className="flex items-center justify-between gap-1.5 pt-0.5">
-          <span className="text-[10px] font-semibold text-slate-500">Preset R:R:</span>
+          <span className="text-[10px] font-semibold text-muted">Preset R:R:</span>
           {[1.5, 2, 3].map(rr => (
             <button
               key={rr}
               type="button"
               onClick={() => applyRR(rr)}
-              className="flex-1 py-1 text-[10px] font-mono font-bold rounded-lg bg-surface border border-border/80 text-slate-400 hover:text-white hover:border-primary transition-colors"
+              className="flex-1 py-1 text-[10px] font-bold rounded-lg bg-surface border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground hover:border-primary transition-colors"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             >
               1:{rr}
             </button>
@@ -436,7 +485,10 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               <TrendingUp className="w-3.5 h-3.5" />
               <span>BUY / LONG</span>
             </div>
-            <span className="text-[10px] font-mono font-normal opacity-90">
+            <span
+              className="text-[10px] font-normal opacity-90"
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
               {orderType === 'LIMIT' && limitPrice ? limitPrice : currentPrice}
             </span>
           </button>
@@ -450,7 +502,10 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               <TrendingDown className="w-3.5 h-3.5" />
               <span>SELL / SHORT</span>
             </div>
-            <span className="text-[10px] font-mono font-normal opacity-90">
+            <span
+              className="text-[10px] font-normal opacity-90"
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
               {orderType === 'LIMIT' && limitPrice ? limitPrice : currentPrice}
             </span>
           </button>
@@ -459,14 +514,15 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
 
       {/* Pending Limit Orders */}
       {pendingOrders.length > 0 && (
-        <div className="pt-2 border-t border-border/60 space-y-2">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="pt-2 border-t border-border/40 dark:border-white/[0.08] space-y-2">
+          <div className="text-[11px] font-bold text-muted uppercase tracking-wider">
             Pending Orders ({pendingOrders.length})
           </div>
           {pendingOrders.map(order => (
             <div
               key={order.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-surface border border-border text-xs font-mono"
+              className="flex items-center justify-between p-2 rounded-lg bg-surface border border-border/40 dark:border-white/[0.08] text-xs"
+              style={{ fontFamily: 'Arial, sans-serif' }}
             >
               <div>
                 <span className={order.side === 'BUY' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
@@ -477,7 +533,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onCancelOrder(order.id)}
-                className="text-slate-400 hover:text-rose-400"
+                className="text-muted hover:text-rose-400"
                 title="Cancel Limit Order"
               >
                 <XCircle className="w-3.5 h-3.5" />

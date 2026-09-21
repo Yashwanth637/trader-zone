@@ -49,66 +49,98 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
   };
 
   return (
-    <div className="bg-surface-card border border-border/80 rounded-2xl p-4 shadow-xl space-y-4">
+    <div className="bg-surface-card border border-border/40 dark:border-white/[0.08] rounded-2xl p-4 shadow-xl space-y-4">
       {/* Session Analytics Metric Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pb-3 border-b border-border/60">
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Trades</div>
-          <div className="text-lg font-mono font-black text-white">{stats.totalTrades}</div>
-          <div className="text-[10px] text-slate-500 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pb-3 border-b border-border/40 dark:border-white/[0.06]">
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Total Trades</div>
+          <div
+            className="text-lg font-black text-foreground"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
+            {stats.totalTrades}
+          </div>
+          <div
+            className="text-[10px] text-muted"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
             {stats.winCount}W / {stats.lossCount}L
           </div>
         </div>
 
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Win Rate</div>
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Win Rate</div>
           <div
-            className={`text-lg font-mono font-black ${
-              stats.winRate >= 50 ? 'text-emerald-400' : 'text-slate-300'
+            className={`text-lg font-black ${
+              stats.winRate >= 50 ? 'text-emerald-400' : 'text-foreground'
             }`}
+            style={{ fontFamily: 'Arial, sans-serif' }}
           >
             {stats.winRate}%
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">{stats.breakevenCount} BE</div>
+          <div
+            className="text-[10px] text-muted"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
+            {stats.breakevenCount} BE
+          </div>
         </div>
 
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Net Return</div>
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Net Return</div>
           <div
-            className={`text-lg font-mono font-black ${
+            className={`text-lg font-black ${
               stats.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
+            style={{ fontFamily: 'Arial, sans-serif' }}
           >
             {stats.netPnl >= 0 ? '+' : ''}
             {formatCurrency(stats.netPnl)}
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">Realized P&L</div>
+          <div className="text-[10px] text-muted">Realized P&L</div>
         </div>
 
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Profit Factor</div>
-          <div className="text-lg font-mono font-black text-white">
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Profit Factor</div>
+          <div
+            className="text-lg font-black text-foreground"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
             {stats.profitFactor.toFixed(2)}
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">Avg R: {stats.avgRR.toFixed(1)}R</div>
+          <div
+            className="text-[10px] text-muted"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
+            Avg R: {stats.avgRR.toFixed(1)}R
+          </div>
         </div>
 
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Avg Win / Loss</div>
-          <div className="text-xs font-mono font-bold text-emerald-400">
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Avg Win / Loss</div>
+          <div
+            className="text-xs font-bold text-emerald-400"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
             +{formatCurrency(stats.avgWin)}
           </div>
-          <div className="text-xs font-mono font-bold text-rose-400">
+          <div
+            className="text-xs font-bold text-rose-400"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
             -{formatCurrency(stats.avgLoss)}
           </div>
         </div>
 
-        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/50">
-          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Max Drawdown</div>
-          <div className="text-lg font-mono font-black text-rose-400">
+        <div className="bg-surface/80 p-2.5 rounded-xl border border-border/40 dark:border-white/[0.06]">
+          <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Max Drawdown</div>
+          <div
+            className="text-lg font-black text-rose-400"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
             {stats.maxDrawdown}%
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">Peak-to-Trough</div>
+          <div className="text-[10px] text-muted">Peak-to-Trough</div>
         </div>
       </div>
 
@@ -116,7 +148,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart2 className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-bold text-white tracking-tight">
+          <h3 className="text-sm font-bold text-foreground tracking-tight">
             Session Trade Log ({trades.length})
           </h3>
           <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/30">
@@ -130,7 +162,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
               <button
                 type="button"
                 onClick={exportTradesCSV}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-elevated border border-border text-slate-300 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export CSV</span>
@@ -143,7 +175,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                     onClearTrades();
                   }
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Clear Trades</span>
@@ -155,13 +187,16 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
 
       {/* Trades Table */}
       {trades.length === 0 ? (
-        <div className="py-8 text-center text-xs text-slate-500">
+        <div className="py-8 text-center text-xs text-muted">
           No simulated trades executed yet. Place a Market or Limit order and step forward bars to backtest.
         </div>
       ) : (
         <div className="overflow-x-auto max-h-60 overflow-y-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-surface/90 text-slate-400 uppercase text-[10px] sticky top-0 border-b border-border/80">
+          <table
+            className="w-full text-left text-xs"
+            style={{ fontFamily: 'Arial, sans-serif' }}
+          >
+            <thead className="bg-surface/90 text-muted uppercase text-[10px] sticky top-0 border-b border-border/40 dark:border-white/[0.06]">
               <tr>
                 <th className="py-2 px-3">Side</th>
                 <th className="py-2 px-3">Entry</th>
@@ -172,7 +207,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                 <th className="py-2 px-3 text-right">Net P&L</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40">
+            <tbody className="divide-y divide-border/40 dark:divide-white/[0.06]">
               {trades.map((trade, idx) => {
                 const isWin = trade.netPnl > 0.01;
                 const isLoss = trade.netPnl < -0.01;
@@ -195,11 +230,11 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                         {trade.side}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-200">{trade.entryPrice}</td>
-                    <td className="py-2.5 px-3 text-slate-200">{trade.exitPrice}</td>
-                    <td className="py-2.5 px-3 text-slate-400">{trade.quantity}</td>
+                    <td className="py-2.5 px-3 text-foreground">{trade.entryPrice}</td>
+                    <td className="py-2.5 px-3 text-foreground">{trade.exitPrice}</td>
+                    <td className="py-2.5 px-3 text-muted">{trade.quantity}</td>
                     <td className="py-2.5 px-3">
-                      <span className="flex items-center gap-1 text-[11px] text-slate-300">
+                      <span className="flex items-center gap-1 text-[11px] text-foreground">
                         {trade.exitReason === 'TP' && (
                           <>
                             <Target className="w-3.5 h-3.5 text-emerald-400" />
@@ -230,7 +265,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                     </td>
                     <td
                       className={`py-2.5 px-3 text-right font-bold ${
-                        isWin ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-400'
+                        isWin ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-muted'
                       }`}
                     >
                       {trade.netPnl >= 0 ? '+' : ''}

@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-20 h-16 bg-surface/85 backdrop-blur-md border-b border-border transition-all duration-300 px-4 md:px-6 flex items-center justify-between ${
+      className={`sticky top-0 z-40 h-16 bg-surface/85 backdrop-blur-md border-b border-border transition-all duration-300 px-4 md:px-6 flex items-center justify-between ${
         collapsed ? 'md:ml-16' : 'md:ml-64'
       }`}
     >
