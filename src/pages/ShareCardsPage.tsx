@@ -231,20 +231,59 @@ export const ShareCardsPage: React.FC = () => {
   const renderCardToCanvas = async (format?: 'png' | 'jpeg'): Promise<HTMLCanvasElement | null> => {
     if (!cardRef.current) return null;
 
-    const bgColor = format === 'jpeg' ? currentTheme.cardBg : null;
+    // 1. Await all fonts to ensure custom font glyphs (Arial, Inter, JetBrains) are 100% loaded
+    if (document.fonts) {
+      try {
+        await document.fonts.ready;
+      } catch (e) {
+        // Fallback gracefully
+      }
+    }
 
-    return await html2canvas(cardRef.current, {
-      scale: 3, // 3x HD resolution (e.g. 1200x1200px)
+    const el = cardRef.current;
+    // Brief layout settle
+    await new Promise(r => setTimeout(r, 60));
+
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
+
+    const bgColor = format === 'jpeg' ? (isCardLight ? '#ffffff' : currentTheme.cardBg) : null;
+
+    return await html2canvas(el, {
+      scale: 3, // 3x HD resolution (e.g. 1620x930px for banner)
       useCORS: true,
       allowTaint: true,
       backgroundColor: bgColor,
       logging: false,
       imageTimeout: 0,
+      scrollX: 0,
+      scrollY: 0,
+      width: width,
+      height: height,
+      windowWidth: document.documentElement.offsetWidth,
+      windowHeight: document.documentElement.offsetHeight,
       onclone: (clonedDoc) => {
         const clonedCard = clonedDoc.querySelector('[data-share-card="true"]');
         if (clonedCard instanceof HTMLElement) {
           clonedCard.style.transition = 'none';
           clonedCard.style.transform = 'none';
+          clonedCard.style.boxShadow = 'none';
+          clonedCard.style.width = `${width}px`;
+          clonedCard.style.height = `${height}px`;
+          clonedCard.style.maxWidth = `${width}px`;
+          clonedCard.style.maxHeight = `${height}px`;
+
+          // Ensure no nested truncation or line-height clipping in html2canvas
+          const allTextNodes = clonedCard.querySelectorAll('.font-mono, [class*="statsBox"] > div');
+          allTextNodes.forEach(node => {
+            if (node instanceof HTMLElement) {
+              node.style.overflow = 'visible';
+              node.style.textOverflow = 'clip';
+              if (!node.style.lineHeight || node.style.lineHeight === 'normal') {
+                node.style.lineHeight = '1.35';
+              }
+            }
+          });
         }
       }
     });
@@ -487,12 +526,12 @@ export const ShareCardsPage: React.FC = () => {
             <div
               ref={cardRef}
               data-share-card="true"
-              className={`p-6 sm:p-7 rounded-[28px] border transition-all flex flex-col justify-between relative overflow-hidden select-none ${currentTheme.container} ${
+              className={`rounded-[28px] border transition-all flex flex-col justify-between relative overflow-hidden select-none ${currentTheme.container} ${
                 aspect === 'square'
-                  ? 'w-[400px] h-[400px]'
+                  ? 'w-[420px] h-[420px] p-6 sm:p-7'
                   : aspect === 'story'
-                  ? 'w-[330px] h-[580px]'
-                  : 'w-[520px] h-[290px]'
+                  ? 'w-[340px] h-[600px] p-6 sm:p-7'
+                  : 'w-[540px] h-[310px] p-5 sm:p-6'
               }`}
               style={{
                 backgroundColor: currentTheme.cardBg
@@ -601,37 +640,37 @@ export const ShareCardsPage: React.FC = () => {
                   {/* 2x2 High-Performance Stats Matrix */}
                   <div className="grid grid-cols-2 gap-2 pt-0.5">
                     <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
                         Entry Price
                       </div>
-                      <div className="text-sm font-mono font-bold">
+                      <div className="text-sm font-mono font-bold leading-normal">
                         ${formatPrice(trade.entryPrice, trade.symbol)}
                       </div>
                     </div>
 
                     <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
                         Exit Price
                       </div>
-                      <div className="text-sm font-mono font-bold">
+                      <div className="text-sm font-mono font-bold leading-normal">
                         {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Closed @ Market'}
                       </div>
                     </div>
 
                     <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
                         Risk : Reward
                       </div>
-                      <div className="text-sm font-mono font-bold">
+                      <div className="text-sm font-mono font-bold leading-normal">
                         {getRiskReward(trade)}
                       </div>
                     </div>
 
                     <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
                         Duration / Time
                       </div>
-                      <div className="text-sm font-mono font-bold">
+                      <div className="text-sm font-mono font-bold leading-normal">
                         {formatDuration(trade)}
                       </div>
                     </div>
@@ -682,7 +721,7 @@ export const ShareCardsPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className={`text-4xl font-black font-mono tracking-tight ${
+                    <div className={`text-4xl font-black font-mono tracking-tight leading-tight py-0.5 ${
                       isWin
                         ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
                         : isCardLight ? 'text-rose-600' : 'text-rose-400'
@@ -690,7 +729,7 @@ export const ShareCardsPage: React.FC = () => {
                       {formatCurrency(trade.netPnl)}
                     </div>
 
-                    <div className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                    <div className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-md border leading-normal ${
                       isWin
                         ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                         : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
@@ -700,36 +739,36 @@ export const ShareCardsPage: React.FC = () => {
                   </div>
 
                   {/* Right Column: 2x2 Matrix */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
                         Entry
                       </div>
-                      <div className="text-xs font-mono font-bold truncate">
+                      <div className="text-xs font-mono font-bold leading-normal whitespace-nowrap overflow-visible">
                         ${formatPrice(trade.entryPrice, trade.symbol)}
                       </div>
                     </div>
-                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
                         Exit
                       </div>
-                      <div className="text-xs font-mono font-bold truncate">
+                      <div className="text-xs font-mono font-bold leading-normal whitespace-nowrap overflow-visible">
                         {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Market'}
                       </div>
                     </div>
-                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
                         R:R
                       </div>
-                      <div className="text-xs font-mono font-bold">
+                      <div className="text-xs font-mono font-bold leading-normal">
                         {getRiskReward(trade)}
                       </div>
                     </div>
-                    <div className={`p-2 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-wider mb-0.5 ${currentTheme.statsLabel}`}>
+                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
+                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
                         Duration
                       </div>
-                      <div className="text-xs font-mono font-bold">
+                      <div className="text-xs font-mono font-bold leading-normal">
                         {formatDuration(trade)}
                       </div>
                     </div>
@@ -738,16 +777,16 @@ export const ShareCardsPage: React.FC = () => {
               )}
 
               {/* CARD FOOTER */}
-              <div className="mt-auto z-10 w-full pt-2">
-                <div className={`w-full h-[1px] mb-2.5 ${currentTheme.divider}`} />
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] flex items-center gap-1.5 min-w-0 flex-1 truncate">
+              <div className="mt-auto z-10 w-full pt-1.5">
+                <div className={`w-full h-[1px] mb-2 ${currentTheme.divider}`} />
+                <div className="flex items-center justify-between gap-2 text-[10.5px] leading-normal">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     <span className={isCardLight ? 'text-slate-500' : 'text-slate-400'}>Strategy:</span>
-                    <strong className={`truncate font-bold ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                    <strong className={`font-bold ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
                       {trade.strategyName || 'Price Action'}
                     </strong>
                   </div>
-                  <div className={`text-[10px] font-bold tracking-wide flex items-center gap-1 shrink-0 ${currentTheme.brandTag}`}>
+                  <div className={`font-bold tracking-normal flex items-center gap-1 shrink-0 ${currentTheme.brandTag}`}>
                     <span>traderzone.live</span>
                     <ShieldCheck className="w-3 h-3 text-emerald-500" />
                   </div>
