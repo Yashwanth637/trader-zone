@@ -1,5 +1,5 @@
 import React from 'react';
-import { BacktestTrade, BacktestStats } from '../../types/backtest';
+import { BacktestTrade, BacktestStats, BacktestPosition } from '../../types/backtest';
 import { formatCurrency } from '../../lib/calculations';
 import {
   TrendingUp,
@@ -9,19 +9,30 @@ import {
   Hand,
   Trash2,
   Download,
-  BarChart2
+  BarChart2,
+  XCircle,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 interface BacktestTradeLogProps {
   trades: BacktestTrade[];
   stats: BacktestStats;
+  openPosition?: BacktestPosition | null;
+  onClosePosition?: () => void;
+  onMoveToBreakeven?: () => void;
   onClearTrades: () => void;
+  onDeleteTrade?: (tradeId: string) => void;
 }
 
 export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
   trades,
   stats,
-  onClearTrades
+  openPosition,
+  onClosePosition,
+  onMoveToBreakeven,
+  onClearTrades,
+  onDeleteTrade
 }) => {
   const exportTradesCSV = () => {
     if (trades.length === 0) return;
@@ -144,6 +155,60 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
         </div>
       </div>
 
+      {/* Active Open Position Action Banner (Item 3: Option to close current trade) */}
+      {openPosition && onClosePosition && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary animate-pulse" />
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                  openPosition.side === 'BUY'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                OPEN {openPosition.side}
+              </span>
+              <span className="text-xs text-foreground font-semibold">
+                Entry: {openPosition.entryPrice}
+              </span>
+              <span
+                className={`text-xs font-bold ${
+                  openPosition.currentPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
+                ({openPosition.currentPnl >= 0 ? '+' : ''}{formatCurrency(openPosition.currentPnl)} / {openPosition.currentR}R)
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {onMoveToBreakeven && (
+              <button
+                type="button"
+                onClick={onMoveToBreakeven}
+                disabled={openPosition.isBreakEven}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-surface hover:bg-surface-elevated border border-border/40 text-muted hover:text-foreground disabled:opacity-40 transition-colors flex items-center gap-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                <span>{openPosition.isBreakEven ? 'At BE' : 'Breakeven'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClosePosition}
+              className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Close Trade Now</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header & Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -178,7 +243,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Clear Trades</span>
+                <span>Clear All</span>
               </button>
             </>
           )}
@@ -205,6 +270,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                 <th className="py-2 px-3">Exit Type</th>
                 <th className="py-2 px-3 text-right">R-Multiple</th>
                 <th className="py-2 px-3 text-right">Net P&L</th>
+                <th className="py-2 px-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 dark:divide-white/[0.06]">
@@ -213,7 +279,7 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                 const isLoss = trade.netPnl < -0.01;
 
                 return (
-                  <tr key={trade.id || idx} className="hover:bg-surface-elevated/40 transition-colors">
+                  <tr key={trade.id || idx} className="hover:bg-surface-elevated/40 transition-colors group">
                     <td className="py-2.5 px-3">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -270,6 +336,18 @@ export const BacktestTradeLog: React.FC<BacktestTradeLogProps> = ({
                     >
                       {trade.netPnl >= 0 ? '+' : ''}
                       {formatCurrency(trade.netPnl)}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      {onDeleteTrade && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteTrade(trade.id)}
+                          title="Delete this trade"
+                          className="p-1 rounded text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

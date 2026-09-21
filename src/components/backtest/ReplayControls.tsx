@@ -6,7 +6,10 @@ import {
   SkipForward,
   RotateCcw,
   Scissors,
-  Calendar
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 
 interface ReplayControlsProps {
@@ -42,20 +45,45 @@ export const ReplayControls: React.FC<ReplayControlsProps> = ({
   currentBarTimeFormatted,
   onJumpToDate
 }) => {
-  const [dateInput, setDateInput] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Calendar State
+  const [viewDate, setViewDate] = useState(() => new Date());
 
   const speedOptions = [0.5, 1, 2, 5, 10];
 
-  const handleDateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dateInput) return;
-    const d = new Date(dateInput);
-    if (!isNaN(d.getTime())) {
-      onJumpToDate(d);
-      setShowDatePicker(false);
-    }
+  // Month navigation
+  const prevMonth = () => {
+    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
   };
+
+  const nextMonth = () => {
+    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
+  };
+
+  const handleSelectDay = (day: number) => {
+    const selected = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12, 0, 0);
+    onJumpToDate(selected);
+    setShowDatePicker(false);
+  };
+
+  const handleQuickPreset = (monthsAgo: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - monthsAgo);
+    onJumpToDate(d);
+    setShowDatePicker(false);
+  };
+
+  // Calendar Grid Calculation
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2.5 bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] rounded-2xl shadow-xl">
@@ -173,42 +201,103 @@ export const ReplayControls: React.FC<ReplayControlsProps> = ({
         <button
           type="button"
           onClick={() => setShowDatePicker(!showDatePicker)}
-          title="Jump to Specific Historic Date (e.g. 1 year ago)"
-          className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors"
+          title="Jump to Specific Historic Date (Open Calendar)"
+          className={`p-2 rounded-xl border transition-colors ${
+            showDatePicker
+              ? 'bg-primary text-white border-primary'
+              : 'text-muted hover:text-foreground hover:bg-surface-elevated border-border/40 dark:border-white/[0.08]'
+          }`}
         >
           <Calendar className="w-4 h-4" />
         </button>
 
-        {/* Theme-Adaptive Calendar Popover (Item 6) */}
+        {/* Rich Interactive Visual Calendar Modal (Item 5) */}
         {showDatePicker && (
-          <div className="absolute right-0 bottom-full mb-2 p-3 bg-surface border border-border/60 dark:border-white/[0.12] rounded-xl shadow-2xl z-50 min-w-[240px]">
-            <form onSubmit={handleDateSubmit} className="space-y-2.5">
-              <label className="block text-[11px] font-semibold text-foreground">
-                Jump to Historical Date
-              </label>
-              <input
-                type="date"
-                value={dateInput}
-                onChange={e => setDateInput(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-lg bg-surface-card border border-border/60 dark:border-white/[0.1] text-foreground text-xs focus:outline-none focus:border-primary transition-colors"
-                style={{ fontFamily: 'Arial, sans-serif' }}
-              />
-              <div className="flex justify-end gap-1.5 pt-1">
+          <div className="absolute right-0 bottom-full mb-3 p-4 bg-surface border border-border/60 dark:border-white/[0.12] rounded-2xl shadow-2xl z-50 w-72 sm:w-80 animate-in fade-in zoom-in-95 duration-150 select-none">
+            {/* Calendar Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-border/40 dark:border-white/[0.06] mb-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-foreground">
+                  {monthNames[month]} {year}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-elevated"
+                  title="Previous Month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-elevated"
+                  title="Next Month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowDatePicker(false)}
-                  className="px-2.5 py-1 text-xs text-muted hover:text-foreground"
+                  className="p-1 rounded-lg text-muted hover:text-rose-400 hover:bg-rose-500/10 ml-1"
+                  title="Close"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg"
-                >
-                  Jump
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              {[
+                { label: '1M Ago', months: 1 },
+                { label: '3M Ago', months: 3 },
+                { label: '6M Ago', months: 6 },
+                { label: '1Y Ago', months: 12 }
+              ].map(preset => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => handleQuickPreset(preset.months)}
+                  className="py-1 px-1.5 rounded-lg text-[10px] font-bold bg-surface-elevated hover:bg-primary/20 text-muted hover:text-primary border border-border/40 dark:border-white/[0.06] transition-colors"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Days of Week */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted mb-1.5">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                <div key={d} className="py-0.5">{d}</div>
+              ))}
+            </div>
+
+            {/* Interactive Day Grid */}
+            <div className="grid grid-cols-7 gap-1 text-center text-xs">
+              {/* Blank cells for offset */}
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <div key={`empty-${i}`} className="p-1.5 text-transparent">0</div>
+              ))}
+
+              {/* Days of current month */}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const dayNum = i + 1;
+                return (
+                  <button
+                    key={dayNum}
+                    type="button"
+                    onClick={() => handleSelectDay(dayNum)}
+                    className="p-1.5 rounded-lg font-medium text-foreground hover:bg-primary hover:text-white transition-all text-center"
+                    style={{ fontFamily: 'Arial, sans-serif' }}
+                  >
+                    {dayNum}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

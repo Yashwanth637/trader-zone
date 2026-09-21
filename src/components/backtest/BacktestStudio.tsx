@@ -296,6 +296,11 @@ export const BacktestStudio: React.FC = () => {
     syncEngineState();
   };
 
+  const handleDeleteTrade = (tradeId: string) => {
+    engineRef.current.deleteTrade(tradeId);
+    syncEngineState();
+  };
+
   // Sync position tool with order panel
   const handleApplyPositionToOrder = (entry: number, sl: number, tp: number, side: TradeSide) => {
     setPresetOrderParams({ entry, sl, tp, side });
@@ -560,7 +565,11 @@ export const BacktestStudio: React.FC = () => {
         <BacktestTradeLog
           trades={engineState.closedTrades}
           stats={engineState.stats}
+          openPosition={engineState.openPosition}
+          onClosePosition={handleClosePosition}
+          onMoveToBreakeven={handleMoveToBreakeven}
           onClearTrades={handleClearTrades}
+          onDeleteTrade={handleDeleteTrade}
         />
       </div>
     </div>

@@ -274,6 +274,19 @@ export class BacktestEngine {
   }
 
   /**
+   * Delete an individual trade from closed trades and adjust balance
+   */
+  public deleteTrade(tradeId: string): boolean {
+    const idx = this.closedTrades.findIndex(t => t.id === tradeId);
+    if (idx === -1) return false;
+    const trade = this.closedTrades[idx];
+    this.balance = parseFloat((this.balance - trade.netPnl).toFixed(2));
+    this.equity = this.balance;
+    this.closedTrades.splice(idx, 1);
+    return true;
+  }
+
+  /**
    * Update Stop Loss and/or Take Profit on active position (e.g. via on-chart drag)
    */
   public updatePositionSlTp(stopLoss?: number, takeProfit?: number): void {
