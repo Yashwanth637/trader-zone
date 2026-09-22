@@ -72,8 +72,9 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     currentPrice: number;
   } | null>(null);
 
-  // Cut Bar Hover Animation State (Item 4)
+  // Cut Bar Hover Animation State (Item 4 & Image 1)
   const [cutHoverX, setCutHoverX] = useState<number | null>(null);
+  const [cutHoverY, setCutHoverY] = useState<number | null>(null);
   const [cutHoverDate, setCutHoverDate] = useState<string | null>(null);
 
   // Initialize Lightweight Chart
@@ -280,21 +281,45 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     }
   }, [openPosition]);
 
-  // Cut Bar Hover & Click Handling with Animation (Item 4)
+  // Cut Bar Hover & Click Handling with Animation (TradingView Style - Image 1)
   const handleChartMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || !chartRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (isCutMode) {
-      setCutHoverX(x);
+      setCutHoverY(y);
       const time = chartRef.current.timeScale().coordinateToTime(x) as number | null;
-      if (time !== null) {
-        const d = new Date(time * 1000);
-        setCutHoverDate(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+      if (time !== null && candles.length > 0) {
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < candles.length; i++) {
+          const diff = Math.abs(candles[i].time - time);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        }
+        const candleCoord = chartRef.current.timeScale().timeToCoordinate(candles[closestIdx].time as any);
+        setCutHoverX(candleCoord !== null && !isNaN(candleCoord) ? candleCoord : x);
+
+        const d = new Date(candles[closestIdx].time * 1000);
+        const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const day = d.toLocaleDateString('en-US', { day: '2-digit' });
+        const month = d.toLocaleDateString('en-US', { month: 'short' });
+        const year = "'" + d.toLocaleDateString('en-US', { year: '2-digit' });
+        const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        setCutHoverDate(`Re: ${weekday} ${day} ${month} ${year} ${timeStr}`);
+      } else {
+        setCutHoverX(x);
       }
     } else {
-      if (cutHoverX !== null) setCutHoverX(null);
+      if (cutHoverX !== null) {
+        setCutHoverX(null);
+        setCutHoverY(null);
+        setCutHoverDate(null);
+      }
     }
   };
 
@@ -318,46 +343,52 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       }
 
       setCutHoverX(null);
+      setCutHoverY(null);
       setCutHoverDate(null);
       onCutAtBar(closestIdx);
     }
   };
 
-  // Drag & Drop SL / TP / Limit Orders System (Item 1)
+  // Drag & Drop SL / TP / Limit Orders System
   const handleStartDrag = (type: 'SL' | 'TP' | 'LIMIT', orderId?: string, initPrice?: number) => (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
     setActiveDrag({ type, orderId, currentPrice: initPrice || 0 });
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const handlePointerMoveDrag = (e: React.PointerEvent) => {
-    if (!activeDrag || !seriesRef.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const price = seriesRef.current.coordinateToPrice(y);
-    if (price === null) return;
+  useEffect(() => {
+    if (!activeDrag) return;
 
-    const roundedPrice = parseFloat(price.toFixed(2));
-    setActiveDrag(prev => prev ? { ...prev, currentPrice: roundedPrice } : null);
+    const onPointerMove = (e: PointerEvent) => {
+      if (!seriesRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const price = seriesRef.current.coordinateToPrice(y);
+      if (price === null) return;
 
-    if (activeDrag.type === 'SL' && onModifyPosition) {
-      onModifyPosition({ stopLoss: roundedPrice });
-    } else if (activeDrag.type === 'TP' && onModifyPosition) {
-      onModifyPosition({ takeProfit: roundedPrice });
-    } else if (activeDrag.type === 'LIMIT' && activeDrag.orderId && onModifyLimitOrder) {
-      onModifyLimitOrder(activeDrag.orderId, roundedPrice);
-    }
-  };
+      const roundedPrice = parseFloat(price.toFixed(2));
+      setActiveDrag(prev => prev ? { ...prev, currentPrice: roundedPrice } : null);
 
-  const handlePointerUpDrag = (e: React.PointerEvent) => {
-    if (activeDrag) {
+      if (activeDrag.type === 'SL' && onModifyPosition) {
+        onModifyPosition({ stopLoss: roundedPrice });
+      } else if (activeDrag.type === 'TP' && onModifyPosition) {
+        onModifyPosition({ takeProfit: roundedPrice });
+      } else if (activeDrag.type === 'LIMIT' && activeDrag.orderId && onModifyLimitOrder) {
+        onModifyLimitOrder(activeDrag.orderId, roundedPrice);
+      }
+    };
+
+    const onPointerUp = () => {
       setActiveDrag(null);
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch (err) {}
-    }
-  };
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, [activeDrag, onModifyPosition, onModifyLimitOrder]);
 
   // Calculate live SVG screen coordinates for SL / TP lines
   const slY = openPosition?.stopLoss !== undefined && seriesRef.current
@@ -379,7 +410,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       }`}
       onClick={handleChartClick}
       onMouseMove={handleChartMouseMove}
-      onMouseLeave={() => { if (isCutMode) setCutHoverX(null); }}
+      onMouseLeave={() => { if (isCutMode) { setCutHoverX(null); setCutHoverY(null); } }}
     >
       {/* Lightweight Charts DOM Canvas */}
       <div ref={containerRef} className="w-full h-full" />
@@ -399,7 +430,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         onApplyPositionToOrder={onApplyPositionToOrder}
       />
 
-      {/* Item 4: Cut Bar Animation & Future Candles Fading Overlay */}
+      {/* Item 4: TradingView Bar Replay Cut Animation (Image 1) */}
       {isCutMode && cutHoverX !== null && (
         <svg
           className="absolute inset-0 pointer-events-none z-25"
@@ -411,59 +442,59 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
             y={0}
             width={Math.max(0, dimensions.width - cutHoverX)}
             height={dimensions.height}
-            fill="rgba(5, 7, 15, 0.72)"
+            fill={isDark ? 'rgba(0, 0, 0, 0.65)' : 'rgba(255, 255, 255, 0.72)'}
             className="transition-opacity duration-150"
           />
 
-          {/* Vertical Cyan/Rose Cutting Line */}
+          {/* Thin Solid TradingView Blue Cutting Line (#2962ff) */}
           <line
             x1={cutHoverX}
             y1={0}
             x2={cutHoverX}
             y2={dimensions.height}
-            stroke="#38bdf8"
-            strokeWidth={2}
-            strokeDasharray="5 3"
+            stroke="#2962ff"
+            strokeWidth={1.5}
           />
 
-          {/* Scissor / Cut Indicator Badge */}
-          <g transform={`translate(${Math.max(10, Math.min(dimensions.width - 180, cutHoverX - 80))}, 18)`}>
-            <rect
-              width={160}
-              height={28}
-              rx={14}
-              fill="#0284c7"
-              stroke="#bae6fd"
-              strokeWidth={1.5}
-              className="drop-shadow-lg"
-            />
-            <text
-              x={80}
-              y={18}
-              fill="#ffffff"
-              fontSize={11}
-              fontFamily="Arial, sans-serif"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              ✂ Cut Replay to This Bar
-            </text>
-          </g>
-
-          {cutHoverDate && (
-            <g transform={`translate(${Math.max(10, Math.min(dimensions.width - 140, cutHoverX - 60))}, 52)`}>
-              <rect
-                width={120}
-                height={20}
-                rx={6}
-                fill="#0f172a"
-                stroke="#38bdf8"
-                strokeWidth={1}
+          {/* Scissor ✂ Icon following mouse cursor right on the cutting line */}
+          {cutHoverY !== null && (
+            <g transform={`translate(${cutHoverX - 11}, ${Math.max(16, Math.min(dimensions.height - 48, cutHoverY - 11))})`}>
+              <circle
+                cx={11}
+                cy={11}
+                r={12}
+                fill={isDark ? '#0f172a' : '#ffffff'}
+                stroke="#2962ff"
+                strokeWidth={1.5}
+                className="drop-shadow-md"
               />
               <text
-                x={60}
-                y={14}
-                fill="#38bdf8"
+                x={11}
+                y={15}
+                fill="#2962ff"
+                fontSize={13}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                ✂
+              </text>
+            </g>
+          )}
+
+          {/* Time Axis Blue Date Pill: Re: Tue 22 Sep '26 07:05 PM */}
+          {cutHoverDate && (
+            <g transform={`translate(${Math.max(6, Math.min(dimensions.width - 210, cutHoverX - 95))}, ${dimensions.height - 25})`}>
+              <rect
+                width={190}
+                height={22}
+                rx={4}
+                fill="#2962ff"
+                className="drop-shadow-md"
+              />
+              <text
+                x={95}
+                y={15}
+                fill="#ffffff"
                 fontSize={10}
                 fontFamily="Arial, sans-serif"
                 fontWeight="bold"
@@ -522,8 +553,6 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
           <g
             className="pointer-events-auto cursor-ns-resize group"
             onPointerDown={handleStartDrag('SL', undefined, openPosition.stopLoss)}
-            onPointerMove={handlePointerMoveDrag}
-            onPointerUp={handlePointerUpDrag}
           >
             {/* Wide Invisible Hit Zone for Effortless Grabbing Anywhere on Line */}
             <line
@@ -578,8 +607,6 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
           <g
             className="pointer-events-auto cursor-ns-resize group"
             onPointerDown={handleStartDrag('TP', undefined, openPosition.takeProfit)}
-            onPointerMove={handlePointerMoveDrag}
-            onPointerUp={handlePointerUpDrag}
           >
             {/* Wide Invisible Hit Zone */}
             <line
@@ -640,8 +667,6 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
               key={order.id}
               className="pointer-events-auto cursor-ns-resize group"
               onPointerDown={handleStartDrag('LIMIT', order.id, order.price)}
-              onPointerMove={handlePointerMoveDrag}
-              onPointerUp={handlePointerUpDrag}
             >
               <line
                 x1={0}

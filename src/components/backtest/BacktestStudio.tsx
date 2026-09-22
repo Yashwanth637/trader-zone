@@ -140,6 +140,9 @@ export const BacktestStudio: React.FC = () => {
         engineRef.current.timeframe = selectedTimeframe;
         engineRef.current.strategyName = strategyName;
         engineRef.current.currentCandle = res.candles[startIndex];
+        engineRef.current.openPosition = null;
+        engineRef.current.pendingOrders = [];
+        setPresetOrderParams(null);
         syncEngineState();
       }
     } catch (err: any) {

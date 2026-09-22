@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BacktestPosition,
   BacktestOrder,
@@ -54,6 +54,7 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
   onMoveToBreakeven,
   onCancelOrder,
   onResetCapital,
+  symbol,
   presetOrderParams
 }) => {
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
@@ -67,6 +68,8 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
   const [showCapitalModal, setShowCapitalModal] = useState<boolean>(false);
 
   const currentPrice = currentCandle ? currentCandle.close : 0;
+  const prevSymbolRef = useRef(symbol);
+  const prevSideRef = useRef(side);
 
   // Sync preset parameters from chart Long/Short drawing tool if available
   useEffect(() => {
@@ -92,19 +95,38 @@ export const BacktestOrderPanel: React.FC<BacktestOrderPanelProps> = ({
     }
   }, [openPosition?.stopLoss, openPosition?.takeProfit]);
 
-  // Set default SL/TP when switching side if empty
+  // Helper to format price with appropriate decimal precision based on asset magnitude
+  const formatPrice = useCallback((val: number) => {
+    if (!val || isNaN(val)) return '0.00';
+    if (val < 2) return val.toFixed(4);
+    if (val < 100) return val.toFixed(3);
+    return val.toFixed(2);
+  }, []);
+
+  // Reset SL & TP whenever symbol changes, side changes, or scale mismatch is detected (e.g. BTC 100k -> Gold 3.8k)
   useEffect(() => {
-    if (currentPrice > 0 && !stopLoss && !takeProfit) {
-      const defaultRisk = currentPrice * 0.01;
-      if (side === 'BUY') {
-        setStopLoss((currentPrice - defaultRisk).toFixed(2));
-        setTakeProfit((currentPrice + defaultRisk * 2).toFixed(2));
-      } else {
-        setStopLoss((currentPrice + defaultRisk).toFixed(2));
-        setTakeProfit((currentPrice - defaultRisk * 2).toFixed(2));
+    const symbolChanged = prevSymbolRef.current !== symbol;
+    const sideChanged = prevSideRef.current !== side;
+    const slVal = parseFloat(stopLoss || '0');
+    const scaleMismatch = slVal > 0 && currentPrice > 0 && Math.abs(currentPrice - slVal) / currentPrice > 0.35;
+
+    if (symbolChanged || sideChanged || scaleMismatch || !stopLoss) {
+      prevSymbolRef.current = symbol;
+      prevSideRef.current = side;
+
+      if (currentPrice > 0) {
+        const defaultRisk = currentPrice * 0.01;
+        if (side === 'BUY') {
+          setStopLoss(formatPrice(currentPrice - defaultRisk));
+          setTakeProfit(formatPrice(currentPrice + defaultRisk * 2));
+        } else {
+          setStopLoss(formatPrice(currentPrice + defaultRisk));
+          setTakeProfit(formatPrice(currentPrice - defaultRisk * 2));
+        }
+        setLimitPrice(formatPrice(currentPrice));
       }
     }
-  }, [side, currentPrice, stopLoss, takeProfit]);
+  }, [symbol, side, currentPrice, formatPrice]);
 
   // Calculate position sizing
   const slNum = parseFloat(stopLoss);
