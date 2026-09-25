@@ -2232,5 +2232,41 @@ export const DEFAULT_HEATMAP_COINS: HeatmapItem[] = [
     "rank": 4,
     "category": "Gold & Metals",
     "marketType": "gold"
+  },
+  {
+    "id": "ailey",
+    "symbol": "AILEY",
+    "displaySymbol": "AILEYUSD",
+    "name": "Ailey",
+    "logoUrl": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e0009c'/%3E%3Cpath d='M50 24c-8.5 0-15 6.5-15 15 0 6.5 3.5 12 9 14v4c-7 2.5-13 8-15 16h42c-2-8-8-13.5-15-16v-4c5.5-2 9-7.5 9-14 0-8.5-6.5-15-15-15z' fill='%23ffffff'/%3E%3C/svg%3E",
+    "price": 1.25,
+    "marketCap": 95000000,
+    "volume24h": 4500000,
+    "change24h": -0.05,
+    "change1h": -0.01,
+    "change7d": 0.32,
+    "high24h": 1.28,
+    "low24h": 1.23,
+    "rank": 98,
+    "category": "DeFi",
+    "marketType": "crypto"
+  },
+  {
+    "id": "metadao",
+    "symbol": "META",
+    "displaySymbol": "METAUSD",
+    "name": "MetaDAO (new)",
+    "logoUrl": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23f87171'/%3E%3Ccircle cx='50' cy='50' r='28' fill='%23ffffff'/%3E%3Ccircle cx='50' cy='50' r='16' fill='%23ef4444'/%3E%3Cpath d='M44 56L56 44M56 44H47M56 44V53' stroke='%23ffffff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+    "price": 42.6,
+    "marketCap": 115000000,
+    "volume24h": 6800000,
+    "change24h": -0.67,
+    "change1h": -0.12,
+    "change7d": -1.45,
+    "high24h": 44.1,
+    "low24h": 41.8,
+    "rank": 99,
+    "category": "DeFi",
+    "marketType": "crypto"
   }
 ];

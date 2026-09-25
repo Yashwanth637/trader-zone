@@ -30,6 +30,8 @@ const CoinLogo: React.FC<{
     if (symbolUpper === 'BNB') return 'bg-[#f3ba2f] text-black';
     if (symbolUpper === 'XRP') return 'bg-[#23292f] text-white';
     if (symbolUpper === 'DOGE') return 'bg-[#c2a633] text-white';
+    if (symbolUpper === 'AILEY') return 'bg-[#e0009c] text-white';
+    if (symbolUpper === 'META') return 'bg-[#f87171] text-white';
     if (symbolUpper.includes('GOLD') || symbolUpper.includes('XAU') || symbolUpper.includes('PAXG') || symbolUpper.includes('XAUT')) {
       return 'bg-gradient-to-tr from-amber-500 to-yellow-300 text-black';
     }
@@ -57,7 +59,7 @@ const CoinLogo: React.FC<{
       alt={symbol}
       loading="eager"
       decoding="async"
-      className="rounded-full object-cover shrink-0 shadow-sm ring-1 ring-black/25 dark:ring-white/20 select-none"
+      className="rounded-full object-cover shrink-0 shadow-sm ring-1 ring-black/10 dark:ring-white/20 select-none"
       style={{
         width: `${size}px`,
         height: `${size}px`
@@ -86,7 +88,9 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Focused Coin / Category Zoom State
+  // Active / Selected Coin State
+  const [activeCoinId, setActiveCoinId] = useState<string | null>(null);
+  const [hoveredCoinId, setHoveredCoinId] = useState<string | null>(null);
   const [focusedCoin, setFocusedCoin] = useState<HeatmapItem | null>(null);
 
   // Resize Observer for responsive canvas dimensions
@@ -146,10 +150,10 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     e.preventDefault();
     if (!containerRef.current) return;
 
-    const zoomFactor = e.deltaY < 0 ? 1.18 : 0.85;
-    const newZoom = Math.min(6, Math.max(1, zoomLevel * zoomFactor));
+    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+    const newZoom = Math.min(8, Math.max(1, zoomLevel * zoomFactor));
 
-    if (newZoom === 1) {
+    if (newZoom <= 1.02) {
       setPanOffset({ x: 0, y: 0 });
       setZoomLevel(1);
       return;
@@ -159,11 +163,23 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
 
-    const newPanX = cursorX - (cursorX - panOffset.x) * (newZoom / zoomLevel);
-    const newPanY = cursorY - (cursorY - panOffset.y) * (newZoom / zoomLevel);
+    // Fixed point in unscaled canvas coordinates:
+    const canvasX = (cursorX - panOffset.x) / zoomLevel;
+    const canvasY = (cursorY - panOffset.y) / zoomLevel;
+
+    // After zooming, keep that point at the cursor:
+    const newPanX = cursorX - canvasX * newZoom;
+    const newPanY = cursorY - canvasY * newZoom;
+
+    // Prevent excessive panning off-canvas
+    const minPanX = dimensions.width - dimensions.width * newZoom;
+    const minPanY = dimensions.height - dimensions.height * newZoom;
 
     setZoomLevel(newZoom);
-    setPanOffset({ x: newPanX, y: newPanY });
+    setPanOffset({
+      x: Math.min(80, Math.max(minPanX - 80, newPanX)),
+      y: Math.min(80, Math.max(minPanY - 80, newPanY))
+    });
   };
 
   // Handle Pan Click & Drag
@@ -177,9 +193,13 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
+      const minPanX = dimensions.width - dimensions.width * zoomLevel;
+      const minPanY = dimensions.height - dimensions.height * zoomLevel;
+      const newPanX = e.clientX - dragStart.x;
+      const newPanY = e.clientY - dragStart.y;
       setPanOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        x: Math.min(100, Math.max(minPanX - 100, newPanX)),
+        y: Math.min(100, Math.max(minPanY - 100, newPanY))
       });
     }
   };
@@ -195,11 +215,14 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     setFocusedCoin(null);
   }, []);
 
-  // Zoom into specific coin
+  // Zoom into specific coin on click
   const handleCoinClick = (item: HeatmapItem, rect: TreemapRect<HeatmapItem>) => {
-    if (zoomLevel < 2) {
+    setActiveCoinId(item.id);
+    onHoverItem(item);
+
+    if (zoomLevel < 1.8) {
       setFocusedCoin(item);
-      const targetZoom = 2.8;
+      const targetZoom = 3.2;
       const centerX = rect.x + rect.width / 2;
       const centerY = rect.y + rect.height / 2;
 
@@ -208,8 +231,6 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
         x: dimensions.width / 2 - centerX * targetZoom,
         y: dimensions.height / 2 - centerY * targetZoom
       });
-    } else {
-      if (onSelectItem) onSelectItem(item);
     }
   };
 
@@ -224,11 +245,15 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
       onMouseLeave={() => {
         handleMouseUp();
         onHoverItem(null);
+        setHoveredCoinId(null);
+      }}
+      style={{
+        cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'
       }}
     >
       {/* Zoom / Drill-down Status Breadcrumb Banner */}
       {focusedCoin && (
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-white/95 dark:bg-[#1e222d]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white shadow-lg animate-in fade-in">
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-2 bg-white/95 dark:bg-[#1e222d]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white shadow-lg animate-in fade-in">
           <button
             onClick={resetZoom}
             className="flex items-center gap-1 text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 font-bold transition-colors"
@@ -251,16 +276,16 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
       )}
 
       {/* Floating Zoom Action Controls (Top Right) */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/95 dark:bg-[#1e222d]/85 backdrop-blur-md p-1 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white shadow-lg">
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-white/95 dark:bg-[#1e222d]/85 backdrop-blur-md p-1 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white shadow-lg">
         <button
-          onClick={() => setZoomLevel(prev => Math.min(6, prev + 0.5))}
+          onClick={() => setZoomLevel(prev => Math.min(8, prev + 0.6))}
           className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
           title="Zoom In (+)"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
-          onClick={() => setZoomLevel(prev => Math.max(1, prev - 0.5))}
+          onClick={() => setZoomLevel(prev => Math.max(1, prev - 0.6))}
           className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
           title="Zoom Out (-)"
         >
@@ -277,16 +302,27 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
         )}
       </div>
 
-      {/* Transformable Canvas Layer */}
-      <div
-        className="w-full h-full transition-transform duration-100 ease-out origin-top-left"
-        style={{
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-          cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'
-        }}
-      >
+      {/* Direct-Rendered Canvas Tiles with Dynamic Size Expansion on Zoom */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {treemapRects.map(rect => {
           const item = rect.data;
+
+          // Compute true visual screen coordinates and dimensions
+          const cardX = rect.x * zoomLevel + panOffset.x;
+          const cardY = rect.y * zoomLevel + panOffset.y;
+          const cardW = rect.width * zoomLevel;
+          const cardH = rect.height * zoomLevel;
+
+          // Viewport Culling: Skip tiles completely off-screen for maximum 60fps performance
+          if (
+            cardX + cardW < -15 ||
+            cardX > dimensions.width + 15 ||
+            cardY + cardH < -15 ||
+            cardY > dimensions.height + 15
+          ) {
+            return null;
+          }
+
           const metricChange =
             colorBy === 'change1h' && item.change1h !== undefined
               ? item.change1h
@@ -295,38 +331,79 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
               : item.change24h;
 
           const { bg, text } = getHeatmapTileColor(metricChange, isDark);
-
-          // Effective visual size on screen accounts for zoomLevel
-          const effW = rect.width * zoomLevel;
-          const effH = rect.height * zoomLevel;
-
-          const isLarge = effW >= 115 && effH >= 80;
-          const isMedium = !isLarge && effW >= 70 && effH >= 50;
-          const isSmall = !isLarge && !isMedium && effW >= 42 && effH >= 32;
-          const isTinyWithLogo = !isLarge && !isMedium && !isSmall && effW >= 14 && effH >= 14;
-
           const isPositive = metricChange >= 0;
+          const isActive = item.id === activeCoinId || item.id === hoveredCoinId;
 
-          // Adaptive logo sizes inside tile coordinate space
-          const largeLogoSize = Math.max(18, Math.min(Math.round(rect.width * 0.35), Math.round(rect.height * 0.35), 36));
-          const mediumLogoSize = Math.max(14, Math.min(Math.round(rect.width * 0.32), Math.round(rect.height * 0.32), 24));
-          const smallLogoSize = Math.max(12, Math.min(Math.round(rect.width * 0.32), Math.round(rect.height * 0.32), 18));
-          const tinyLogoSize = Math.max(10, Math.min(Math.round(rect.width * 0.72), Math.round(rect.height * 0.72), 20));
+          // Level-of-Detail (LOD) based on true card pixel dimensions:
+          // 1. Extra Large: cardW >= 180 && cardH >= 120 (Bitcoin unzoomed, or deeply zoomed coins)
+          // 2. Large: cardW >= 120 && cardH >= 80 (Image 2 style: big logo, full untruncated name, price)
+          // 3. Medium: cardW >= 78 && cardH >= 56 (Image 1 style: logo, truncated name, percentage return)
+          // 4. Compact: cardW >= 46 && cardH >= 40 (small logo, symbol, return)
+          // 5. Micro: cardW < 46 || cardH < 40 (Image 3 style: centered coin logo only)
+
+          const isExtraLarge = cardW >= 180 && cardH >= 120;
+          const isLarge = !isExtraLarge && cardW >= 120 && cardH >= 80;
+          const isMedium = !isExtraLarge && !isLarge && cardW >= 78 && cardH >= 56;
+          const isCompact = !isExtraLarge && !isLarge && !isMedium && cardW >= 46 && cardH >= 40;
+          const isMicro = !isExtraLarge && !isLarge && !isMedium && !isCompact && cardW >= 16 && cardH >= 16;
+
+          // Dynamic Logo Sizes scaling proportionally with true card dimensions
+          const logoSize = isExtraLarge
+            ? Math.max(48, Math.min(Math.round(cardW * 0.28), Math.round(cardH * 0.28), 68))
+            : isLarge
+            ? Math.max(34, Math.min(Math.round(cardW * 0.32), Math.round(cardH * 0.28), 54))
+            : isMedium
+            ? Math.max(24, Math.min(Math.round(cardW * 0.34), Math.round(cardH * 0.32), 38))
+            : isCompact
+            ? Math.max(16, Math.min(Math.round(cardW * 0.34), Math.round(cardH * 0.32), 26))
+            : Math.max(14, Math.min(Math.round(cardW * 0.72), Math.round(cardH * 0.72), 28));
+
+          // Dynamic typography scaling based on card pixel width
+          const nameFontSize = isExtraLarge
+            ? Math.max(15, Math.min(20, Math.round(cardW * 0.08)))
+            : isLarge
+            ? Math.max(13, Math.min(16, Math.round(cardW * 0.10)))
+            : isMedium
+            ? Math.max(11, Math.min(14, Math.round(cardW * 0.12)))
+            : Math.max(9, Math.min(12, Math.round(cardW * 0.14)));
+
+          const returnFontSize = isExtraLarge
+            ? Math.max(18, Math.min(26, Math.round(cardW * 0.11)))
+            : isLarge
+            ? Math.max(15, Math.min(20, Math.round(cardW * 0.12)))
+            : isMedium
+            ? Math.max(12, Math.min(16, Math.round(cardW * 0.13)))
+            : Math.max(10, Math.min(12, Math.round(cardW * 0.14)));
+
+          const priceFontSize = Math.max(10, Math.min(15, Math.round(cardW * 0.085)));
+          const textShadowStyle = text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none';
 
           return (
             <div
               key={rect.id}
-              className="absolute overflow-hidden transition-colors border border-black/40 dark:border-black/50 cursor-pointer group hover:brightness-110 active:brightness-95"
+              className={`absolute overflow-hidden cursor-pointer transition-colors pointer-events-auto select-none ${
+                isActive
+                  ? 'ring-2 ring-[#2962ff] z-20 shadow-xl'
+                  : 'border-[1.5px] border-white/95 dark:border-white/80'
+              } hover:brightness-110 active:brightness-95`}
               style={{
-                left: `${rect.x}px`,
-                top: `${rect.y}px`,
-                width: `${rect.width}px`,
-                height: `${rect.height}px`,
+                left: `${cardX}px`,
+                top: `${cardY}px`,
+                width: `${cardW}px`,
+                height: `${cardH}px`,
                 backgroundColor: bg,
                 color: text
               }}
-              onMouseEnter={(e) => onHoverItem(item, { x: e.clientX, y: e.clientY })}
-              onMouseMove={(e) => onHoverItem(item, { x: e.clientX, y: e.clientY })}
+              onMouseEnter={(e) => {
+                setHoveredCoinId(item.id);
+                onHoverItem(item, { x: e.clientX, y: e.clientY });
+              }}
+              onMouseMove={(e) => {
+                onHoverItem(item, { x: e.clientX, y: e.clientY });
+              }}
+              onMouseLeave={() => {
+                setHoveredCoinId(null);
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleCoinClick(item, rect);
@@ -337,87 +414,127 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
               }}
             >
               {/* Tile Content Layout */}
-              <div className="w-full h-full flex flex-col items-center justify-center p-0.5 text-center select-none overflow-hidden">
-                {/* 1. Large Tiles: Full Name, Logo, Return, Price */}
-                {isLarge && (
+              <div className="w-full h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+                {/* 1. Extra Large Cards: Big Logo, Full Name, Large Return, Price, Market Cap */}
+                {isExtraLarge && (
                   <>
                     <CoinLogo
                       logoUrl={item.logoUrl}
                       name={item.name}
                       symbol={item.symbol}
-                      size={largeLogoSize}
+                      size={logoSize}
                     />
                     <span
-                      className="font-bold text-base leading-tight tracking-tight mt-1 max-w-full truncate px-1 font-['Arial',sans-serif]"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                      className="font-bold leading-tight mt-1 max-w-full truncate px-1 font-['Arial',sans-serif]"
+                      style={{ fontSize: `${nameFontSize}px`, textShadow: textShadowStyle }}
                     >
                       {item.name}
                     </span>
                     <span
-                      className="font-extrabold text-lg mt-0.5 tracking-wide font-['Arial',sans-serif]"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 3px rgba(0,0,0,0.75)' : 'none' }}
+                      className="font-extrabold tracking-wide mt-0.5 font-['Arial',sans-serif]"
+                      style={{ fontSize: `${returnFontSize}px`, textShadow: textShadowStyle }}
                     >
                       {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
                     </span>
                     <span
-                      className="text-[11px] font-bold mt-0.5 font-['Arial',sans-serif]"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                      className="font-bold mt-0.5 font-['Arial',sans-serif]"
+                      style={{ fontSize: `${priceFontSize}px`, textShadow: textShadowStyle }}
                     >
                       ${formatHeatmapPrice(item.price)}
                     </span>
                   </>
                 )}
 
-                {/* 2. Medium Tiles: Logo, Name or Symbol, Return */}
+                {/* 2. Large Cards (Image 2 style): Logo, Full Name, Return, Price */}
+                {isLarge && (
+                  <>
+                    <CoinLogo
+                      logoUrl={item.logoUrl}
+                      name={item.name}
+                      symbol={item.symbol}
+                      size={logoSize}
+                    />
+                    <span
+                      className="font-bold leading-tight mt-1 max-w-full truncate px-1 font-['Arial',sans-serif]"
+                      style={{ fontSize: `${nameFontSize}px`, textShadow: textShadowStyle }}
+                    >
+                      {item.name}
+                    </span>
+                    <span
+                      className="font-extrabold tracking-wide mt-0.5 font-['Arial',sans-serif]"
+                      style={{ fontSize: `${returnFontSize}px`, textShadow: textShadowStyle }}
+                    >
+                      {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
+                    </span>
+                    {cardH >= 105 && (
+                      <span
+                        className="font-bold mt-0.5 font-['Arial',sans-serif]"
+                        style={{ fontSize: `${priceFontSize}px`, textShadow: textShadowStyle }}
+                      >
+                        ${formatHeatmapPrice(item.price)}
+                      </span>
+                    )}
+                  </>
+                )}
+
+                {/* 3. Medium Cards (Image 1 style): Logo, Truncated Name, Return */}
                 {isMedium && (
                   <>
                     <CoinLogo
                       logoUrl={item.logoUrl}
                       name={item.name}
                       symbol={item.symbol}
-                      size={mediumLogoSize}
+                      size={logoSize}
                     />
                     <span
-                      className="font-bold text-xs leading-tight tracking-tight truncate max-w-full px-0.5 font-['Arial',sans-serif] mt-0.5"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                      className="font-bold leading-tight truncate max-w-full px-0.5 font-['Arial',sans-serif] mt-0.5"
+                      style={{ fontSize: `${nameFontSize}px`, textShadow: textShadowStyle }}
                     >
-                      {rect.width >= 85 ? item.name : item.symbol}
+                      {item.name}
                     </span>
                     <span
-                      className="font-extrabold text-xs mt-0.5 font-['Arial',sans-serif]"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.7)' : 'none' }}
+                      className="font-extrabold tracking-wide font-['Arial',sans-serif] mt-0.5"
+                      style={{ fontSize: `${returnFontSize}px`, textShadow: textShadowStyle }}
                     >
                       {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
                     </span>
+                    {cardH >= 85 && (
+                      <span
+                        className="font-bold mt-0.5 font-['Arial',sans-serif]"
+                        style={{ fontSize: `${priceFontSize}px`, textShadow: textShadowStyle }}
+                      >
+                        ${formatHeatmapPrice(item.price)}
+                      </span>
+                    )}
                   </>
                 )}
 
-                {/* 3. Small Tiles: Logo, Symbol, Return */}
-                {isSmall && (
+                {/* 4. Compact Cards: Small Logo, Symbol, Return */}
+                {isCompact && (
                   <>
                     <CoinLogo
                       logoUrl={item.logoUrl}
                       name={item.name}
                       symbol={item.symbol}
-                      size={smallLogoSize}
+                      size={logoSize}
                     />
                     <span
-                      className="font-bold text-[10px] leading-tight font-['Arial',sans-serif] mt-0.5 max-w-full truncate"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                      className="font-bold leading-tight font-['Arial',sans-serif] mt-0.5 max-w-full truncate"
+                      style={{ fontSize: `${nameFontSize}px`, textShadow: textShadowStyle }}
                     >
                       {item.symbol}
                     </span>
                     <span
-                      className="font-bold text-[9px] font-['Arial',sans-serif]"
-                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                      className="font-extrabold font-['Arial',sans-serif]"
+                      style={{ fontSize: `${returnFontSize}px`, textShadow: textShadowStyle }}
                     >
                       {isPositive ? `+${metricChange.toFixed(1)}%` : `${metricChange.toFixed(1)}%`}
                     </span>
                   </>
                 )}
 
-                {/* 4. Tiny Tiles (Image 1 Dense Right-Grid): Centered Coin Logo */}
-                {isTinyWithLogo && (
+                {/* 5. Micro Cards (Image 3 style): Centered Coin Logo Only */}
+                {isMicro && (
                   <div
                     className="w-full h-full flex items-center justify-center p-0.5"
                     title={`${item.name} (${item.displaySymbol}): ${isPositive ? '+' : ''}${metricChange.toFixed(2)}%`}
@@ -426,17 +543,9 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                       logoUrl={item.logoUrl}
                       name={item.name}
                       symbol={item.symbol}
-                      size={tinyLogoSize}
+                      size={logoSize}
                     />
                   </div>
-                )}
-
-                {/* 5. Microscopic Tiles: Minimal Color Indicator */}
-                {!isLarge && !isMedium && !isSmall && !isTinyWithLogo && (
-                  <div
-                    className="w-full h-full"
-                    title={`${item.name} (${item.displaySymbol}): ${isPositive ? '+' : ''}${metricChange.toFixed(2)}%`}
-                  />
                 )}
               </div>
             </div>
