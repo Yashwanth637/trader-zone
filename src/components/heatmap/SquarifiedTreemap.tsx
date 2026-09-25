@@ -355,8 +355,8 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
             : isMedium
             ? Math.max(24, Math.min(Math.round(cardW * 0.34), Math.round(cardH * 0.32), 38))
             : isCompact
-            ? Math.max(16, Math.min(Math.round(cardW * 0.34), Math.round(cardH * 0.32), 26))
-            : Math.max(14, Math.min(Math.round(cardW * 0.72), Math.round(cardH * 0.72), 28));
+            ? Math.max(16, Math.min(Math.round(cardW * 0.40), Math.round(cardH * 0.38), 30))
+            : Math.max(12, Math.min(Math.round(cardW - 3), Math.round(cardH - 3), 34));
 
           // Dynamic typography scaling based on card pixel width
           const nameFontSize = isExtraLarge
@@ -384,7 +384,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
               className={`absolute overflow-hidden cursor-pointer transition-colors pointer-events-auto select-none ${
                 isActive
                   ? 'ring-2 ring-[#2962ff] z-20 shadow-xl'
-                  : 'border-[1.5px] border-white/95 dark:border-white/80'
+                  : 'border-[0.5px] border-white/40 dark:border-black/40'
               } hover:brightness-110 active:brightness-95`}
               style={{
                 left: `${cardX}px`,
@@ -414,7 +414,9 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
               }}
             >
               {/* Tile Content Layout */}
-              <div className="w-full h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+              <div className={`w-full h-full flex flex-col items-center justify-center text-center overflow-hidden ${
+                isExtraLarge || isLarge ? 'p-1.5' : isMedium ? 'p-1' : isCompact ? 'p-0.5' : 'p-0'
+              }`}>
                 {/* 1. Extra Large Cards: Big Logo, Full Name, Large Return, Price, Market Cap */}
                 {isExtraLarge && (
                   <>
@@ -536,7 +538,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                 {/* 5. Micro Cards (Image 3 style): Centered Coin Logo Only */}
                 {isMicro && (
                   <div
-                    className="w-full h-full flex items-center justify-center p-0.5"
+                    className="w-full h-full flex items-center justify-center p-0"
                     title={`${item.name} (${item.displaySymbol}): ${isPositive ? '+' : ''}${metricChange.toFixed(2)}%`}
                   >
                     <CoinLogo

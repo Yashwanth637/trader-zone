@@ -13,9 +13,9 @@ export interface ColorStop {
 }
 
 export const HEATMAP_COLOR_STOPS: ColorStop[] = [
-  { percent: -13, bgDark: '#7f1d1d', bgLight: '#991b1b', textDark: '#ffffff', textLight: '#ffffff' },
-  { percent: -8,  bgDark: '#991b1b', bgLight: '#b91c1c', textDark: '#ffffff', textLight: '#ffffff' },
-  { percent: -3,  bgDark: '#dc2626', bgLight: '#dc2626', textDark: '#ffffff', textLight: '#ffffff' },
+  { percent: -13, bgDark: '#751a23', bgLight: '#7f1d1d', textDark: '#ffffff', textLight: '#ffffff' },
+  { percent: -8,  bgDark: '#992430', bgLight: '#a32936', textDark: '#ffffff', textLight: '#ffffff' },
+  { percent: -3,  bgDark: '#b33642', bgLight: '#be3c49', textDark: '#ffffff', textLight: '#ffffff' },
   { percent: 0,   bgDark: '#475569', bgLight: '#cbd5e1', textDark: '#ffffff', textLight: '#0f172a' },
   { percent: 3,   bgDark: '#16a34a', bgLight: '#16a34a', textDark: '#ffffff', textLight: '#ffffff' },
   { percent: 8,   bgDark: '#059669', bgLight: '#059669', textDark: '#ffffff', textLight: '#ffffff' },
@@ -24,7 +24,7 @@ export const HEATMAP_COLOR_STOPS: ColorStop[] = [
 
 /**
  * Returns exact background color for a given percentage change
- * Carefully calibrated to ensure high-contrast (WCAG AA/AAA) readability in both light and dark themes
+ * Carefully calibrated with dimmed, sophisticated red tones for negative performance
  */
 export function getHeatmapTileColor(changePercent: number, isDark: boolean = true): { bg: string; text: string } {
   // If virtually zero (-0.3% to +0.3%), render neutral slate grey like Bitcoin (+0.10%) in Image 1
@@ -50,16 +50,16 @@ export function getHeatmapTileColor(changePercent: number, isDark: boolean = tru
   } else {
     const abs = Math.abs(changePercent);
     if (abs >= 10) {
-      return { bg: isDark ? '#7f1d1d' : '#991b1b', text: '#ffffff' };
+      return { bg: isDark ? '#751a23' : '#7f1d1d', text: '#ffffff' };
     }
     if (abs >= 5) {
-      return { bg: isDark ? '#991b1b' : '#b91c1c', text: '#ffffff' };
+      return { bg: isDark ? '#992430' : '#a32936', text: '#ffffff' };
     }
     if (abs >= 2) {
-      return { bg: isDark ? '#b91c1c' : '#dc2626', text: '#ffffff' };
+      return { bg: isDark ? '#b33642' : '#be3c49', text: '#ffffff' };
     }
-    // Mild negative (-0.3% to -2%): In light mode use solid red #dc2626 so white text is crisp and bold
-    return { bg: isDark ? '#dc2626' : '#dc2626', text: '#ffffff' };
+    // Mild negative (-0.3% to -2%): Soft, dimmed coral red (matches TradingView & MetaDAO screenshot)
+    return { bg: isDark ? '#c54954' : '#d9535f', text: '#ffffff' };
   }
 }
 
