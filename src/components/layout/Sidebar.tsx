@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   Target,
   Flame,
-  CalendarDays
+  CalendarDays,
+  LayoutGrid
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -261,6 +262,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center justify-between w-full">
               <span>Event Calendar</span>
               <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                LIVE
+              </span>
+            </div>
+          )}
+        </NavLink>
+
+        {/* Market Heatmap (Crypto & Gold) */}
+        <NavLink
+          to="/heatmap"
+          onClick={onMobileClose}
+          className={({ isActive }) => navClass(isActive)}
+          title={collapsed ? "Market Heatmap" : undefined}
+        >
+          <LayoutGrid className="w-4 h-4 shrink-0 text-emerald-400" />
+          {!collapsed && (
+            <div className="flex items-center justify-between w-full">
+              <span>Market Heatmap</span>
+              <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 LIVE
               </span>
             </div>
