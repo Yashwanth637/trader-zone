@@ -11,9 +11,12 @@ import {
 import { HeatmapHoverPill } from '../components/heatmap/HeatmapHoverPill';
 import { HeatmapLegend } from '../components/heatmap/HeatmapLegend';
 import { CoinDetailModal } from '../components/heatmap/CoinDetailModal';
+import { useTheme } from '../context/ThemeContext';
 import html2canvas from 'html2canvas';
 
 export const MarketHeatmapPage: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [items, setItems] = useState<HeatmapItem[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [marketType, setMarketType] = useState<MarketTypeFilter>('crypto');
@@ -105,7 +108,7 @@ export const MarketHeatmapPage: React.FC = () => {
     if (!heatmapContainerRef.current) return;
     try {
       const canvas = await html2canvas(heatmapContainerRef.current, {
-        backgroundColor: '#131722',
+        backgroundColor: isDark ? '#131722' : '#f8fafc',
         scale: 2,
         useCORS: true
       });
@@ -141,7 +144,7 @@ export const MarketHeatmapPage: React.FC = () => {
       {/* Main Heatmap Canvas Area (Image 1) */}
       <div
         ref={heatmapContainerRef}
-        className="relative flex-1 w-full min-h-[460px] rounded-2xl overflow-hidden shadow-xl border border-border/40 dark:border-white/[0.08] bg-[#131722]"
+        className="relative flex-1 w-full min-h-[460px] rounded-2xl overflow-hidden shadow-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-[#131722]"
       >
         <SquarifiedTreemap
           items={filteredItems}
@@ -166,7 +169,7 @@ export const MarketHeatmapPage: React.FC = () => {
         )}
 
         {/* Bottom Left: TradingView Color Scale Legend (Image 1) */}
-        <div className="absolute bottom-3 left-3 z-20 bg-[#1e222d]/85 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10 shadow-lg pointer-events-auto">
+        <div className="absolute bottom-3 left-3 z-20 bg-white/95 dark:bg-[#1e222d]/85 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 shadow-lg pointer-events-auto">
           <HeatmapLegend />
         </div>
       </div>

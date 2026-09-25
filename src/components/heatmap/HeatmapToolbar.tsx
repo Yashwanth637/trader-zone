@@ -78,7 +78,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
               }`}
             >
               <span>Crypto Coins Heatmap</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">100+</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold">100+</span>
             </button>
 
             <button
@@ -91,7 +91,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
               }`}
             >
               <span>Gold & Metals Heatmap</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold">Gold</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-amber-800 dark:text-yellow-400 font-bold">Gold</span>
             </button>
 
             <button
@@ -104,7 +104,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
               }`}
             >
               <span>All Markets (Crypto + Gold)</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Combined</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold">Combined</span>
             </button>
           </div>
         )}
@@ -113,16 +113,16 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
       {/* Middle & Right Controls: Category, Size, Color & Actions */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Category Pills / Dropdown */}
-        <div className="flex items-center gap-1 bg-surface-hover/70 p-1 rounded-xl border border-border/40">
-          <Layers className="w-3.5 h-3.5 text-muted-foreground ml-1 mr-0.5" />
+        <div className="flex items-center gap-1 bg-surface-hover/80 p-1 rounded-xl border border-border/50">
+          <Layers className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 ml-1 mr-0.5" />
           {(['All', 'Layer 1', 'DeFi', 'Stablecoin', 'Meme', 'Gold & Metals'] as CategoryFilter[]).map(cat => (
             <button
               key={cat}
               onClick={() => onCategoryChange(cat)}
               className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all font-['Arial',sans-serif] ${
                 selectedCategory === cat
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-surface/50'
+                  ? 'bg-primary text-white shadow-sm font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
               {cat}
@@ -131,8 +131,8 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
         </div>
 
         {/* Size By Dropdown */}
-        <div className="flex items-center gap-1.5 bg-surface-hover/70 px-3 py-1.5 rounded-xl border border-border/40 text-xs font-medium">
-          <span className="text-muted-foreground font-['Arial',sans-serif]">Size:</span>
+        <div className="flex items-center gap-1.5 bg-surface-hover/80 px-3 py-1.5 rounded-xl border border-border/50 text-xs font-medium">
+          <span className="text-slate-500 dark:text-slate-400 font-['Arial',sans-serif]">Size:</span>
           <select
             value={sizeBy}
             onChange={(e) => onSizeByChange(e.target.value as SizeByOption)}
@@ -144,8 +144,8 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
         </div>
 
         {/* Color By Dropdown */}
-        <div className="flex items-center gap-1.5 bg-surface-hover/70 px-3 py-1.5 rounded-xl border border-border/40 text-xs font-medium">
-          <span className="text-muted-foreground font-['Arial',sans-serif]">Color:</span>
+        <div className="flex items-center gap-1.5 bg-surface-hover/80 px-3 py-1.5 rounded-xl border border-border/50 text-xs font-medium">
+          <span className="text-slate-500 dark:text-slate-400 font-['Arial',sans-serif]">Color:</span>
           <select
             value={colorBy}
             onChange={(e) => onColorByChange(e.target.value as ColorByOption)}
@@ -163,7 +163,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 hover:bg-surface-hover rounded-xl text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            className="p-2 hover:bg-surface-hover rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors disabled:opacity-50"
             title="Refresh Market Data"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
@@ -172,7 +172,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
           {/* Snapshot Button */}
           <button
             onClick={onSnapshot}
-            className="p-2 hover:bg-surface-hover rounded-xl text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 hover:bg-surface-hover rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
             title="Export / Download Heatmap Image"
           >
             <Camera className="w-4 h-4" />
@@ -181,7 +181,7 @@ export const HeatmapToolbar: React.FC<HeatmapToolbarProps> = ({
           {/* Fullscreen Button */}
           <button
             onClick={onToggleFullscreen}
-            className="p-2 hover:bg-surface-hover rounded-xl text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 hover:bg-surface-hover rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

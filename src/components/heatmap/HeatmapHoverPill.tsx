@@ -35,45 +35,45 @@ export const HeatmapHoverPill: React.FC<HeatmapHoverPillProps> = ({
           : undefined
       }
     >
-      <div className="flex items-center gap-6 px-5 py-2.5 rounded-xl bg-[#1e222d] border border-white/10 text-white shadow-2xl backdrop-blur-md">
+      <div className="flex items-center gap-6 px-5 py-2.5 rounded-xl bg-white/95 dark:bg-[#1e222d]/95 border border-slate-200/90 dark:border-white/10 shadow-2xl backdrop-blur-md">
         {/* Coin Logo & Display Symbol */}
         <div className="flex items-center gap-2.5">
           {item.logoUrl ? (
             <img
               src={item.logoUrl}
               alt={item.name}
-              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-white/10"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = 'none';
               }}
             />
           ) : (
-            <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
+            <div className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs">
               {item.symbol.slice(0, 3)}
             </div>
           )}
-          <span className="font-bold text-base tracking-tight text-white font-['Arial',sans-serif]">
+          <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white font-['Arial',sans-serif]">
             {item.displaySymbol}
           </span>
         </div>
 
         {/* Price Column */}
         <div className="flex flex-col">
-          <span className="font-bold text-base text-white font-['Arial',sans-serif]">
-            {formatHeatmapPrice(item.price)}
+          <span className="font-bold text-base text-slate-900 dark:text-white font-['Arial',sans-serif]">
+            ${formatHeatmapPrice(item.price)}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-['Arial',sans-serif]">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-['Arial',sans-serif]">
             PRICE
           </span>
         </div>
 
         {/* Market Cap Column */}
         <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 font-bold text-base text-white font-['Arial',sans-serif]">
+          <div className="flex items-center gap-1.5 font-bold text-base text-slate-900 dark:text-white font-['Arial',sans-serif]">
             <Maximize2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{formatCompactNumber(item.marketCap).replace('$', '')}</span>
           </div>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-['Arial',sans-serif]">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-['Arial',sans-serif]">
             MARKET CAP
           </span>
         </div>
@@ -83,10 +83,10 @@ export const HeatmapHoverPill: React.FC<HeatmapHoverPillProps> = ({
           <div
             className={`flex items-center gap-1.5 font-bold text-base font-['Arial',sans-serif] ${
               isNeutral
-                ? 'text-slate-300'
+                ? 'text-slate-600 dark:text-slate-300'
                 : isPositive
-                ? 'text-emerald-400'
-                : 'text-rose-400'
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-rose-600 dark:text-rose-400'
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5 shrink-0 opacity-80" />
@@ -94,7 +94,7 @@ export const HeatmapHoverPill: React.FC<HeatmapHoverPillProps> = ({
               {isPositive ? `+${item.change24h.toFixed(2)}%` : `${item.change24h.toFixed(2)}%`}
             </span>
           </div>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-['Arial',sans-serif]">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-['Arial',sans-serif]">
             CHANGE 24H, %
           </span>
         </div>

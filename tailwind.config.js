@@ -10,14 +10,17 @@ export default {
       colors: {
         background: "var(--bg-app)",
         surface: "var(--bg-surface)",
+        "surface-hover": "var(--bg-card-hover)",
         "surface-card": "var(--bg-card)",
         "surface-card-hover": "var(--bg-card-hover)",
         border: "var(--border-subtle)",
         "border-glow": "var(--border-glow)",
         foreground: "var(--text-primary)",
         muted: "var(--text-secondary)",
+        "muted-foreground": "var(--text-muted)",
         primary: {
           DEFAULT: "#8b5cf6",
+          foreground: "#ffffff",
           hover: "#7c3aed",
           light: "#a78bfa",
           glow: "rgba(139, 92, 246, 0.25)"

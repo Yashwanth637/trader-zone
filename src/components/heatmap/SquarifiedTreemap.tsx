@@ -216,7 +216,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-[#131722] select-none"
+      className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-[#131722] select-none"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -228,21 +228,21 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     >
       {/* Zoom / Drill-down Status Breadcrumb Banner */}
       {focusedCoin && (
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-[#1e222d]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white shadow-lg animate-in fade-in">
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-white/95 dark:bg-[#1e222d]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white shadow-lg animate-in fade-in">
           <button
             onClick={resetZoom}
-            className="flex items-center gap-1 text-sky-400 hover:text-sky-300 font-bold transition-colors"
+            className="flex items-center gap-1 text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 font-bold transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>All Coins</span>
           </button>
-          <span className="text-slate-500">/</span>
-          <span className="font-semibold text-slate-200">
+          <span className="text-slate-400 dark:text-slate-500">/</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
             {focusedCoin.name} ({focusedCoin.category})
           </span>
           <button
             onClick={resetZoom}
-            className="ml-2 p-1 hover:bg-white/10 rounded text-slate-400 hover:text-white"
+            className="ml-2 p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
             title="Reset Zoom"
           >
             <RotateCcw className="w-3 h-3" />
@@ -251,17 +251,17 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
       )}
 
       {/* Floating Zoom Action Controls (Top Right) */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-[#1e222d]/85 backdrop-blur-md p-1 rounded-lg border border-white/10 text-white shadow-lg">
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/95 dark:bg-[#1e222d]/85 backdrop-blur-md p-1 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white shadow-lg">
         <button
           onClick={() => setZoomLevel(prev => Math.min(6, prev + 0.5))}
-          className="p-1.5 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-colors"
+          className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
           title="Zoom In (+)"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={() => setZoomLevel(prev => Math.max(1, prev - 0.5))}
-          className="p-1.5 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-colors"
+          className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
           title="Zoom Out (-)"
         >
           <ZoomOut className="w-4 h-4" />
@@ -269,7 +269,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
         {(zoomLevel > 1 || focusedCoin) && (
           <button
             onClick={resetZoom}
-            className="p-1.5 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-colors"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
             title="Reset Zoom"
           >
             <RotateCcw className="w-4 h-4" />
@@ -347,13 +347,22 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                       symbol={item.symbol}
                       size={largeLogoSize}
                     />
-                    <span className="font-bold text-base leading-tight tracking-tight drop-shadow-sm font-['Arial',sans-serif] mt-1 max-w-full truncate px-1">
+                    <span
+                      className="font-bold text-base leading-tight tracking-tight mt-1 max-w-full truncate px-1 font-['Arial',sans-serif]"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                    >
                       {item.name}
                     </span>
-                    <span className="font-extrabold text-lg mt-0.5 tracking-wide drop-shadow font-['Arial',sans-serif]">
+                    <span
+                      className="font-extrabold text-lg mt-0.5 tracking-wide font-['Arial',sans-serif]"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 3px rgba(0,0,0,0.75)' : 'none' }}
+                    >
                       {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
                     </span>
-                    <span className="text-[11px] font-semibold opacity-90 mt-0.5 font-['Arial',sans-serif]">
+                    <span
+                      className="text-[11px] font-bold mt-0.5 font-['Arial',sans-serif]"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                    >
                       ${formatHeatmapPrice(item.price)}
                     </span>
                   </>
@@ -368,10 +377,16 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                       symbol={item.symbol}
                       size={mediumLogoSize}
                     />
-                    <span className="font-bold text-xs leading-tight tracking-tight truncate max-w-full px-0.5 font-['Arial',sans-serif] mt-0.5">
+                    <span
+                      className="font-bold text-xs leading-tight tracking-tight truncate max-w-full px-0.5 font-['Arial',sans-serif] mt-0.5"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                    >
                       {rect.width >= 85 ? item.name : item.symbol}
                     </span>
-                    <span className="font-extrabold text-xs mt-0.5 font-['Arial',sans-serif]">
+                    <span
+                      className="font-extrabold text-xs mt-0.5 font-['Arial',sans-serif]"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.7)' : 'none' }}
+                    >
                       {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
                     </span>
                   </>
@@ -386,10 +401,16 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                       symbol={item.symbol}
                       size={smallLogoSize}
                     />
-                    <span className="font-bold text-[10px] leading-tight font-['Arial',sans-serif] mt-0.5 max-w-full truncate">
+                    <span
+                      className="font-bold text-[10px] leading-tight font-['Arial',sans-serif] mt-0.5 max-w-full truncate"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                    >
                       {item.symbol}
                     </span>
-                    <span className="font-bold text-[9px] font-['Arial',sans-serif]">
+                    <span
+                      className="font-bold text-[9px] font-['Arial',sans-serif]"
+                      style={{ textShadow: text === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.65)' : 'none' }}
+                    >
                       {isPositive ? `+${metricChange.toFixed(1)}%` : `${metricChange.toFixed(1)}%`}
                     </span>
                   </>

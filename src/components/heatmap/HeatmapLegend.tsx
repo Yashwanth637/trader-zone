@@ -9,7 +9,7 @@ export const HeatmapLegend: React.FC = () => {
   return (
     <div className="flex flex-col gap-1 select-none">
       {/* Percentage numbers */}
-      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-400 font-['Arial',sans-serif] px-0.5">
+      <div className="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-300 font-['Arial',sans-serif] px-0.5">
         {HEATMAP_COLOR_STOPS.map(stop => (
           <span key={stop.percent} className="min-w-[28px] text-center">
             {stop.percent > 0 ? `+${stop.percent}%` : `${stop.percent}%`}
