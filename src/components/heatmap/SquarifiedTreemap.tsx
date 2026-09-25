@@ -13,6 +13,60 @@ interface SquarifiedTreemapProps {
   onSelectItem?: (item: HeatmapItem) => void;
 }
 
+// High-res Coin Logo with Instant Fallback
+const CoinLogo: React.FC<{
+  logoUrl?: string;
+  name: string;
+  symbol: string;
+  size: number;
+}> = ({ logoUrl, symbol, size }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const symbolUpper = symbol.toUpperCase();
+  const getBadgeColor = () => {
+    if (symbolUpper === 'BTC') return 'bg-[#f7931a] text-white';
+    if (symbolUpper === 'ETH') return 'bg-[#627eea] text-white';
+    if (symbolUpper === 'SOL') return 'bg-[#14f195] text-black';
+    if (symbolUpper === 'BNB') return 'bg-[#f3ba2f] text-black';
+    if (symbolUpper === 'XRP') return 'bg-[#23292f] text-white';
+    if (symbolUpper === 'DOGE') return 'bg-[#c2a633] text-white';
+    if (symbolUpper.includes('GOLD') || symbolUpper.includes('XAU') || symbolUpper.includes('PAXG') || symbolUpper.includes('XAUT')) {
+      return 'bg-gradient-to-tr from-amber-500 to-yellow-300 text-black';
+    }
+    return 'bg-black/35 text-white ring-1 ring-white/20';
+  };
+
+  if (!logoUrl || hasError) {
+    return (
+      <div
+        className={`rounded-full flex items-center justify-center font-black shrink-0 shadow-sm select-none ${getBadgeColor()}`}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          fontSize: `${Math.max(7, Math.round(size * 0.44))}px`
+        }}
+      >
+        {symbol.slice(0, 2).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={symbol}
+      loading="eager"
+      decoding="async"
+      className="rounded-full object-cover shrink-0 shadow-sm ring-1 ring-black/25 dark:ring-white/20 select-none"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`
+      }}
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
 export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
   items,
   sizeBy,
@@ -59,7 +113,6 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
   // Compute Layout Items (filter by focused coin's category if drilled down)
   const activeItems = useMemo(() => {
     if (!focusedCoin) return items;
-    // When focused on a coin, display that coin plus related coins in its ecosystem/category
     const related = items.filter(it => it.category === focusedCoin.category || it.id === focusedCoin.id);
     return related.length > 0 ? related : items;
   }, [items, focusedCoin]);
@@ -93,7 +146,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     e.preventDefault();
     if (!containerRef.current) return;
 
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+    const zoomFactor = e.deltaY < 0 ? 1.18 : 0.85;
     const newZoom = Math.min(6, Math.max(1, zoomLevel * zoomFactor));
 
     if (newZoom === 1) {
@@ -106,7 +159,6 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
 
-    // Adjust pan offset so zoom centers under cursor
     const newPanX = cursorX - (cursorX - panOffset.x) * (newZoom / zoomLevel);
     const newPanY = cursorY - (cursorY - panOffset.y) * (newZoom / zoomLevel);
 
@@ -116,7 +168,7 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
 
   // Handle Pan Click & Drag
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return;
     if (zoomLevel > 1) {
       setIsPanning(true);
       setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -145,17 +197,16 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
 
   // Zoom into specific coin
   const handleCoinClick = (item: HeatmapItem, rect: TreemapRect<HeatmapItem>) => {
-    if (zoomLevel === 1 && !focusedCoin) {
-      // Zoom into coin tile smoothly
+    if (zoomLevel < 2) {
       setFocusedCoin(item);
-      const targetScale = Math.min(3, Math.max(1.8, dimensions.width / (rect.width * 1.5)));
+      const targetZoom = 2.8;
       const centerX = rect.x + rect.width / 2;
       const centerY = rect.y + rect.height / 2;
 
-      setZoomLevel(targetScale);
+      setZoomLevel(targetZoom);
       setPanOffset({
-        x: dimensions.width / 2 - centerX * targetScale,
-        y: dimensions.height / 2 - centerY * targetScale
+        x: dimensions.width / 2 - centerX * targetZoom,
+        y: dimensions.height / 2 - centerY * targetZoom
       });
     } else {
       if (onSelectItem) onSelectItem(item);
@@ -245,13 +296,22 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
 
           const { bg, text } = getHeatmapTileColor(metricChange, isDark);
 
-          // Tile sizing classifications
-          const isLarge = rect.width >= 120 && rect.height >= 85;
-          const isMedium = rect.width >= 75 && rect.height >= 55;
-          const isSmall = rect.width >= 45 && rect.height >= 35;
-          const isMicro = rect.width < 45 || rect.height < 35;
+          // Effective visual size on screen accounts for zoomLevel
+          const effW = rect.width * zoomLevel;
+          const effH = rect.height * zoomLevel;
+
+          const isLarge = effW >= 115 && effH >= 80;
+          const isMedium = !isLarge && effW >= 70 && effH >= 50;
+          const isSmall = !isLarge && !isMedium && effW >= 42 && effH >= 32;
+          const isTinyWithLogo = !isLarge && !isMedium && !isSmall && effW >= 14 && effH >= 14;
 
           const isPositive = metricChange >= 0;
+
+          // Adaptive logo sizes inside tile coordinate space
+          const largeLogoSize = Math.max(18, Math.min(Math.round(rect.width * 0.35), Math.round(rect.height * 0.35), 36));
+          const mediumLogoSize = Math.max(14, Math.min(Math.round(rect.width * 0.32), Math.round(rect.height * 0.32), 24));
+          const smallLogoSize = Math.max(12, Math.min(Math.round(rect.width * 0.32), Math.round(rect.height * 0.32), 18));
+          const tinyLogoSize = Math.max(10, Math.min(Math.round(rect.width * 0.72), Math.round(rect.height * 0.72), 20));
 
           return (
             <div
@@ -277,24 +337,17 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
               }}
             >
               {/* Tile Content Layout */}
-              <div className="w-full h-full flex flex-col items-center justify-center p-1 text-center select-none">
+              <div className="w-full h-full flex flex-col items-center justify-center p-0.5 text-center select-none overflow-hidden">
+                {/* 1. Large Tiles: Full Name, Logo, Return, Price */}
                 {isLarge && (
                   <>
-                    {item.logoUrl ? (
-                      <img
-                        src={item.logoUrl}
-                        alt={item.name}
-                        className="w-10 h-10 rounded-full object-cover mb-1.5 shadow-md ring-1 ring-white/20"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center font-bold text-sm mb-1.5">
-                        {item.symbol.slice(0, 3)}
-                      </div>
-                    )}
-                    <span className="font-bold text-base leading-tight tracking-tight drop-shadow-sm font-['Arial',sans-serif]">
+                    <CoinLogo
+                      logoUrl={item.logoUrl}
+                      name={item.name}
+                      symbol={item.symbol}
+                      size={largeLogoSize}
+                    />
+                    <span className="font-bold text-base leading-tight tracking-tight drop-shadow-sm font-['Arial',sans-serif] mt-1 max-w-full truncate px-1">
                       {item.name}
                     </span>
                     <span className="font-extrabold text-lg mt-0.5 tracking-wide drop-shadow font-['Arial',sans-serif]">
@@ -306,20 +359,17 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                   </>
                 )}
 
-                {isMedium && !isLarge && (
+                {/* 2. Medium Tiles: Logo, Name or Symbol, Return */}
+                {isMedium && (
                   <>
-                    {item.logoUrl && (
-                      <img
-                        src={item.logoUrl}
-                        alt={item.name}
-                        className="w-6 h-6 rounded-full object-cover mb-1 shadow-sm"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <span className="font-bold text-xs leading-tight tracking-tight truncate max-w-full px-1 font-['Arial',sans-serif]">
-                      {item.name.length > 12 ? item.symbol : item.name}
+                    <CoinLogo
+                      logoUrl={item.logoUrl}
+                      name={item.name}
+                      symbol={item.symbol}
+                      size={mediumLogoSize}
+                    />
+                    <span className="font-bold text-xs leading-tight tracking-tight truncate max-w-full px-0.5 font-['Arial',sans-serif] mt-0.5">
+                      {rect.width >= 85 ? item.name : item.symbol}
                     </span>
                     <span className="font-extrabold text-xs mt-0.5 font-['Arial',sans-serif]">
                       {isPositive ? `+${metricChange.toFixed(2)}%` : `${metricChange.toFixed(2)}%`}
@@ -327,19 +377,16 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                   </>
                 )}
 
-                {isSmall && !isMedium && (
+                {/* 3. Small Tiles: Logo, Symbol, Return */}
+                {isSmall && (
                   <>
-                    {item.logoUrl && rect.height > 40 && (
-                      <img
-                        src={item.logoUrl}
-                        alt={item.name}
-                        className="w-4 h-4 rounded-full object-cover mb-0.5"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <span className="font-bold text-[10px] leading-tight font-['Arial',sans-serif]">
+                    <CoinLogo
+                      logoUrl={item.logoUrl}
+                      name={item.name}
+                      symbol={item.symbol}
+                      size={smallLogoSize}
+                    />
+                    <span className="font-bold text-[10px] leading-tight font-['Arial',sans-serif] mt-0.5 max-w-full truncate">
                       {item.symbol}
                     </span>
                     <span className="font-bold text-[9px] font-['Arial',sans-serif]">
@@ -348,7 +395,23 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
                   </>
                 )}
 
-                {isMicro && (
+                {/* 4. Tiny Tiles (Image 1 Dense Right-Grid): Centered Coin Logo */}
+                {isTinyWithLogo && (
+                  <div
+                    className="w-full h-full flex items-center justify-center p-0.5"
+                    title={`${item.name} (${item.displaySymbol}): ${isPositive ? '+' : ''}${metricChange.toFixed(2)}%`}
+                  >
+                    <CoinLogo
+                      logoUrl={item.logoUrl}
+                      name={item.name}
+                      symbol={item.symbol}
+                      size={tinyLogoSize}
+                    />
+                  </div>
+                )}
+
+                {/* 5. Microscopic Tiles: Minimal Color Indicator */}
+                {!isLarge && !isMedium && !isSmall && !isTinyWithLogo && (
                   <div
                     className="w-full h-full"
                     title={`${item.name} (${item.displaySymbol}): ${isPositive ? '+' : ''}${metricChange.toFixed(2)}%`}
