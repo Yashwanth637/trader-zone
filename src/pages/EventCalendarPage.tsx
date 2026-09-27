@@ -92,10 +92,10 @@ export const EventCalendarPage: React.FC = () => {
   }, [selectedYear, selectedMonth]);
 
   // Synchronize with Forex Factory live bundled feed
-  const syncLiveForexFactory = async (baseEvents?: EconomicEvent[]) => {
+  const syncLiveForexFactory = async (baseEvents?: EconomicEvent[], forceRefresh = false) => {
     setIsRefreshing(true);
     try {
-      const liveData = await fetchLiveForexFactoryCalendar();
+      const liveData = await fetchLiveForexFactoryCalendar(forceRefresh);
       const base = baseEvents || monthlyEvents;
       const merged = mergeCalendarData(base, liveData);
       setMonthlyEvents(merged);
@@ -481,7 +481,7 @@ export const EventCalendarPage: React.FC = () => {
           <div className="flex items-center gap-3 self-end xl:self-auto">
             <span className="text-[11px] text-muted hidden 2xl:inline">{lastSyncText}</span>
             <button
-              onClick={() => syncLiveForexFactory()}
+              onClick={() => syncLiveForexFactory(undefined, true)}
               disabled={isRefreshing}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all disabled:opacity-50"
             >

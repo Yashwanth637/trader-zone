@@ -762,41 +762,44 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
  * Fetch live weekly data from Forex Factory (bundled JSON file or live CDN)
  * Loads from bundled public/data/forex_factory_calendar.json with 0 CORS issues.
  */
-export async function fetchLiveForexFactoryCalendar(): Promise<EconomicEvent[]> {
+export async function fetchLiveForexFactoryCalendar(forceRefresh = false): Promise<EconomicEvent[]> {
   const CACHE_KEY = 'forex_factory_live_cache_v8';
   const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v8';
 
-  // 1. Try localStorage cache
-  try {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    const cachedExpiry = localStorage.getItem(CACHE_EXPIRY_KEY);
-    if (cachedData && cachedExpiry && Date.now() < parseInt(cachedExpiry, 10)) {
-      const parsed = JSON.parse(cachedData);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+  // 1. Try localStorage cache (unless forceRefresh is true)
+  if (!forceRefresh) {
+    try {
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      const cachedExpiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+      if (cachedData && cachedExpiry && Date.now() < parseInt(cachedExpiry, 10)) {
+        const parsed = JSON.parse(cachedData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
   }
 
-  // 2. Fetch the bundled official Forex Factory JSON file from our own domain
+  // 2. Fetch the bundled official Forex Factory JSON file from our own domain with cache-busting
   // Zero CORS, Zero 429, Instantaneous load!
   let rawEvents: any[] | null = null;
 
   const baseUrl = import.meta.env.BASE_URL || './';
   const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const bust = Date.now();
 
   const candidateUrls = [
-    `${cleanBase}data/forex_factory_calendar.json`,
-    './data/forex_factory_calendar.json',
-    '/data/forex_factory_calendar.json',
-    'data/forex_factory_calendar.json'
+    `${cleanBase}data/forex_factory_calendar.json?_t=${bust}`,
+    `./data/forex_factory_calendar.json?_t=${bust}`,
+    `/data/forex_factory_calendar.json?_t=${bust}`,
+    `data/forex_factory_calendar.json?_t=${bust}`
   ];
 
   for (const url of candidateUrls) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-cache' });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) {
@@ -813,7 +816,7 @@ export async function fetchLiveForexFactoryCalendar(): Promise<EconomicEvent[]> 
     const parsedEvents = parseForexFactoryRawEvents(rawEvents);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(parsedEvents));
-      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + 10 * 60 * 1000));
+      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + 5 * 60 * 1000));
     } catch (e) {}
     return parsedEvents;
   }
