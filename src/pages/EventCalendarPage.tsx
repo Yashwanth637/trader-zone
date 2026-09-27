@@ -87,11 +87,8 @@ export const EventCalendarPage: React.FC = () => {
     const generated = generateMonthlyCalendar(selectedYear, selectedMonth);
     setMonthlyEvents(generated);
 
-    // Also fetch live official Forex Factory overlay if current month
-    const currentDate = new Date();
-    if (selectedYear === currentDate.getFullYear() && selectedMonth === currentDate.getMonth()) {
-      syncLiveForexFactory(generated);
-    }
+    // Synchronize live official Forex Factory feed across all month boundaries
+    syncLiveForexFactory(generated);
   }, [selectedYear, selectedMonth]);
 
   // Synchronize with Forex Factory live bundled feed
@@ -213,10 +210,11 @@ export const EventCalendarPage: React.FC = () => {
         return evt.date >= weekRanges.nextWeekStart && evt.date <= weekRanges.nextWeekEnd;
       }
 
-      // 'month': full month data
-      return true;
+      // 'month': full month data for selected year and month
+      const monthPrefix = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+      return evt.date.startsWith(monthPrefix);
     });
-  }, [monthlyEvents, selectedImpacts, selectedCurrency, searchQuery, horizon, weekRanges]);
+  }, [monthlyEvents, selectedImpacts, selectedCurrency, searchQuery, horizon, weekRanges, selectedYear, selectedMonth]);
 
   // Group events by day string (e.g. "2026-09-16")
   const groupedEvents = useMemo(() => {

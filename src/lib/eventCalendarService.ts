@@ -332,24 +332,37 @@ export function parseForexFactoryRawEvents(rawEvents: any[]): EconomicEvent[] {
     // Parse date and time in IST (Asia/Kolkata, UTC +5:30)
     let dateStr = '';
     let timeStr = 'All Day';
+    const isHoliday = impact === 'Holiday' || (item.title && item.title.toLowerCase().includes('holiday')) || item.time === 'All Day';
+
     if (item.date) {
       const d = new Date(item.date);
       if (!isNaN(d.getTime())) {
         dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-        timeStr = d.toLocaleTimeString('en-US', {
-          timeZone: 'Asia/Kolkata',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        }).toLowerCase();
+        if (isHoliday) {
+          timeStr = 'All Day';
+        } else {
+          timeStr = d.toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }).toLowerCase();
+        }
       }
     }
 
     const forecast = item.forecast ? String(item.forecast).trim() : '-';
     const previous = item.previous ? String(item.previous).trim() : '-';
-    const actual = item.actual !== undefined && item.actual !== null && String(item.actual).trim() !== ''
-      ? String(item.actual).trim()
-      : undefined;
+
+    // Strict actual value rule: ONLY announced past events can have an actual value
+    const now = new Date();
+    const eventTime = item.date ? new Date(item.date) : null;
+    let actual: string | undefined = undefined;
+    if (eventTime && eventTime.getTime() <= now.getTime()) {
+      if (item.actual !== undefined && item.actual !== null && String(item.actual).trim() !== '' && String(item.actual).trim() !== '-') {
+        actual = String(item.actual).trim();
+      }
+    }
 
     const outcome = calculateOutcome(actual, forecast, specs.usualEffect);
 
@@ -383,15 +396,14 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
     title: string,
     impact: ImpactLevel,
     forecast: string,
-    previous: string,
-    actual?: string
+    previous: string
   ): EconomicEvent => {
     const paddedMonth = String(monthIndex + 1).padStart(2, '0');
     const paddedDay = String(day).padStart(2, '0');
     const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
     const specs = getSpecsForEvent(title, country);
-    const outcome = calculateOutcome(actual, forecast, specs.usualEffect);
 
+    // Baseline events are unannounced forecasts; actual MUST be undefined and outcome 'pending'
     return {
       id: `${dateStr}-${country}-${title.replace(/\s+/g, '-').toLowerCase()}`,
       title,
@@ -401,8 +413,8 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
       impact,
       forecast,
       previous,
-      actual,
-      outcome,
+      actual: undefined,
+      outcome: 'pending',
       specs
     };
   };
@@ -422,54 +434,64 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
   }
 
   // --- WEEK 1 ---
-  events.push(createEvent(1, '07:30pm', 'USD', 'ISM Manufacturing PMI', 'High', '48.2', '46.8', '47.9'));
+  // If October 2026 (monthIndex === 9): Authentic Forex Factory events matching Image 1
+  if (monthIndex === 9 && year === 2026) {
+    events.push(createEvent(1, 'All Day', 'CNY', 'Bank Holiday', 'Holiday', '-', '-'));
+    events.push(createEvent(2, 'All Day', 'CNY', 'Bank Holiday', 'Holiday', '-', '-'));
+    if (fridays.length > 0) {
+      const firstFri = fridays[0];
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Average Hourly Earnings m/m', 'High', '0.3%', '0.3%'));
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Non-Farm Employment Change', 'High', '98K', '162K'));
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Unemployment Rate', 'High', '4.1%', '4.1%'));
+    }
+  } else {
+    events.push(createEvent(1, '07:30pm', 'USD', 'ISM Manufacturing PMI', 'Medium', '48.2', '46.8'));
 
-  if (tuesdays.length > 0) {
-    events.push(createEvent(tuesdays[0], '10:00am', 'AUD', 'RBA Cash Rate Statement', 'High', '4.35%', '4.35%', '4.35%'));
-  }
+    if (tuesdays.length > 0) {
+      events.push(createEvent(tuesdays[0], '10:00am', 'AUD', 'RBA Cash Rate Statement', 'High', '4.35%', '4.35%'));
+    }
 
-  events.push(createEvent(3, '07:30pm', 'USD', 'ISM Services PMI', 'High', '51.5', '51.4', '51.5'));
+    events.push(createEvent(3, '07:30pm', 'USD', 'ISM Services PMI', 'Medium', '51.5', '51.4'));
 
-  if (wednesdays.length > 0) {
-    events.push(createEvent(wednesdays[0], '05:45pm', 'USD', 'ADP Non-Farm Employment Change', 'Medium', '142K', '111K', '99K'));
-  }
+    if (wednesdays.length > 0) {
+      events.push(createEvent(wednesdays[0], '05:45pm', 'USD', 'ADP Non-Farm Employment Change', 'Medium', '142K', '111K'));
+    }
 
-  if (fridays.length > 0) {
-    const firstFri = fridays[0];
-    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Non-Farm Employment Change (NFP)', 'High', '164K', '114K', '142K'));
-    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Unemployment Rate', 'High', '4.2%', '4.3%', '4.2%'));
-    events.push(createEvent(firstFri, '06:00pm', 'USD', 'Average Hourly Earnings m/m', 'High', '0.3%', '0.2%', '0.4%'));
-    events.push(createEvent(firstFri, '06:00pm', 'CAD', 'Employment Change', 'High', '25.0K', '-2.8K', '-22.1K'));
-    events.push(createEvent(firstFri, '06:00pm', 'CAD', 'Unemployment Rate', 'High', '6.5%', '6.4%', '6.6%'));
+    if (fridays.length > 0) {
+      const firstFri = fridays[0];
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Average Hourly Earnings m/m', 'High', '0.3%', '0.3%'));
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Non-Farm Employment Change', 'High', '98K', '162K'));
+      events.push(createEvent(firstFri, '06:00pm', 'USD', 'Unemployment Rate', 'High', '4.1%', '4.1%'));
+    }
   }
 
   // --- WEEK 2 ---
-  events.push(createEvent(11, '06:00pm', 'USD', 'CPI m/m', 'High', '0.2%', '0.2%', '0.2%'));
-  events.push(createEvent(11, '06:00pm', 'USD', 'CPI y/y', 'High', '2.6%', '2.9%', '2.5%'));
-  events.push(createEvent(11, '06:00pm', 'USD', 'Core CPI m/m', 'High', '0.2%', '0.2%', '0.3%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'CPI m/m', 'High', '0.2%', '0.2%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'CPI y/y', 'High', '2.6%', '2.9%'));
+  events.push(createEvent(11, '06:00pm', 'USD', 'Core CPI m/m', 'High', '0.2%', '0.2%'));
 
   if (thursdays.length > 1) {
     const ecbDay = thursdays[1];
-    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Main Refinancing Rate', 'High', '3.65%', '4.25%', '3.65%'));
-    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Monetary Policy Statement', 'High', '-', '-', '-'));
-    events.push(createEvent(ecbDay, '06:15pm', 'EUR', 'ECB Press Conference', 'High', '-', '-', '-'));
+    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Main Refinancing Rate', 'High', '3.65%', '4.25%'));
+    events.push(createEvent(ecbDay, '05:45pm', 'EUR', 'Monetary Policy Statement', 'High', '-', '-'));
+    events.push(createEvent(ecbDay, '06:15pm', 'EUR', 'ECB Press Conference', 'High', '-', '-'));
   }
 
-  events.push(createEvent(12, '06:00pm', 'USD', 'PPI m/m', 'Medium', '0.1%', '0.1%', '0.2%'));
-  events.push(createEvent(12, '06:00pm', 'USD', 'Core PPI m/m', 'Medium', '0.2%', '0.0%', '0.3%'));
+  events.push(createEvent(12, '06:00pm', 'USD', 'PPI m/m', 'Medium', '0.1%', '0.1%'));
+  events.push(createEvent(12, '06:00pm', 'USD', 'Core PPI m/m', 'Medium', '0.2%', '0.0%'));
 
   if (fridays.length > 1) {
-    events.push(createEvent(fridays[1], '07:30pm', 'USD', 'Prelim UoM Consumer Sentiment', 'Medium', '68.5', '67.9', '69.0'));
+    events.push(createEvent(fridays[1], '07:30pm', 'USD', 'Prelim UoM Consumer Sentiment', 'Medium', '68.5', '67.9'));
   }
 
   // --- WEEK 3 (Calibrated to 100% Forex Factory Real Figures) ---
   events.push(createEvent(16, '06:00pm', 'USD', 'Retail Sales m/m', 'Medium', '0.8%', '-0.6%'));
   events.push(createEvent(16, '06:00pm', 'USD', 'Core Retail Sales m/m', 'Medium', '0.6%', '-0.3%'));
 
-  // UK CPI y/y (Exact match to Image 2: 3.1% / 2.9%)
+  // UK CPI y/y
   events.push(createEvent(16, '11:30am', 'GBP', 'CPI y/y', 'High', '3.1%', '2.9%'));
 
-  // US Federal Funds Rate & FOMC (Exact match to Image 2: 4.00% / 3.75%)
+  // US Federal Funds Rate & FOMC
   events.push(createEvent(16, '11:30pm', 'USD', 'Federal Funds Rate', 'High', '4.00%', '3.75%'));
   events.push(createEvent(16, '11:30pm', 'USD', 'FOMC Economic Projections', 'High', '-', '-'));
   events.push(createEvent(16, '11:30pm', 'USD', 'FOMC Statement', 'High', '-', '-'));
@@ -477,37 +499,39 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
 
   if (thursdays.length > 2) {
     const boeDay = thursdays[2];
-    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Official Bank Rate', 'High', '5.00%', '5.00%', '5.00%'));
-    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Monetary Policy Summary', 'High', '-', '-', '-'));
-    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'MPC Official Bank Rate Votes', 'High', '8-1', '5-4', '8-1'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Official Bank Rate', 'High', '5.00%', '5.00%'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'Monetary Policy Summary', 'High', '-', '-'));
+    events.push(createEvent(boeDay, '04:30pm', 'GBP', 'MPC Official Bank Rate Votes', 'High', '8-1', '5-4'));
   }
 
   if (fridays.length > 2) {
     const bojDay = fridays[2];
-    events.push(createEvent(bojDay, '08:30am', 'JPY', 'BOJ Policy Rate', 'High', '0.25%', '0.25%', '0.25%'));
-    events.push(createEvent(bojDay, '12:00pm', 'JPY', 'BOJ Press Conference', 'High', '-', '-', '-'));
+    events.push(createEvent(bojDay, '08:30am', 'JPY', 'BOJ Policy Rate', 'High', '0.25%', '0.25%'));
+    events.push(createEvent(bojDay, '12:00pm', 'JPY', 'BOJ Press Conference', 'High', '-', '-'));
   }
 
   // --- WEEK 4 & 5 ---
-  events.push(createEvent(23, '12:45pm', 'EUR', 'French Flash Manufacturing PMI', 'Medium', '44.2', '43.9', '44.0'));
-  events.push(createEvent(23, '01:00pm', 'EUR', 'German Flash Manufacturing PMI', 'High', '42.4', '42.4', '40.6'));
-  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Manufacturing PMI', 'Medium', '52.3', '52.5', '51.5'));
-  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Services PMI', 'High', '53.5', '53.7', '52.4'));
-  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Manufacturing PMI', 'Medium', '47.9', '47.9', '47.0'));
-  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Services PMI', 'High', '55.3', '55.7', '55.2'));
+  events.push(createEvent(23, '12:45pm', 'EUR', 'French Flash Manufacturing PMI', 'Medium', '44.2', '43.9'));
+  events.push(createEvent(23, '01:00pm', 'EUR', 'German Flash Manufacturing PMI', 'High', '42.4', '42.4'));
+  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Manufacturing PMI', 'Medium', '52.3', '52.5'));
+  events.push(createEvent(23, '02:00pm', 'GBP', 'Flash Services PMI', 'High', '53.5', '53.7'));
+  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Manufacturing PMI', 'Medium', '47.9', '47.9'));
+  events.push(createEvent(23, '07:15pm', 'USD', 'Flash Services PMI', 'High', '55.3', '55.7'));
 
   if (thursdays.length > 3) {
     const gdpDay = thursdays[3];
-    events.push(createEvent(gdpDay, '06:00pm', 'USD', 'Final GDP q/q', 'High', '3.0%', '3.0%', '3.0%'));
+    events.push(createEvent(gdpDay, '06:00pm', 'USD', 'Final GDP q/q', 'High', '3.0%', '3.0%'));
   }
 
   if (fridays.length > 3) {
     const pceDay = fridays[3];
-    events.push(createEvent(pceDay, '06:00pm', 'USD', 'Core PCE Price Index m/m', 'High', '0.2%', '0.2%', '0.2%'));
+    events.push(createEvent(pceDay, '06:00pm', 'USD', 'Core PCE Price Index m/m', 'High', '0.2%', '0.2%'));
   }
 
   thursdays.forEach(thu => {
-    events.push(createEvent(thu, '06:00pm', 'USD', 'Unemployment Claims', 'High', '230K', '231K', '219K'));
+    // Avoid conflicting with Bank Holiday on Thu Oct 1
+    if (monthIndex === 9 && year === 2026 && thu === 1) return;
+    events.push(createEvent(thu, '06:00pm', 'USD', 'Unemployment Claims', 'Medium', '230K', '231K'));
   });
 
   return events.sort((a, b) => {
@@ -522,8 +546,8 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
  * Loads from bundled public/data/forex_factory_calendar.json with 0 CORS issues.
  */
 export async function fetchLiveForexFactoryCalendar(): Promise<EconomicEvent[]> {
-  const CACHE_KEY = 'forex_factory_live_cache_v5';
-  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v5';
+  const CACHE_KEY = 'forex_factory_live_cache_v7';
+  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v7';
 
   // 1. Try localStorage cache
   try {
