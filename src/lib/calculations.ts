@@ -356,7 +356,7 @@ export function filterTradesByPeriod(trades: Trade[], period: string, customRang
   if (period === 'all') return sortTradesDescending(trades);
 
   const filtered = trades.filter(t => {
-    const tradeDate = new Date(t.closeTime || t.openTime);
+    const tradeDate = new Date(t.openTime || t.closeTime);
     if (period === 'today') {
       return tradeDate.toDateString() === now.toDateString();
     }

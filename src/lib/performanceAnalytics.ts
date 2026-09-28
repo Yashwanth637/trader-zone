@@ -1,4 +1,5 @@
 import { Trade } from '../types/trade';
+import { parseUniversalDate } from './deltaIndiaParser';
 
 export interface ProfitDistributionTier {
   name: string;
@@ -241,23 +242,89 @@ export function calculateProfitDistribution(trades: Trade[]): ProfitDistribution
 }
 
 /**
- * Calculates Hourly Performance analytics for Image 1 Right Card
+ * Safely extracts the trade's open hour (0 to 23) in local time based strictly on openTime.
+ * Handles ISO strings, localized strings, universal formats, and epoch timestamps.
+ */
+export function getTradeOpenHour(t: Trade): number | null {
+  // 1. Strictly prioritize openTime / entryTime
+  const rawOpen = t.openTime || (t as any).open_time || (t as any).entryTime || (t as any).entry_time || (t as any).openedAt;
+
+  if (rawOpen) {
+    if (typeof rawOpen === 'string') {
+      const trimmed = rawOpen.trim();
+      // Epoch millisecond string e.g. "1727548200000"
+      if (/^\d{10,13}$/.test(trimmed)) {
+        const ms = parseInt(trimmed, 10) * (trimmed.length === 10 ? 1000 : 1);
+        const d = new Date(ms);
+        if (!isNaN(d.getTime())) return d.getHours();
+      }
+
+      // Standard ISO or date string
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) {
+        return d.getHours();
+      }
+
+      // Universal date parser (e.g. DD-MM-YYYY, YYYY.MM.DD)
+      const u = parseUniversalDate(trimmed);
+      if (!isNaN(u.getTime())) {
+        return u.getHours();
+      }
+
+      // Direct regex fallback for HH:mm in string
+      const timeMatch = trimmed.match(/(?:[T\s]|^)(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const h = parseInt(timeMatch[1], 10);
+        if (h >= 0 && h <= 23) return h;
+      }
+    } else if (typeof rawOpen === 'number') {
+      const ms = rawOpen < 1e11 ? rawOpen * 1000 : rawOpen;
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d.getHours();
+    } else if (rawOpen instanceof Date) {
+      if (!isNaN(rawOpen.getTime())) return rawOpen.getHours();
+    }
+  }
+
+  // 2. Secondary fallback ONLY if openTime is completely unavailable
+  const rawClose = t.closeTime || (t as any).close_time || (t as any).exitTime;
+  if (rawClose) {
+    const d = new Date(rawClose);
+    if (!isNaN(d.getTime())) return d.getHours();
+    const u = parseUniversalDate(String(rawClose));
+    if (!isNaN(u.getTime())) return u.getHours();
+  }
+
+  return null;
+}
+
+/**
+ * Calculates Hourly Performance analytics strictly considering trade open times
  */
 export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceData {
-  const closed = trades.filter(t => t.status === 'CLOSED');
+  const closed = trades.filter(t => 
+    t.status === 'CLOSED' || 
+    (t.status as any) === 'closed' || 
+    (!t.status && (t.exitPrice !== undefined || t.netPnl !== undefined))
+  );
 
-  // 24 hour buckets
+  // 24 hour buckets (0:00 to 23:00)
   const hourMap: Record<number, { pnl: number; count: number; wins: number }> = {};
   for (let i = 0; i < 24; i++) {
     hourMap[i] = { pnl: 0, count: 0, wins: 0 };
   }
 
   closed.forEach(t => {
-    const d = new Date(t.openTime || t.closeTime);
-    const hour = d.getHours();
-    hourMap[hour].pnl += t.netPnl;
+    // Strictly consider the open time of every trade
+    const hour = getTradeOpenHour(t);
+    if (hour === null || isNaN(hour) || hour < 0 || hour > 23) {
+      return;
+    }
+
+    const net = Number(t.netPnl) || 0;
+    hourMap[hour].pnl += net;
     hourMap[hour].count += 1;
-    if (t.netPnl > 0.01) {
+    if (net > 0.0001) {
       hourMap[hour].wins += 1;
     }
   });
@@ -291,13 +358,13 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
         avgPnl: 0
       }));
 
-  // Identify Best Hour, Worst Hour, Most Active
+  // Identify Best Hour, Worst Hour, Most Active based on trade open time
   let bestHour: HourlyPerformanceData['bestHour'] = null;
   let worstHour: HourlyPerformanceData['worstHour'] = null;
   let mostActiveHour: HourlyPerformanceData['mostActiveHour'] = null;
 
   hoursWithTrades.forEach(h => {
-    // Best Hour: Hour with the highest total net profit (matching the peak green bar on the chart)
+    // Best Hour: Open hour with the highest total net profit (matching the peak green bar on the chart)
     if (h.netPnl > 0) {
       if (!bestHour || h.netPnl > (bestHour.totalPnl || 0)) {
         bestHour = {
@@ -309,7 +376,7 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
       }
     }
 
-    // Worst Hour: Hour with the deepest total net loss (matching the lowest red bar on the chart)
+    // Worst Hour: Open hour with the deepest total net loss (matching the lowest red bar on the chart)
     if (h.netPnl < 0) {
       if (!worstHour || h.netPnl < (worstHour.totalPnl || 0)) {
         worstHour = {
@@ -321,7 +388,7 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
       }
     }
 
-    // Most Active: Hour with the highest number of trades
+    // Most Active: Open hour with the highest number of trades opened
     if (!mostActiveHour || h.tradeCount > mostActiveHour.tradeCount) {
       mostActiveHour = {
         hourStr: h.hourStr,
@@ -366,14 +433,14 @@ export function calculateHourlyPerformance(trades: Trade[]): HourlyPerformanceDa
   if (worstHour && (worstHour.totalPnl < 0 || worstHour.avgPnl < 0)) {
     const absAvg = Math.abs(worstHour.avgPnl);
     advice = {
-      title: `Caution around ${worstHour.hourStr}`,
-      description: `Your highest loss concentration is at ${worstHour.hourStr} with -$${absAvg >= 1 ? absAvg.toFixed(2) : absAvg.toFixed(2)} avg loss per trade across ${worstHour.tradeCount} trades.`,
+      title: `Caution around ${worstHour.hourStr} Openings`,
+      description: `Your highest loss concentration is for trades opened at ${worstHour.hourStr} with -$${absAvg >= 1 ? absAvg.toFixed(2) : absAvg.toFixed(2)} avg loss per trade across ${worstHour.tradeCount} trades.`,
       isWarning: true
     };
   } else if (bestHour && (bestHour.totalPnl > 0 || bestHour.avgPnl > 0)) {
     advice = {
-      title: `Prime Performance Window: ${bestHour.hourStr}`,
-      description: `Your highest edge is concentrated here with +$${bestHour.avgPnl.toFixed(2)} avg return per trade across ${bestHour.tradeCount} trades.`,
+      title: `Prime Execution Window: ${bestHour.hourStr}`,
+      description: `Your highest edge is concentrated on trades opened at ${bestHour.hourStr} with +$${bestHour.avgPnl.toFixed(2)} avg return per trade across ${bestHour.tradeCount} trades.`,
       isWarning: false
     };
   }

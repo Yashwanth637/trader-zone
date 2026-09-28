@@ -76,7 +76,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
             <h2 className="text-lg font-bold text-foreground tracking-tight">
               Performance by Time
             </h2>
-            <p className="text-xs text-muted">P&L by hour of day</p>
+            <p className="text-xs text-muted">P&L by open hour of trade</p>
           </div>
         </div>
       </div>
@@ -194,8 +194,8 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
               className="absolute px-3 py-2 rounded-xl bg-slate-900/95 dark:bg-black/90 border border-slate-700/80 shadow-2xl text-xs text-white z-30 pointer-events-none transition-all duration-75 ease-out backdrop-blur-md min-w-[150px]"
             >
               <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1 mb-1">
-                <span className="font-bold text-slate-200 font-mono text-xs">{hoveredHour.hourStr}</span>
-                <span className="text-[10px] text-slate-400 font-medium">{hoveredHour.tradeCount} trades</span>
+                <span className="font-bold text-slate-200 font-mono text-xs">{hoveredHour.hourStr} (Open Time)</span>
+                <span className="text-[10px] text-slate-400 font-medium">{hoveredHour.tradeCount} trades opened</span>
               </div>
               <div className={`font-mono font-bold text-sm ${hoveredHour.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 Net P&L: {hoveredHour.netPnl > 0 ? '+' : ''}{formatAdaptivePnl(hoveredHour.netPnl)}
@@ -214,7 +214,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
         <div className="p-3.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Best Hour</span>
+            <span>Best Hour (Open Time)</span>
           </div>
           <div className="text-lg font-mono font-black text-emerald-500 mt-1">
             {bestHour ? bestHour.hourStr : '--:--'}
@@ -228,7 +228,7 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
         <div className="p-3.5 rounded-xl border border-rose-500/25 bg-rose-500/5 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-xs text-rose-500 font-semibold">
             <TrendingDown className="w-3.5 h-3.5" />
-            <span>Worst Hour</span>
+            <span>Worst Hour (Open Time)</span>
           </div>
           <div className="text-lg font-mono font-black text-rose-500 mt-1">
             {worstHour ? worstHour.hourStr : '--:--'}
@@ -242,13 +242,13 @@ export const PerformanceByTimeCard: React.FC<PerformanceByTimeCardProps> = ({ da
         <div className="p-3.5 rounded-xl border border-violet-500/25 bg-violet-500/5 flex flex-col justify-between">
           <div className="flex items-center gap-1.5 text-xs text-violet-400 font-semibold">
             <Clock className="w-3.5 h-3.5" />
-            <span>Most Active</span>
+            <span>Most Active (Open Time)</span>
           </div>
           <div className="text-lg font-mono font-black text-violet-400 mt-1">
             {mostActiveHour ? mostActiveHour.hourStr : '--:--'}
           </div>
           <div className="text-xs text-muted mt-0.5 font-medium">
-            {mostActiveHour ? `${mostActiveHour.tradeCount} trades` : '0 trades'}
+            {mostActiveHour ? `${mostActiveHour.tradeCount} trades opened` : '0 trades'}
           </div>
         </div>
       </div>

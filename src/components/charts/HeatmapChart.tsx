@@ -20,7 +20,7 @@ export const HeatmapChart: React.FC<HeatmapProps> = ({ trades }) => {
   };
 
   closed.forEach(t => {
-    const d = new Date(t.closeTime || t.openTime);
+    const d = new Date(t.openTime || t.closeTime);
     const dayIdx = d.getDay(); // 0 is Sun, 1 is Mon...
     const name = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayIdx];
     if (dayStats[name]) {
