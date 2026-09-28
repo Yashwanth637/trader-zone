@@ -116,12 +116,10 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Compute Layout Items (filter by focused coin's category if drilled down)
+  // Full coin treemap layout remains stable so zooming expands into tiles in place
   const activeItems = useMemo(() => {
-    if (!focusedCoin) return items;
-    const related = items.filter(it => it.category === focusedCoin.category || it.id === focusedCoin.id);
-    return related.length > 0 ? related : items;
-  }, [items, focusedCoin]);
+    return items;
+  }, [items]);
 
   // Compute Treemap Rectangles using Squarify Algorithm
   const treemapRects = useMemo<TreemapRect<HeatmapItem>[]>(() => {
@@ -147,52 +145,80 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     });
   }, [activeItems, sizeBy, dimensions]);
 
-  // Handle Mouse Wheel Zoom centered on cursor
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!containerRef.current) return;
+  // Reset Zoom
+  const resetZoom = useCallback(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+    setFocusedCoin(null);
+  }, []);
 
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
-    const newZoom = Math.min(8, Math.max(0.7, +(zoomLevel * zoomFactor).toFixed(3)));
+  // Handle Non-Passive Mouse Wheel Zoom Centered on Cursor (TradingView style)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-    if (Math.abs(newZoom - 1) < 0.04) {
-      setPanOffset({ x: 0, y: 0 });
-      setZoomLevel(1);
-      return;
-    }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
 
-    if (newZoom < 1) {
-      // Keep treemap centered when zoomed out below 1
-      setPanOffset({
-        x: (dimensions.width - dimensions.width * newZoom) / 2,
-        y: (dimensions.height - dimensions.height * newZoom) / 2
+      const rect = container.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      if (cursorX < 0 || cursorX > rect.width || cursorY < 0 || cursorY > rect.height) {
+        return;
+      }
+
+      // Smooth zoom factor calculation
+      let zoomFactor: number;
+      if (e.ctrlKey) {
+        // Trackpad pinch-to-zoom
+        zoomFactor = Math.exp(-e.deltaY * 0.01);
+      } else {
+        // Standard mouse wheel
+        const clampedDelta = Math.max(-120, Math.min(120, e.deltaY));
+        zoomFactor = Math.pow(1.0025, -clampedDelta);
+      }
+
+      setZoomLevel(prevZoom => {
+        let newZoom = prevZoom * zoomFactor;
+
+        // Strictly enforce minimum zoom at 100% (1.0) and maximum at 800% (8.0)
+        if (newZoom <= 1.01) {
+          setPanOffset({ x: 0, y: 0 });
+          setFocusedCoin(null);
+          return 1;
+        }
+
+        newZoom = Math.min(8, newZoom);
+
+        setPanOffset(prevPan => {
+          // Point in unscaled canvas coordinates currently under cursor
+          const canvasX = (cursorX - prevPan.x) / prevZoom;
+          const canvasY = (cursorY - prevPan.y) / prevZoom;
+
+          // Keep that exact point under the cursor at newZoom
+          let nextPanX = cursorX - canvasX * newZoom;
+          let nextPanY = cursorY - canvasY * newZoom;
+
+          // Strictly clamp so heatmap edges never pull away from container edges (no blank gaps)
+          const minPanX = rect.width - rect.width * newZoom;
+          const minPanY = rect.height - rect.height * newZoom;
+
+          nextPanX = Math.min(0, Math.max(minPanX, nextPanX));
+          nextPanY = Math.min(0, Math.max(minPanY, nextPanY));
+
+          return { x: nextPanX, y: nextPanY };
+        });
+
+        return newZoom;
       });
-      setZoomLevel(newZoom);
-      return;
-    }
+    };
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const cursorX = e.clientX - rect.left;
-    const cursorY = e.clientY - rect.top;
-
-    // Fixed point in unscaled canvas coordinates:
-    const canvasX = (cursorX - panOffset.x) / zoomLevel;
-    const canvasY = (cursorY - panOffset.y) / zoomLevel;
-
-    // After zooming, keep that point at the cursor:
-    const newPanX = cursorX - canvasX * newZoom;
-    const newPanY = cursorY - canvasY * newZoom;
-
-    // Prevent excessive panning off-canvas
-    const minPanX = dimensions.width - dimensions.width * newZoom;
-    const minPanY = dimensions.height - dimensions.height * newZoom;
-
-    setZoomLevel(newZoom);
-    setPanOffset({
-      x: Math.min(80, Math.max(minPanX - 80, newPanX)),
-      y: Math.min(80, Math.max(minPanY - 80, newPanY))
-    });
-  };
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+    };
+  }, [dimensions]);
 
   // Handle Pan Click & Drag
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -207,11 +233,11 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     if (isPanning && zoomLevel > 1) {
       const minPanX = dimensions.width - dimensions.width * zoomLevel;
       const minPanY = dimensions.height - dimensions.height * zoomLevel;
-      const newPanX = e.clientX - dragStart.x;
-      const newPanY = e.clientY - dragStart.y;
+      const rawPanX = e.clientX - dragStart.x;
+      const rawPanY = e.clientY - dragStart.y;
       setPanOffset({
-        x: Math.min(100, Math.max(minPanX - 100, newPanX)),
-        y: Math.min(100, Math.max(minPanY - 100, newPanY))
+        x: Math.min(0, Math.max(minPanX, rawPanX)),
+        y: Math.min(0, Math.max(minPanY, rawPanY))
       });
     }
   };
@@ -220,13 +246,6 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     setIsPanning(false);
   };
 
-  // Reset Zoom
-  const resetZoom = useCallback(() => {
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-    setFocusedCoin(null);
-  }, []);
-
   // Zoom into specific coin on click
   const handleCoinClick = (item: HeatmapItem, rect: TreemapRect<HeatmapItem>) => {
     setActiveCoinId(item.id);
@@ -234,15 +253,21 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
 
     if (zoomLevel < 1.8) {
       setFocusedCoin(item);
-      const targetZoom = 3.2;
+      const targetZoom = 2.6;
       const centerX = rect.x + rect.width / 2;
       const centerY = rect.y + rect.height / 2;
 
+      let nextPanX = dimensions.width / 2 - centerX * targetZoom;
+      let nextPanY = dimensions.height / 2 - centerY * targetZoom;
+
+      const minPanX = dimensions.width - dimensions.width * targetZoom;
+      const minPanY = dimensions.height - dimensions.height * targetZoom;
+
+      nextPanX = Math.min(0, Math.max(minPanX, nextPanX));
+      nextPanY = Math.min(0, Math.max(minPanY, nextPanY));
+
       setZoomLevel(targetZoom);
-      setPanOffset({
-        x: dimensions.width / 2 - centerX * targetZoom,
-        y: dimensions.height / 2 - centerY * targetZoom
-      });
+      setPanOffset({ x: nextPanX, y: nextPanY });
     }
   };
 
@@ -250,7 +275,6 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
     <div
       ref={containerRef}
       className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-[#131722] select-none"
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -264,18 +288,18 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
       }}
     >
       {/* Zoom / Drill-down Status Breadcrumb Banner */}
-      {focusedCoin && (
+      {focusedCoin && zoomLevel > 1 && (
         <div className="absolute top-3 left-3 z-30 flex items-center gap-2 bg-white/95 dark:bg-[#1e222d]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white shadow-lg animate-in fade-in">
           <button
             onClick={resetZoom}
             className="flex items-center gap-1 text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 font-bold transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>All Coins</span>
+            <span>Reset Zoom</span>
           </button>
           <span className="text-slate-400 dark:text-slate-500">/</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200">
-            {focusedCoin.name} ({focusedCoin.category})
+            {focusedCoin.name} ({focusedCoin.displaySymbol})
           </span>
           <button
             onClick={resetZoom}
@@ -291,58 +315,69 @@ export const SquarifiedTreemap: React.FC<SquarifiedTreemapProps> = ({
       <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-white/95 dark:bg-[#1e222d]/85 backdrop-blur-md px-2 py-1 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white shadow-lg">
         <button
           onClick={() => {
+            const centerX = dimensions.width / 2;
+            const centerY = dimensions.height / 2;
             const nextZoom = Math.min(8, +(zoomLevel * 1.3).toFixed(2));
+            const canvasX = (centerX - panOffset.x) / zoomLevel;
+            const canvasY = (centerY - panOffset.y) / zoomLevel;
+            let nextPanX = centerX - canvasX * nextZoom;
+            let nextPanY = centerY - canvasY * nextZoom;
+            const minPanX = dimensions.width - dimensions.width * nextZoom;
+            const minPanY = dimensions.height - dimensions.height * nextZoom;
+            nextPanX = Math.min(0, Math.max(minPanX, nextPanX));
+            nextPanY = Math.min(0, Math.max(minPanY, nextPanY));
             setZoomLevel(nextZoom);
-            if (nextZoom < 1) {
-              setPanOffset({
-                x: (dimensions.width - dimensions.width * nextZoom) / 2,
-                y: (dimensions.height - dimensions.height * nextZoom) / 2
-              });
-            } else {
-              setPanOffset(prev => ({
-                x: prev.x - (dimensions.width * (nextZoom - zoomLevel)) / (2 * Math.max(1, zoomLevel)),
-                y: prev.y - (dimensions.height * (nextZoom - zoomLevel)) / (2 * Math.max(1, zoomLevel))
-              }));
-            }
+            setPanOffset({ x: nextPanX, y: nextPanY });
           }}
-          className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+          disabled={zoomLevel >= 8}
+          className={`p-1 rounded transition-colors ${
+            zoomLevel >= 8
+              ? 'opacity-30 cursor-not-allowed text-slate-400'
+              : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+          }`}
           title="Zoom In (+)"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
-        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 min-w-[32px] text-center select-none">
+        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 min-w-[34px] text-center select-none">
           {Math.round(zoomLevel * 100)}%
         </span>
         <button
           onClick={() => {
-            const nextZoom = Math.max(0.7, +(zoomLevel / 1.3).toFixed(2));
-            if (Math.abs(nextZoom - 1) < 0.08) {
+            if (zoomLevel <= 1.01) return;
+            const nextZoom = Math.max(1, +(zoomLevel / 1.3).toFixed(2));
+            if (nextZoom <= 1.01) {
               resetZoom();
               return;
             }
+            const centerX = dimensions.width / 2;
+            const centerY = dimensions.height / 2;
+            const canvasX = (centerX - panOffset.x) / zoomLevel;
+            const canvasY = (centerY - panOffset.y) / zoomLevel;
+            let nextPanX = centerX - canvasX * nextZoom;
+            let nextPanY = centerY - canvasY * nextZoom;
+            const minPanX = dimensions.width - dimensions.width * nextZoom;
+            const minPanY = dimensions.height - dimensions.height * nextZoom;
+            nextPanX = Math.min(0, Math.max(minPanX, nextPanX));
+            nextPanY = Math.min(0, Math.max(minPanY, nextPanY));
             setZoomLevel(nextZoom);
-            if (nextZoom < 1) {
-              setPanOffset({
-                x: (dimensions.width - dimensions.width * nextZoom) / 2,
-                y: (dimensions.height - dimensions.height * nextZoom) / 2
-              });
-            } else {
-              setPanOffset(prev => ({
-                x: prev.x + (dimensions.width * (zoomLevel - nextZoom)) / (2 * zoomLevel),
-                y: prev.y + (dimensions.height * (zoomLevel - nextZoom)) / (2 * zoomLevel)
-              }));
-            }
+            setPanOffset({ x: nextPanX, y: nextPanY });
           }}
-          className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+          disabled={zoomLevel <= 1}
+          className={`p-1 rounded transition-colors ${
+            zoomLevel <= 1
+              ? 'opacity-30 cursor-not-allowed text-slate-400'
+              : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+          }`}
           title="Zoom Out (-)"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
-        {(zoomLevel !== 1 || focusedCoin) && (
+        {(zoomLevel > 1 || focusedCoin) && (
           <button
             onClick={resetZoom}
             className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors ml-0.5"
-            title="Reset Zoom"
+            title="Reset Zoom (100%)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
