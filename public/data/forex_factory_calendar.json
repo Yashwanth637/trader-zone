@@ -68,7 +68,7 @@
     "country": "AUD",
     "date": "2026-09-28T21:30:00-04:00",
     "impact": "Low",
-    "forecast": "0.4%",
+    "forecast": "0.3%",
     "previous": "1.1%"
   },
   {
@@ -108,7 +108,7 @@
     "country": "EUR",
     "date": "2026-09-29T03:00:00-04:00",
     "impact": "Low",
-    "forecast": "4.7%",
+    "forecast": "4.6%",
     "previous": "4.3%"
   },
   {
@@ -124,7 +124,7 @@
     "country": "GBP",
     "date": "2026-09-29T04:30:00-04:00",
     "impact": "Low",
-    "forecast": "57K",
+    "forecast": "56K",
     "previous": "56K"
   },
   {
@@ -136,20 +136,20 @@
     "previous": "6.3B"
   },
   {
-    "title": "Italian 10-y Bond Auction",
-    "country": "EUR",
-    "date": "2026-09-29T05:33:00-04:00",
-    "impact": "Low",
-    "forecast": "",
-    "previous": "4.10|1.6"
-  },
-  {
     "title": "10-y Bond Auction",
     "country": "GBP",
-    "date": "2026-09-29T05:33:00-04:00",
+    "date": "2026-09-29T05:02:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": "5.16|3.6"
+  },
+  {
+    "title": "Italian 10-y Bond Auction",
+    "country": "EUR",
+    "date": "2026-09-29T05:04:00-04:00",
+    "impact": "Low",
+    "forecast": "",
+    "previous": "4.10|1.6"
   },
   {
     "title": "German Buba President Nagel Speaks",
@@ -172,7 +172,7 @@
     "country": "CAD",
     "date": "2026-09-29T08:30:00-04:00",
     "impact": "Medium",
-    "forecast": "0.1%",
+    "forecast": "0.0%",
     "previous": "0.3%"
   },
   {
@@ -196,7 +196,7 @@
     "country": "USD",
     "date": "2026-09-29T10:00:00-04:00",
     "impact": "Medium",
-    "forecast": "90.1",
+    "forecast": "89.2",
     "previous": "89.4"
   },
   {
@@ -292,7 +292,7 @@
     "country": "JPY",
     "date": "2026-09-29T19:50:00-04:00",
     "impact": "Low",
-    "forecast": "1.2%",
+    "forecast": "1.4%",
     "previous": "0.1%"
   },
   {
@@ -300,7 +300,7 @@
     "country": "JPY",
     "date": "2026-09-29T19:50:00-04:00",
     "impact": "Low",
-    "forecast": "3.2%",
+    "forecast": "3.3%",
     "previous": "4.0%"
   },
   {
@@ -340,7 +340,7 @@
     "country": "AUD",
     "date": "2026-09-29T21:30:00-04:00",
     "impact": "Low",
-    "forecast": "-0.9%",
+    "forecast": "-1.6%",
     "previous": "-3.6%"
   },
   {
@@ -364,7 +364,7 @@
     "country": "CNY",
     "date": "2026-09-29T21:30:00-04:00",
     "impact": "Low",
-    "forecast": "49.3",
+    "forecast": "49.2",
     "previous": "49.0"
   },
   {
@@ -380,7 +380,7 @@
     "country": "CNY",
     "date": "2026-09-29T21:45:00-04:00",
     "impact": "Low",
-    "forecast": "51.2",
+    "forecast": "51.3",
     "previous": "51.4"
   },
   {
@@ -388,7 +388,7 @@
     "country": "JPY",
     "date": "2026-09-30T01:00:00-04:00",
     "impact": "Low",
-    "forecast": "6.8%",
+    "forecast": "6.9%",
     "previous": "8.2%"
   },
   {
@@ -396,16 +396,8 @@
     "country": "EUR",
     "date": "2026-09-30T02:00:00-04:00",
     "impact": "Low",
-    "forecast": "0.1%",
+    "forecast": "0.6%",
     "previous": "0.2%"
-  },
-  {
-    "title": "German Retail Sales m/m",
-    "country": "EUR",
-    "date": "2026-09-30T02:00:00-04:00",
-    "impact": "Low",
-    "forecast": "1.4%",
-    "previous": "-3.4%"
   },
   {
     "title": "Current Account",
@@ -430,6 +422,14 @@
     "impact": "Low",
     "forecast": "1.7%",
     "previous": "1.7%"
+  },
+  {
+    "title": "German Retail Sales m/m",
+    "country": "EUR",
+    "date": "2026-09-30T02:04:00-04:00",
+    "impact": "Low",
+    "forecast": "1.6%",
+    "previous": "-3.4%"
   },
   {
     "title": "German Prelim CPI m/m",
@@ -460,7 +460,7 @@
     "country": "EUR",
     "date": "2026-09-30T03:55:00-04:00",
     "impact": "Low",
-    "forecast": "2K",
+    "forecast": "1K",
     "previous": "4K"
   },
   {
@@ -476,7 +476,7 @@
     "country": "EUR",
     "date": "2026-09-30T05:00:00-04:00",
     "impact": "Low",
-    "forecast": "0.0%",
+    "forecast": "0.2%",
     "previous": "0.5%"
   },
   {
@@ -498,7 +498,7 @@
   {
     "title": "German 10-y Bond Auction",
     "country": "EUR",
-    "date": "2026-09-30T05:42:00-04:00",
+    "date": "2026-09-30T05:32:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": "3.39|1.5"
@@ -516,7 +516,7 @@
     "country": "USD",
     "date": "2026-09-30T08:15:00-04:00",
     "impact": "Medium",
-    "forecast": "70K",
+    "forecast": "73K",
     "previous": "38K"
   },
   {
@@ -548,7 +548,7 @@
     "country": "USD",
     "date": "2026-09-30T08:30:00-04:00",
     "impact": "Low",
-    "forecast": "-113.8B",
+    "forecast": "-116.3B",
     "previous": "-118.8B"
   },
   {
@@ -564,7 +564,7 @@
     "country": "USD",
     "date": "2026-09-30T08:30:00-04:00",
     "impact": "Low",
-    "forecast": "1.0%",
+    "forecast": "0.8%",
     "previous": "0.2%"
   },
   {
@@ -572,7 +572,7 @@
     "country": "USD",
     "date": "2026-09-30T08:30:00-04:00",
     "impact": "Low",
-    "forecast": "1.1%",
+    "forecast": "0.5%",
     "previous": "1.3%"
   },
   {
@@ -588,7 +588,7 @@
     "country": "USD",
     "date": "2026-09-30T09:45:00-04:00",
     "impact": "Low",
-    "forecast": "51.3",
+    "forecast": "51.2",
     "previous": "47.1"
   },
   {
@@ -604,7 +604,7 @@
     "country": "USD",
     "date": "2026-09-30T10:30:00-04:00",
     "impact": "Low",
-    "forecast": "",
+    "forecast": "-0.7M",
     "previous": "3.0M"
   },
   {
@@ -620,6 +620,14 @@
     "country": "USD",
     "date": "2026-09-30T15:25:00-04:00",
     "impact": "Low",
+    "forecast": "",
+    "previous": ""
+  },
+  {
+    "title": "President Trump Speaks",
+    "country": "USD",
+    "date": "2026-09-30T15:30:00-04:00",
+    "impact": "Medium",
     "forecast": "",
     "previous": ""
   },
@@ -643,7 +651,7 @@
     "title": "FOMC Member Kashkari Speaks",
     "country": "USD",
     "date": "2026-09-30T18:00:00-04:00",
-    "impact": "Low",
+    "impact": "Medium",
     "forecast": "",
     "previous": ""
   },
@@ -692,7 +700,7 @@
     "country": "AUD",
     "date": "2026-09-30T21:30:00-04:00",
     "impact": "Low",
-    "forecast": "2.10B",
+    "forecast": "2.00B",
     "previous": "1.92B"
   },
   {
@@ -708,7 +716,7 @@
     "country": "GBP",
     "date": "2026-10-01T02:00:00-04:00",
     "impact": "Low",
-    "forecast": "0.2%",
+    "forecast": "0.0%",
     "previous": "0.2%"
   },
   {
@@ -732,7 +740,7 @@
     "country": "CHF",
     "date": "2026-10-01T02:30:00-04:00",
     "impact": "Low",
-    "forecast": "2.2%",
+    "forecast": "2.1%",
     "previous": "2.3%"
   },
   {
@@ -748,7 +756,7 @@
     "country": "CHF",
     "date": "2026-10-01T03:30:00-04:00",
     "impact": "Low",
-    "forecast": "56.0",
+    "forecast": "56.3",
     "previous": "57.1"
   },
   {
@@ -756,7 +764,7 @@
     "country": "EUR",
     "date": "2026-10-01T03:45:00-04:00",
     "impact": "Low",
-    "forecast": "49.9",
+    "forecast": "50.1",
     "previous": "49.6"
   },
   {
@@ -788,7 +796,7 @@
     "country": "EUR",
     "date": "2026-10-01T04:00:00-04:00",
     "impact": "Low",
-    "forecast": "5.7%",
+    "forecast": "5.8%",
     "previous": "5.8%"
   },
   {
@@ -808,17 +816,9 @@
     "previous": "52.0"
   },
   {
-    "title": "Unemployment Rate",
-    "country": "EUR",
-    "date": "2026-10-01T05:00:00-04:00",
-    "impact": "Low",
-    "forecast": "6.4%",
-    "previous": "6.4%"
-  },
-  {
     "title": "Spanish 10-y Bond Auction",
     "country": "EUR",
-    "date": "2026-10-01T05:03:00-04:00",
+    "date": "2026-10-01T04:42:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": "3.96|1.7"
@@ -826,10 +826,18 @@
   {
     "title": "French 10-y Bond Auction",
     "country": "EUR",
-    "date": "2026-10-01T05:18:00-04:00",
+    "date": "2026-10-01T04:57:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": "4.23|2.3"
+  },
+  {
+    "title": "Unemployment Rate",
+    "country": "EUR",
+    "date": "2026-10-01T05:00:00-04:00",
+    "impact": "Low",
+    "forecast": "6.4%",
+    "previous": "6.4%"
   },
   {
     "title": "Challenger Job Cuts y/y",
@@ -860,7 +868,7 @@
     "country": "USD",
     "date": "2026-10-01T08:30:00-04:00",
     "impact": "Medium",
-    "forecast": "199K",
+    "forecast": "201K",
     "previous": "197K"
   },
   {
@@ -908,7 +916,7 @@
     "country": "USD",
     "date": "2026-10-01T09:45:00-04:00",
     "impact": "Low",
-    "forecast": "57.0",
+    "forecast": "56.9",
     "previous": "57.0"
   },
   {
@@ -924,7 +932,7 @@
     "country": "USD",
     "date": "2026-10-01T10:00:00-04:00",
     "impact": "Medium",
-    "forecast": "55.0",
+    "forecast": "54.8",
     "previous": "54.6"
   },
   {
@@ -932,7 +940,7 @@
     "country": "USD",
     "date": "2026-10-01T10:00:00-04:00",
     "impact": "Low",
-    "forecast": "0.1%",
+    "forecast": "0.0%",
     "previous": "-0.5%"
   },
   {
@@ -940,7 +948,7 @@
     "country": "USD",
     "date": "2026-10-01T10:00:00-04:00",
     "impact": "Low",
-    "forecast": "72.0",
+    "forecast": "72.9",
     "previous": "71.1"
   },
   {
@@ -948,7 +956,7 @@
     "country": "USD",
     "date": "2026-10-01T10:15:00-04:00",
     "impact": "Low",
-    "forecast": "16.5M",
+    "forecast": "16.3M",
     "previous": "16.8M"
   },
   {
@@ -956,7 +964,7 @@
     "country": "USD",
     "date": "2026-10-01T10:30:00-04:00",
     "impact": "Low",
-    "forecast": "",
+    "forecast": "63B",
     "previous": "53B"
   },
   {
@@ -1000,18 +1008,18 @@
     "previous": ""
   },
   {
-    "title": "FOMC Member Logan Speaks",
-    "country": "USD",
-    "date": "2026-10-01T18:45:00-04:00",
-    "impact": "Low",
-    "forecast": "",
-    "previous": ""
-  },
-  {
     "title": "Bank Holiday",
     "country": "CNY",
     "date": "2026-10-01T19:01:00-04:00",
     "impact": "Holiday",
+    "forecast": "",
+    "previous": ""
+  },
+  {
+    "title": "FOMC Member Logan Speaks",
+    "country": "USD",
+    "date": "2026-10-01T19:20:00-04:00",
+    "impact": "Low",
     "forecast": "",
     "previous": ""
   },

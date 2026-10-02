@@ -389,6 +389,15 @@ export const BacktestStudio: React.FC = () => {
     }
   };
 
+  // Sync state if user exits fullscreen via Esc key
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   // Current bar formatted timestamp
   const currentCandle = candles[currentIndex] || null;
   const currentBarTimeFormatted = currentCandle
@@ -405,13 +414,17 @@ export const BacktestStudio: React.FC = () => {
   return (
     <div
       ref={studioContainerRef}
-      className={`flex flex-col space-y-4 bg-background min-h-screen text-foreground ${
-        isFullscreen ? 'p-6 fixed inset-0 z-50 overflow-y-auto bg-background' : ''
+      className={`flex flex-col bg-background text-foreground transition-all ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 p-3 h-screen w-screen overflow-hidden justify-between space-y-3'
+          : 'space-y-4 min-h-screen'
       }`}
       style={{ fontFamily: 'Arial, sans-serif' }}
     >
       {/* Top Header & Strategy Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border/40 dark:border-white/[0.08] shadow-xl">
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border/40 dark:border-white/[0.08] shadow-xl ${
+        isFullscreen ? 'shrink-0 p-3' : ''
+      }`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Strategy Title & Selector */}
           <div className="flex items-center gap-2">
@@ -499,11 +512,17 @@ export const BacktestStudio: React.FC = () => {
       </div>
 
       {/* Main Workspace (Chart + Drawing Toolbar + Order Panel) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
-        {/* Chart Column (3 cols on large screens) */}
-        <div className="lg:col-span-3 flex flex-col space-y-3">
+      <div className={`grid gap-4 items-start ${
+        isFullscreen
+          ? 'grid-cols-1 flex-1 h-[calc(100vh-120px)] min-h-0'
+          : 'grid-cols-1 lg:grid-cols-4'
+      }`}>
+        {/* Chart Column (Takes full width in fullscreen, 3 cols otherwise) */}
+        <div className={`${isFullscreen ? 'col-span-1 h-full' : 'lg:col-span-3'} flex flex-col space-y-3`}>
           {loading ? (
-            <div className="w-full h-[540px] rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3">
+            <div className={`w-full rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3 ${
+              isFullscreen ? 'flex-1 h-full' : 'h-[540px]'
+            }`}>
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
               <div className="text-sm font-bold text-foreground">
                 Fetching Real Market Historical Candles...
@@ -513,7 +532,9 @@ export const BacktestStudio: React.FC = () => {
               </p>
             </div>
           ) : loadError ? (
-            <div className="w-full h-[540px] rounded-2xl border border-rose-500/30 bg-surface flex flex-col items-center justify-center space-y-3 p-6 text-center">
+            <div className={`w-full rounded-2xl border border-rose-500/30 bg-surface flex flex-col items-center justify-center space-y-3 p-6 text-center ${
+              isFullscreen ? 'flex-1 h-full' : 'h-[540px]'
+            }`}>
               <div className="text-rose-400 font-bold text-base">Historical Data Fetch Error</div>
               <p className="text-xs text-muted max-w-md">{loadError}</p>
               <button
@@ -525,7 +546,7 @@ export const BacktestStudio: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="relative w-full h-[540px]">
+            <div className={`relative w-full ${isFullscreen ? 'flex-1 h-[calc(100%-65px)] min-h-[480px]' : 'h-[540px]'}`}>
               {/* Drawing Toolbar Overlay on Left with Hide Option (Items 2 & 5) */}
               <div className="absolute top-3 left-3 z-20">
                 {isToolbarVisible ? (
@@ -588,62 +609,68 @@ export const BacktestStudio: React.FC = () => {
 
           {/* Floating Replay Controls Bar */}
           {!loading && candles.length > 0 && (
-            <ReplayControls
-              isPlaying={isPlaying}
-              onTogglePlay={() => setIsPlaying(!isPlaying)}
-              onStepForward={handleStepForward}
-              onStepBack={handleStepBack}
-              onReset={handleResetReplay}
-              speed={speed}
-              onChangeSpeed={setSpeed}
-              currentIndex={currentIndex}
-              totalCandles={candles.length}
-              onSeek={idx => {
-                setCurrentIndex(idx);
-                if (candles[idx]) {
-                  engineRef.current.currentCandle = candles[idx];
-                  syncEngineState();
-                }
-              }}
-              isCutMode={isCutMode}
-              onToggleCutMode={() => setIsCutMode(!isCutMode)}
-              currentBarTimeFormatted={currentBarTimeFormatted}
-              onJumpToDate={handleJumpToDate}
-            />
+            <div className="shrink-0">
+              <ReplayControls
+                isPlaying={isPlaying}
+                onTogglePlay={() => setIsPlaying(!isPlaying)}
+                onStepForward={handleStepForward}
+                onStepBack={handleStepBack}
+                onReset={handleResetReplay}
+                speed={speed}
+                onChangeSpeed={setSpeed}
+                currentIndex={currentIndex}
+                totalCandles={candles.length}
+                onSeek={idx => {
+                  setCurrentIndex(idx);
+                  if (candles[idx]) {
+                    engineRef.current.currentCandle = candles[idx];
+                    syncEngineState();
+                  }
+                }}
+                isCutMode={isCutMode}
+                onToggleCutMode={() => setIsCutMode(!isCutMode)}
+                currentBarTimeFormatted={currentBarTimeFormatted}
+                onJumpToDate={handleJumpToDate}
+              />
+            </div>
           )}
         </div>
 
-        {/* Order Execution & Sizing Panel Column (1 col) */}
-        <div className="lg:col-span-1 h-full">
-          <BacktestOrderPanel
-            currentCandle={currentCandle}
-            virtualBalance={engineState.virtualBalance}
-            virtualEquity={engineState.virtualEquity}
-            openPosition={engineState.openPosition}
-            pendingOrders={engineState.pendingOrders}
-            onPlaceOrder={handlePlaceOrder}
-            onClosePosition={handleClosePosition}
-            onMoveToBreakeven={handleMoveToBreakeven}
-            onCancelOrder={handleCancelOrder}
-            onResetCapital={handleResetCapital}
-            symbol={selectedAssetId}
-            presetOrderParams={presetOrderParams}
-          />
-        </div>
+        {/* Order Execution & Sizing Panel Column (1 col) - Hidden in Fullscreen (Item 3 & Image 2) */}
+        {!isFullscreen && (
+          <div className="lg:col-span-1 h-full">
+            <BacktestOrderPanel
+              currentCandle={currentCandle}
+              virtualBalance={engineState.virtualBalance}
+              virtualEquity={engineState.virtualEquity}
+              openPosition={engineState.openPosition}
+              pendingOrders={engineState.pendingOrders}
+              onPlaceOrder={handlePlaceOrder}
+              onClosePosition={handleClosePosition}
+              onMoveToBreakeven={handleMoveToBreakeven}
+              onCancelOrder={handleCancelOrder}
+              onResetCapital={handleResetCapital}
+              symbol={selectedAssetId}
+              presetOrderParams={presetOrderParams}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Bottom Session Trade Log & Analytics (100% Isolated) */}
-      <div className="w-full pt-2">
-        <BacktestTradeLog
-          trades={engineState.closedTrades}
-          stats={engineState.stats}
-          openPosition={engineState.openPosition}
-          onClosePosition={handleClosePosition}
-          onMoveToBreakeven={handleMoveToBreakeven}
-          onClearTrades={handleClearTrades}
-          onDeleteTrade={handleDeleteTrade}
-        />
-      </div>
+      {/* Bottom Session Trade Log & Analytics - Hidden in Fullscreen (Item 3 & Image 3) */}
+      {!isFullscreen && (
+        <div className="w-full pt-2">
+          <BacktestTradeLog
+            trades={engineState.closedTrades}
+            stats={engineState.stats}
+            openPosition={engineState.openPosition}
+            onClosePosition={handleClosePosition}
+            onMoveToBreakeven={handleMoveToBreakeven}
+            onClearTrades={handleClearTrades}
+            onDeleteTrade={handleDeleteTrade}
+          />
+        </div>
+      )}
     </div>
   );
 };

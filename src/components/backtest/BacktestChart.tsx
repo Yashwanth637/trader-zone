@@ -97,16 +97,18 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       crosshair: {
         mode: 0,
         vertLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
           width: 1,
           style: LineStyle.Dashed,
-          visible: !isCutMode
+          visible: !isCutMode,
+          labelBackgroundColor: isDark ? '#334155' : '#1e293b'
         },
         horzLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
           width: 1,
           style: LineStyle.Dashed,
-          visible: !isCutMode
+          visible: !isCutMode,
+          labelBackgroundColor: isDark ? '#334155' : '#1e293b'
         }
       },
       handleScale: {
@@ -188,6 +190,16 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       grid: {
         vertLines: { color: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)' },
         horzLines: { color: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)' }
+      },
+      crosshair: {
+        vertLine: {
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
+          labelBackgroundColor: isDark ? '#334155' : '#1e293b'
+        },
+        horzLine: {
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
+          labelBackgroundColor: isDark ? '#334155' : '#1e293b'
+        }
       },
       timeScale: {
         borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
