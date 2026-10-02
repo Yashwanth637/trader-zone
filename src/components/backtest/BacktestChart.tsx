@@ -32,6 +32,7 @@ interface BacktestChartProps {
   onSelectDrawing: (id: string | null) => void;
   isCutMode: boolean;
   onCutAtBar: (index: number) => void;
+  onCancelCutMode?: () => void;
   onApplyPositionToOrder?: (entry: number, sl: number, tp: number, side: 'BUY' | 'SELL') => void;
   onModifyPosition?: (params: { stopLoss?: number; takeProfit?: number }) => void;
   onModifyLimitOrder?: (orderId: string, price: number) => void;
@@ -50,6 +51,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
   onSelectDrawing,
   isCutMode,
   onCutAtBar,
+  onCancelCutMode,
   onApplyPositionToOrder,
   onModifyPosition,
   onModifyLimitOrder
@@ -93,7 +95,19 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         horzLines: { color: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)' }
       },
       crosshair: {
-        mode: 1
+        mode: 0,
+        vertLine: {
+          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          width: 1,
+          style: LineStyle.Dashed,
+          visible: !isCutMode
+        },
+        horzLine: {
+          color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.35)',
+          width: 1,
+          style: LineStyle.Dashed,
+          visible: !isCutMode
+        }
       },
       handleScale: {
         mouseWheel: true,
@@ -183,6 +197,21 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       }
     });
   }, [isDark]);
+
+  // Update crosshair visibility when isCutMode changes (hide during cut mode)
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      crosshair: {
+        vertLine: {
+          visible: !isCutMode
+        },
+        horzLine: {
+          visible: !isCutMode
+        }
+      }
+    });
+  }, [isCutMode]);
 
   // TradingView Style Price Scale Wheel Zoom (Item 2: Gentle, reduced sensitivity)
   useEffect(() => {
@@ -281,59 +310,95 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     }
   }, [openPosition]);
 
-  // Cut Bar Hover & Click Handling with Animation (TradingView Style - Image 1)
-  const handleChartMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current || !chartRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (isCutMode) {
-      setCutHoverY(y);
-      const time = chartRef.current.timeScale().coordinateToTime(x) as number | null;
-      if (time !== null && candles.length > 0) {
-        let closestIdx = 0;
-        let minDiff = Infinity;
-        for (let i = 0; i < candles.length; i++) {
-          const diff = Math.abs(candles[i].time - time);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestIdx = i;
-          }
+  // Set default initial cut line position when isCutMode is activated
+  useEffect(() => {
+    if (isCutMode && chartRef.current && candles.length > 0) {
+      const curCandle = candles[currentIndex] || candles[candles.length - 1];
+      if (curCandle) {
+        const candleCoord = chartRef.current.timeScale().timeToCoordinate(curCandle.time as any);
+        if (candleCoord !== null && !isNaN(candleCoord)) {
+          setCutHoverX(candleCoord);
+        } else {
+          setCutHoverX(dimensions.width * 0.7);
         }
-        const candleCoord = chartRef.current.timeScale().timeToCoordinate(candles[closestIdx].time as any);
-        setCutHoverX(candleCoord !== null && !isNaN(candleCoord) ? candleCoord : x);
-
-        const d = new Date(candles[closestIdx].time * 1000);
+        setCutHoverY(dimensions.height / 2);
+        const d = new Date(curCandle.time * 1000);
         const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
         const day = d.toLocaleDateString('en-US', { day: '2-digit' });
         const month = d.toLocaleDateString('en-US', { month: 'short' });
         const year = "'" + d.toLocaleDateString('en-US', { year: '2-digit' });
         const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        setCutHoverDate(`Re: ${weekday} ${day} ${month} ${year} ${timeStr}`);
-      } else {
-        setCutHoverX(x);
+        setCutHoverDate(`${weekday} ${day} ${month} ${year} ${timeStr}`);
       }
-    } else {
-      if (cutHoverX !== null) {
-        setCutHoverX(null);
-        setCutHoverY(null);
-        setCutHoverDate(null);
-      }
+    } else if (!isCutMode) {
+      setCutHoverX(null);
+      setCutHoverY(null);
+      setCutHoverDate(null);
     }
+  }, [isCutMode, currentIndex, candles, dimensions]);
+
+  // Escape key handler to cancel cut mode
+  useEffect(() => {
+    if (!isCutMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (onCancelCutMode) onCancelCutMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCutMode, onCancelCutMode]);
+
+  // Cut Bar Hover & Click Handling
+  const updateCutHover = useCallback((clientX: number, clientY: number) => {
+    if (!containerRef.current || !chartRef.current || candles.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    setCutHoverY(y);
+
+    const time = chartRef.current.timeScale().coordinateToTime(x) as number | null;
+    if (time !== null) {
+      let closestIdx = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < candles.length; i++) {
+        const diff = Math.abs(candles[i].time - time);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
+      }
+      const candleCoord = chartRef.current.timeScale().timeToCoordinate(candles[closestIdx].time as any);
+      setCutHoverX(candleCoord !== null && !isNaN(candleCoord) ? candleCoord : x);
+
+      const d = new Date(candles[closestIdx].time * 1000);
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const day = d.toLocaleDateString('en-US', { day: '2-digit' });
+      const month = d.toLocaleDateString('en-US', { month: 'short' });
+      const year = "'" + d.toLocaleDateString('en-US', { year: '2-digit' });
+      const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      setCutHoverDate(`${weekday} ${day} ${month} ${year} ${timeStr}`);
+    } else {
+      setCutHoverX(x);
+    }
+  }, [candles]);
+
+  const handleCutOverlayMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!isCutMode) return;
+    updateCutHover(e.clientX, e.clientY);
   };
 
-  const handleChartClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isCutMode || !chartRef.current || !containerRef.current) return;
-
+  const handleCutOverlayClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!isCutMode || !chartRef.current || !containerRef.current || candles.length === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const clickedTime = chartRef.current.timeScale().coordinateToTime(x) as number | null;
 
+    let targetIdx = currentIndex;
     if (clickedTime !== null) {
       let closestIdx = 0;
       let minDiff = Infinity;
-
       for (let i = 0; i < candles.length; i++) {
         const diff = Math.abs(candles[i].time - clickedTime);
         if (diff < minDiff) {
@@ -341,12 +406,13 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
           closestIdx = i;
         }
       }
-
-      setCutHoverX(null);
-      setCutHoverY(null);
-      setCutHoverDate(null);
-      onCutAtBar(closestIdx);
+      targetIdx = closestIdx;
     }
+
+    setCutHoverX(null);
+    setCutHoverY(null);
+    setCutHoverDate(null);
+    onCutAtBar(targetIdx);
   };
 
   // Drag & Drop SL / TP / Limit Orders System
@@ -405,12 +471,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-surface select-none ${
-        isCutMode ? 'cursor-crosshair' : ''
-      }`}
-      onClick={handleChartClick}
-      onMouseMove={handleChartMouseMove}
-      onMouseLeave={() => { if (isCutMode) { setCutHoverX(null); setCutHoverY(null); } }}
+      className="relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-surface select-none"
     >
       {/* Lightweight Charts DOM Canvas */}
       <div ref={containerRef} className="w-full h-full" />
@@ -430,11 +491,13 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         onApplyPositionToOrder={onApplyPositionToOrder}
       />
 
-      {/* Item 4: TradingView Bar Replay Cut Animation (Image 1) */}
+      {/* Item 2: Interactive Bar Replay Cut Overlay (Scissors / Caesar Logo in middle) */}
       {isCutMode && cutHoverX !== null && (
         <svg
-          className="absolute inset-0 pointer-events-none z-25"
-          style={{ width: dimensions.width, height: dimensions.height }}
+          className="absolute inset-0 z-30 cursor-crosshair select-none"
+          style={{ width: dimensions.width, height: dimensions.height, pointerEvents: 'auto' }}
+          onClick={handleCutOverlayClick}
+          onMouseMove={handleCutOverlayMouseMove}
         >
           {/* Faded Mask Covering Future Candles (To the right of the cutting line) */}
           <rect
@@ -442,68 +505,112 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
             y={0}
             width={Math.max(0, dimensions.width - cutHoverX)}
             height={dimensions.height}
-            fill={isDark ? 'rgba(0, 0, 0, 0.65)' : 'rgba(255, 255, 255, 0.72)'}
-            className="transition-opacity duration-150"
+            fill={isDark ? 'rgba(0, 0, 0, 0.58)' : 'rgba(255, 255, 255, 0.68)'}
+            className="transition-opacity duration-150 pointer-events-none"
           />
 
-          {/* Thin Solid TradingView Blue Cutting Line (#2962ff) */}
+          {/* Vertical Cutting Line */}
           <line
             x1={cutHoverX}
             y1={0}
             x2={cutHoverX}
             y2={dimensions.height}
-            stroke="#2962ff"
-            strokeWidth={1.5}
+            stroke="#f43f5e"
+            strokeWidth={1.75}
+            strokeDasharray="5 3"
+            className="pointer-events-none drop-shadow"
           />
 
-          {/* Scissor ✂ Icon following mouse cursor right on the cutting line */}
-          {cutHoverY !== null && (
-            <g transform={`translate(${cutHoverX - 11}, ${Math.max(16, Math.min(dimensions.height - 48, cutHoverY - 11))})`}>
-              <circle
-                cx={11}
-                cy={11}
-                r={12}
-                fill={isDark ? '#0f172a' : '#ffffff'}
-                stroke="#2962ff"
-                strokeWidth={1.5}
-                className="drop-shadow-md"
-              />
-              <text
-                x={11}
-                y={15}
-                fill="#2962ff"
-                fontSize={13}
-                fontWeight="bold"
-                textAnchor="middle"
+          {/* Circular Badge with Scissors ("Caesar") Logo in the middle */}
+          <g
+            transform={`translate(${cutHoverX}, ${
+              cutHoverY !== null
+                ? Math.max(30, Math.min(dimensions.height - 48, cutHoverY))
+                : dimensions.height / 2
+            })`}
+            className="pointer-events-none"
+          >
+            {/* Outer Circular Ring & Shadow */}
+            <circle
+              cx={0}
+              cy={0}
+              r={18}
+              fill={isDark ? '#090d16' : '#ffffff'}
+              stroke="#f43f5e"
+              strokeWidth={2}
+              className="drop-shadow-xl"
+            />
+            {/* Crisp SVG Scissors Icon ("Caesar") */}
+            <g transform="translate(-8, -8)">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#f43f5e"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                ✂
-              </text>
+                <circle cx="6" cy="6" r="3" />
+                <path d="M8.12 8.12 12 12" />
+                <path d="M20 4 8.12 15.88" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M14.8 14.8 20 20" />
+              </svg>
             </g>
-          )}
+          </g>
 
-          {/* Time Axis Blue Date Pill: Re: Tue 22 Sep '26 07:05 PM */}
+          {/* Target Cut Date Pill at Bottom of Line */}
           {cutHoverDate && (
-            <g transform={`translate(${Math.max(6, Math.min(dimensions.width - 210, cutHoverX - 95))}, ${dimensions.height - 25})`}>
+            <g
+              transform={`translate(${Math.max(10, Math.min(dimensions.width - 210, cutHoverX - 95))}, ${dimensions.height - 28})`}
+              className="pointer-events-none"
+            >
               <rect
                 width={190}
                 height={22}
-                rx={4}
-                fill="#2962ff"
-                className="drop-shadow-md"
+                rx={6}
+                fill="#f43f5e"
+                className="drop-shadow-lg"
               />
               <text
                 x={95}
                 y={15}
                 fill="#ffffff"
-                fontSize={10}
-                fontFamily="Arial, sans-serif"
+                fontSize={10.5}
+                fontFamily="'Arial', sans-serif"
                 fontWeight="bold"
                 textAnchor="middle"
               >
-                {cutHoverDate}
+                Cut to: {cutHoverDate}
               </text>
             </g>
           )}
+
+          {/* Top Floating Instruction Pill */}
+          <g transform={`translate(${dimensions.width / 2 - 130}, 12)`} className="pointer-events-none">
+            <rect
+              width={260}
+              height={24}
+              rx={12}
+              fill={isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.96)'}
+              stroke="#f43f5e"
+              strokeWidth={1}
+              className="drop-shadow-md"
+            />
+            <text
+              x={130}
+              y={16}
+              fill={isDark ? '#f1f5f9' : '#0f172a'}
+              fontSize={10.5}
+              fontWeight="600"
+              fontFamily="'Arial', sans-serif"
+              textAnchor="middle"
+            >
+              Click bar to cut replay • Press Esc to cancel
+            </text>
+          </g>
         </svg>
       )}
 

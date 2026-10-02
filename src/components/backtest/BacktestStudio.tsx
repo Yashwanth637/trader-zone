@@ -86,15 +86,65 @@ export const BacktestStudio: React.FC = () => {
   });
 
   const syncEngineState = useCallback(() => {
+    const balance = engineRef.current.balance;
+    const equity = engineRef.current.equity;
+    const openPosition = engineRef.current.openPosition;
+    const pendingOrders = [...engineRef.current.pendingOrders];
+    const closedTrades = [...engineRef.current.closedTrades];
+    const stats = engineRef.current.getStats();
+
     setEngineState({
-      virtualBalance: engineRef.current.balance,
-      virtualEquity: engineRef.current.equity,
-      openPosition: engineRef.current.openPosition,
-      pendingOrders: [...engineRef.current.pendingOrders],
-      closedTrades: [...engineRef.current.closedTrades],
-      stats: engineRef.current.getStats()
+      virtualBalance: balance,
+      virtualEquity: equity,
+      openPosition,
+      pendingOrders,
+      closedTrades,
+      stats
     });
-  }, []);
+
+    // Item 3: Persist strategy backtest trades & capital to localStorage
+    const sessionKey = `tz_backtest_session_${strategyName}`;
+    try {
+      localStorage.setItem(
+        sessionKey,
+        JSON.stringify({
+          closedTrades,
+          balance,
+          equity,
+          initialBalance: engineRef.current.initialBalance,
+          strategyName
+        })
+      );
+    } catch (e) {
+      console.error('Failed to persist backtest session', e);
+    }
+  }, [strategyName]);
+
+  // Item 3: Hydrate saved strategy backtest session from localStorage
+  useEffect(() => {
+    const sessionKey = `tz_backtest_session_${strategyName}`;
+    const saved = localStorage.getItem(sessionKey);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (Array.isArray(data.closedTrades)) {
+          engineRef.current.closedTrades = data.closedTrades;
+        }
+        if (typeof data.balance === 'number') {
+          engineRef.current.balance = data.balance;
+        }
+        if (typeof data.equity === 'number') {
+          engineRef.current.equity = data.equity;
+        }
+        if (typeof data.initialBalance === 'number') {
+          engineRef.current.initialBalance = data.initialBalance;
+        }
+        syncEngineState();
+      } catch (e) {
+        console.error('Failed to parse saved backtest session', e);
+      }
+    }
+  }, [strategyName, syncEngineState]);
 
   // Load saved drawings for asset & timeframe from localStorage
   useEffect(() => {
@@ -132,14 +182,14 @@ export const BacktestStudio: React.FC = () => {
         setCandles(res.candles);
         setDataSource(res.source);
 
-        // Start replay around 300 bars into the dataset
-        const startIndex = Math.max(10, Math.min(300, res.candles.length - 100));
-        setCurrentIndex(startIndex);
+        // Item 4: Always open the chart for current date & time (the latest candle)
+        const latestIndex = Math.max(0, res.candles.length - 1);
+        setCurrentIndex(latestIndex);
 
         engineRef.current.symbol = selectedAssetId;
         engineRef.current.timeframe = selectedTimeframe;
         engineRef.current.strategyName = strategyName;
-        engineRef.current.currentCandle = res.candles[startIndex];
+        engineRef.current.currentCandle = res.candles[latestIndex];
         engineRef.current.openPosition = null;
         engineRef.current.pendingOrders = [];
         setPresetOrderParams(null);
@@ -226,7 +276,25 @@ export const BacktestStudio: React.FC = () => {
 
   // Jump to specific historic date
   const handleJumpToDate = (targetDate: Date) => {
-    loadMarketData(targetDate);
+    const targetSec = Math.floor(targetDate.getTime() / 1000);
+    if (candles.length > 0 && targetSec >= candles[0].time && targetSec <= candles[candles.length - 1].time) {
+      let closestIdx = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < candles.length; i++) {
+        const diff = Math.abs(candles[i].time - targetSec);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
+      }
+      setCurrentIndex(closestIdx);
+      if (candles[closestIdx]) {
+        engineRef.current.currentCandle = candles[closestIdx];
+        syncEngineState();
+      }
+    } else {
+      loadMarketData(targetDate);
+    }
   };
 
   // Order Placement Handler
@@ -510,6 +578,7 @@ export const BacktestStudio: React.FC = () => {
                 onSelectDrawing={setSelectedDrawingId}
                 isCutMode={isCutMode}
                 onCutAtBar={handleCutAtBar}
+                onCancelCutMode={() => setIsCutMode(false)}
                 onApplyPositionToOrder={handleApplyPositionToOrder}
                 onModifyPosition={handleModifyPosition}
                 onModifyLimitOrder={handleModifyLimitOrder}
