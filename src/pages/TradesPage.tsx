@@ -15,10 +15,13 @@ import {
   PlayCircle,
   Zap,
   Calendar,
-  RotateCcw
+  RotateCcw,
+  Image as ImageIcon
 } from 'lucide-react';
+import { Trade } from '../types/trade';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
+import { ChartLightboxModal } from '../components/trades/ChartLightboxModal';
 
 interface TradesPageProps {
   onOpenAddTrade: () => void;
@@ -42,6 +45,10 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   // Close Trade Modal state
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
   const [closeExitPrice, setCloseExitPrice] = useState('');
+
+  // Chart Screenshot Lightbox Modal state
+  const [selectedTradeForChart, setSelectedTradeForChart] = useState<Trade | null>(null);
+  const [chartModalOpen, setChartModalOpen] = useState(false);
 
   const availableYears = React.useMemo(() => {
     const years = new Set<number>();
@@ -329,6 +336,20 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                               {accounts.find(a => a.id === t.accountId)?.name || 'Account'}
                             </span>
                           )}
+                          {(t.chartBeforeUrl || t.chartAfterUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTradeForChart(t);
+                                setChartModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[10px] font-bold transition-all shadow-sm"
+                              title="View Chart Screenshot (Bigger View)"
+                            >
+                              <ImageIcon className="w-3 h-3" />
+                              <span>Chart</span>
+                            </button>
+                          )}
                         </div>
                         <div className="text-[10px] text-muted font-mono">#{t.ticket}</div>
                       </td>
@@ -376,6 +397,19 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
 
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {(t.chartBeforeUrl || t.chartAfterUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTradeForChart(t);
+                                setChartModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-primary hover:text-white hover:bg-primary border border-primary/20 transition-all"
+                              title="View Chart Screenshot (Bigger View)"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                            </button>
+                          )}
                           {t.status === 'CLOSED' && (
                             <Link
                               to={`/replay?tradeId=${t.id}`}
@@ -454,6 +488,22 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         <DeltaSyncModal
           isOpen={deltaModalOpen}
           onClose={() => setDeltaModalOpen(false)}
+        />
+      )}
+
+      {/* High-Resolution Chart Screenshot Lightbox Modal */}
+      {selectedTradeForChart && (
+        <ChartLightboxModal
+          isOpen={chartModalOpen}
+          onClose={() => {
+            setChartModalOpen(false);
+            setSelectedTradeForChart(null);
+          }}
+          title={`${selectedTradeForChart.symbol} #${selectedTradeForChart.ticket}`}
+          subtitle={`${selectedTradeForChart.direction} ${selectedTradeForChart.lotSize} Lots · ${selectedTradeForChart.netPnl >= 0 ? '+' : ''}${formatCurrency(selectedTradeForChart.netPnl)} (${selectedTradeForChart.realizedRR ? `${selectedTradeForChart.realizedRR}R` : 'Closed'}) · ${new Date(selectedTradeForChart.openTime).toLocaleDateString()}`}
+          beforeUrl={selectedTradeForChart.chartBeforeUrl}
+          afterUrl={selectedTradeForChart.chartAfterUrl}
+          initialTab={selectedTradeForChart.chartAfterUrl ? 'after' : 'before'}
         />
       )}
     </div>

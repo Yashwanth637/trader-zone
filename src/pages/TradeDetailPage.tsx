@@ -10,8 +10,10 @@ import {
   Trash2,
   PlayCircle,
   CheckCircle,
-  Zap
+  Zap,
+  Maximize2
 } from 'lucide-react';
+import { ChartLightboxModal } from '../components/trades/ChartLightboxModal';
 
 export const TradeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +38,8 @@ export const TradeDetailPage: React.FC = () => {
   const [postMortem, setPostMortem] = useState(trade.postMortem || '');
   const [chartBeforeUrl, setChartBeforeUrl] = useState(trade.chartBeforeUrl || '');
   const [chartAfterUrl, setChartAfterUrl] = useState(trade.chartAfterUrl || '');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxTab, setLightboxTab] = useState<'before' | 'after'>('before');
   const [emotionalState, setEmotionalState] = useState<EmotionalState>(trade.emotionalState || 'Disciplined');
   const [executionRating, setExecutionRating] = useState<number>(trade.executionRating || 4);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -179,15 +183,69 @@ export const TradeDetailPage: React.FC = () => {
 
       {/* Chart Visualizer (Before & After Screenshots) */}
       <div className="premium-card p-5 space-y-4">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Chart Screenshot Visualizer</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Chart Screenshot Visualizer</h3>
+          {(chartBeforeUrl || chartAfterUrl) && (
+            <span className="text-[11px] text-muted flex items-center gap-1.5">
+              <Maximize2 className="w-3.5 h-3.5 text-primary" />
+              <span>Click any image for bigger view</span>
+            </span>
+          )}
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Setup / Before */}
           <div>
-            <span className="text-xs font-semibold text-muted mb-2 block">Before (Entry Setup)</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted">Before (Entry Setup)</span>
+              {chartBeforeUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLightboxTab('before');
+                    setLightboxOpen(true);
+                  }}
+                  className="text-[10px] font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-colors"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Bigger View</span>
+                </button>
+              )}
+            </div>
             {chartBeforeUrl ? (
-              <div className="rounded-xl overflow-hidden border border-border bg-black/40 h-64 flex items-center justify-center">
-                <img src={chartBeforeUrl} alt="Entry Setup" className="w-full h-full object-cover" />
+              <div
+                onClick={() => {
+                  setLightboxTab('before');
+                  setLightboxOpen(true);
+                }}
+                className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/50 bg-slate-950/70 h-64 flex items-center justify-center cursor-pointer transition-all hover:shadow-xl hover:shadow-primary/10 select-none"
+                title="Click to view bigger / fullscreen"
+              >
+                <img
+                  src={chartBeforeUrl}
+                  alt="Entry Setup"
+                  className="w-full h-full object-contain p-1 transition-transform duration-200 group-hover:scale-[1.02]"
+                />
+                {/* Hover Overlay with Expand Prompt */}
+                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                  <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-white/20 flex items-center gap-1.5 transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                    <Maximize2 className="w-3.5 h-3.5 text-primary" />
+                    <span>Click for Bigger View</span>
+                  </div>
+                </div>
+                {/* Expand Corner Badge */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxTab('before');
+                    setLightboxOpen(true);
+                  }}
+                  title="Expand to Fullscreen"
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-white shadow-md border border-white/10 backdrop-blur-md opacity-80 group-hover:opacity-100 transition-all hover:scale-105"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
               <div className="h-64 rounded-xl border border-dashed border-border flex flex-col items-center justify-center text-xs text-muted bg-surface">
@@ -205,10 +263,56 @@ export const TradeDetailPage: React.FC = () => {
 
           {/* Result / After */}
           <div>
-            <span className="text-xs font-semibold text-muted mb-2 block">After (Outcome & Exit)</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted">After (Outcome & Exit)</span>
+              {chartAfterUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLightboxTab('after');
+                    setLightboxOpen(true);
+                  }}
+                  className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Bigger View</span>
+                </button>
+              )}
+            </div>
             {chartAfterUrl ? (
-              <div className="rounded-xl overflow-hidden border border-border bg-black/40 h-64 flex items-center justify-center">
-                <img src={chartAfterUrl} alt="Outcome Result" className="w-full h-full object-cover" />
+              <div
+                onClick={() => {
+                  setLightboxTab('after');
+                  setLightboxOpen(true);
+                }}
+                className="group relative rounded-xl overflow-hidden border border-border hover:border-emerald-500/50 bg-slate-950/70 h-64 flex items-center justify-center cursor-pointer transition-all hover:shadow-xl hover:shadow-emerald-500/10 select-none"
+                title="Click to view bigger / fullscreen"
+              >
+                <img
+                  src={chartAfterUrl}
+                  alt="Outcome Result"
+                  className="w-full h-full object-contain p-1 transition-transform duration-200 group-hover:scale-[1.02]"
+                />
+                {/* Hover Overlay with Expand Prompt */}
+                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                  <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 text-white text-xs font-bold shadow-xl border border-white/20 flex items-center gap-1.5 transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                    <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Click for Bigger View</span>
+                  </div>
+                </div>
+                {/* Expand Corner Badge */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxTab('after');
+                    setLightboxOpen(true);
+                  }}
+                  title="Expand to Fullscreen"
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-white shadow-md border border-white/10 backdrop-blur-md opacity-80 group-hover:opacity-100 transition-all hover:scale-105"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
               <div className="h-64 rounded-xl border border-dashed border-border flex flex-col items-center justify-center text-xs text-muted bg-surface">
@@ -290,6 +394,17 @@ export const TradeDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* High-Resolution Chart Screenshot Lightbox Modal */}
+      <ChartLightboxModal
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        title={`${trade.symbol} #${trade.ticket}`}
+        subtitle={`${trade.direction} ${trade.lotSize} Lots · ${trade.netPnl >= 0 ? '+' : ''}${formatCurrency(trade.netPnl)} (${trade.realizedRR ? `${trade.realizedRR}R` : 'Closed'}) · ${new Date(trade.openTime).toLocaleDateString()}`}
+        beforeUrl={chartBeforeUrl}
+        afterUrl={chartAfterUrl}
+        initialTab={lightboxTab}
+      />
     </div>
   );
 };
