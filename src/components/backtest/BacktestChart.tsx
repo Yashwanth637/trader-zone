@@ -284,16 +284,28 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     seriesRef.current.setData(visible as any);
   }, [candles, currentIndex]);
 
-  // Fit content on first load or when switching symbols
+  // Fit content or frame current replay position on first load or when switching symbols/timeframes
   const lastSymbolTimeRef = useRef<number | null>(null);
   useEffect(() => {
     if (!chartRef.current || candles.length === 0) return;
     const firstTime = candles[0]?.time;
     if (firstTime !== lastSymbolTimeRef.current) {
       lastSymbolTimeRef.current = firstTime;
-      chartRef.current.timeScale().fitContent();
+      const visibleCount = Math.min(currentIndex + 1, candles.length);
+      if (visibleCount > 0) {
+        try {
+          chartRef.current.timeScale().setVisibleLogicalRange({
+            from: Math.max(0, visibleCount - 90),
+            to: visibleCount + 8
+          });
+        } catch (e) {
+          chartRef.current.timeScale().fitContent();
+        }
+      } else {
+        chartRef.current.timeScale().fitContent();
+      }
     }
-  }, [candles]);
+  }, [candles, currentIndex]);
 
   // Update Static Entry Price Line on Chart Axis
   useEffect(() => {

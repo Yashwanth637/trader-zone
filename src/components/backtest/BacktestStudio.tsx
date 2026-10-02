@@ -44,6 +44,19 @@ export const BacktestStudio: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(1);
   const [isCutMode, setIsCutMode] = useState<boolean>(false);
+  const [isReplayMode, setIsReplayMode] = useState<boolean>(false);
+  const isReplayModeRef = useRef<boolean>(false);
+  const replayTargetTimeRef = useRef<number | null>(null);
+
+  const updateReplayMode = useCallback((active: boolean, targetTimestampSec?: number) => {
+    setIsReplayMode(active);
+    isReplayModeRef.current = active;
+    if (active && targetTimestampSec !== undefined) {
+      replayTargetTimeRef.current = targetTimestampSec;
+    } else if (!active) {
+      replayTargetTimeRef.current = null;
+    }
+  }, []);
 
   // Drawings State & Toolbar Visibility (Item 5)
   const [isToolbarVisible, setIsToolbarVisible] = useState<boolean>(true);
@@ -169,29 +182,67 @@ export const BacktestStudio: React.FC = () => {
   };
 
   // Load 100% Real Historical Market Candles
-  const loadMarketData = useCallback(async (customStartDate?: Date) => {
+  const loadMarketData = useCallback(async (customTargetDate?: Date, forceLive: boolean = false) => {
     setLoading(true);
     setLoadError(null);
     setIsPlaying(false);
 
     try {
-      const res = await fetchRealHistoricalCandles(selectedAssetId, selectedTimeframe, customStartDate, 1500);
+      let targetTimeSec: number | undefined = undefined;
+
+      if (forceLive) {
+        updateReplayMode(false);
+      } else if (customTargetDate) {
+        targetTimeSec = Math.floor(customTargetDate.getTime() / 1000);
+        updateReplayMode(true, targetTimeSec);
+      } else if (isReplayModeRef.current && replayTargetTimeRef.current) {
+        targetTimeSec = replayTargetTimeRef.current;
+      }
+
+      const res = await fetchRealHistoricalCandles(
+        selectedAssetId,
+        selectedTimeframe,
+        targetTimeSec,
+        1500
+      );
+
       if (res.candles.length === 0) {
         setLoadError('No historical candles returned from market feed for this asset.');
       } else {
         setCandles(res.candles);
         setDataSource(res.source);
 
-        // Item 4: Always open the chart for current date & time (the latest candle)
-        const latestIndex = Math.max(0, res.candles.length - 1);
-        setCurrentIndex(latestIndex);
+        if (targetTimeSec && isReplayModeRef.current) {
+          // Replay Mode: snap to candle closest to historical replay target
+          let closestIdx = 0;
+          let minDiff = Infinity;
+          for (let i = 0; i < res.candles.length; i++) {
+            const diff = Math.abs(res.candles[i].time - targetTimeSec);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestIdx = i;
+            }
+          }
+          setCurrentIndex(closestIdx);
+          engineRef.current.currentCandle = res.candles[closestIdx];
+          // Keep target time locked to the exact matched candle time
+          replayTargetTimeRef.current = res.candles[closestIdx].time;
+        } else {
+          // Live Mode: Always open the chart for current date & time (the latest candle)
+          const latestIndex = Math.max(0, res.candles.length - 1);
+          setCurrentIndex(latestIndex);
+          engineRef.current.currentCandle = res.candles[latestIndex];
+        }
+
+        // Only clear open positions if asset changed
+        if (engineRef.current.symbol !== selectedAssetId) {
+          engineRef.current.openPosition = null;
+          engineRef.current.pendingOrders = [];
+        }
 
         engineRef.current.symbol = selectedAssetId;
         engineRef.current.timeframe = selectedTimeframe;
         engineRef.current.strategyName = strategyName;
-        engineRef.current.currentCandle = res.candles[latestIndex];
-        engineRef.current.openPosition = null;
-        engineRef.current.pendingOrders = [];
         setPresetOrderParams(null);
         syncEngineState();
       }
@@ -200,7 +251,7 @@ export const BacktestStudio: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedAssetId, selectedTimeframe, strategyName, syncEngineState]);
+  }, [selectedAssetId, selectedTimeframe, strategyName, syncEngineState, updateReplayMode]);
 
   useEffect(() => {
     loadMarketData();
@@ -220,6 +271,9 @@ export const BacktestStudio: React.FC = () => {
         const nextIdx = prev + 1;
         const newCandle = candles[nextIdx];
         if (newCandle) {
+          if (isReplayModeRef.current) {
+            replayTargetTimeRef.current = newCandle.time;
+          }
           engineRef.current.processCandle(newCandle);
           syncEngineState();
         }
@@ -231,52 +285,78 @@ export const BacktestStudio: React.FC = () => {
   }, [isPlaying, speed, candles, syncEngineState]);
 
   // Step Forward
-  const handleStepForward = () => {
+  const handleStepForward = useCallback(() => {
     if (currentIndex < candles.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
       const newCandle = candles[nextIdx];
       if (newCandle) {
+        if (isReplayModeRef.current) {
+          replayTargetTimeRef.current = newCandle.time;
+        }
         engineRef.current.processCandle(newCandle);
         syncEngineState();
       }
     }
-  };
+  }, [currentIndex, candles, syncEngineState]);
 
   // Step Backward
-  const handleStepBack = () => {
+  const handleStepBack = useCallback(() => {
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
       setCurrentIndex(prevIdx);
-      if (candles[prevIdx]) {
-        engineRef.current.currentCandle = candles[prevIdx];
+      const prevCandle = candles[prevIdx];
+      if (prevCandle) {
+        updateReplayMode(true, prevCandle.time);
+        engineRef.current.currentCandle = prevCandle;
+        syncEngineState();
       }
     }
-  };
+  }, [currentIndex, candles, syncEngineState, updateReplayMode]);
 
   // Reset to start of dataset
-  const handleResetReplay = () => {
+  const handleResetReplay = useCallback(() => {
     setIsPlaying(false);
     const startIdx = Math.min(10, candles.length - 1);
     setCurrentIndex(startIdx);
-    if (candles[startIdx]) {
-      engineRef.current.currentCandle = candles[startIdx];
+    const candle = candles[startIdx];
+    if (candle) {
+      updateReplayMode(true, candle.time);
+      engineRef.current.currentCandle = candle;
+      syncEngineState();
+    }
+  }, [candles, syncEngineState, updateReplayMode]);
+
+  // Scrubber Seek Handler
+  const handleSeek = (index: number) => {
+    setCurrentIndex(index);
+    const candle = candles[index];
+    if (candle) {
+      if (index < candles.length - 1 || isReplayModeRef.current) {
+        updateReplayMode(true, candle.time);
+      }
+      engineRef.current.currentCandle = candle;
+      syncEngineState();
     }
   };
 
   // Cut Bar Handler
   const handleCutAtBar = (index: number) => {
     setIsCutMode(false);
-    setCurrentIndex(index);
-    if (candles[index]) {
-      engineRef.current.currentCandle = candles[index];
-      syncEngineState();
+    const cutCandle = candles[index];
+    if (cutCandle) {
+      updateReplayMode(true, cutCandle.time);
+      engineRef.current.currentCandle = cutCandle;
     }
+    setCurrentIndex(index);
+    syncEngineState();
   };
 
   // Jump to specific historic date
   const handleJumpToDate = (targetDate: Date) => {
     const targetSec = Math.floor(targetDate.getTime() / 1000);
+    updateReplayMode(true, targetSec);
+
     if (candles.length > 0 && targetSec >= candles[0].time && targetSec <= candles[candles.length - 1].time) {
       let closestIdx = 0;
       let minDiff = Infinity;
@@ -296,6 +376,57 @@ export const BacktestStudio: React.FC = () => {
       loadMarketData(targetDate);
     }
   };
+
+  // Exit Replay Mode & Return to Live Real-Time Market
+  const handleExitReplay = () => {
+    updateReplayMode(false);
+    setIsPlaying(false);
+    loadMarketData(undefined, true);
+  };
+
+  // Timeframe switch handler preserving historical replay position
+  const handleSelectTimeframe = (newTf: string) => {
+    if (newTf === selectedTimeframe) return;
+    const candle = candles[currentIndex];
+    if (candle && (isReplayModeRef.current || currentIndex < candles.length - 1)) {
+      updateReplayMode(true, candle.time);
+    }
+    setSelectedTimeframe(newTf);
+  };
+
+  // Asset switch handler preserving historical replay position
+  const handleSelectAsset = (newAssetId: string) => {
+    if (newAssetId === selectedAssetId) return;
+    const candle = candles[currentIndex];
+    if (candle && (isReplayModeRef.current || currentIndex < candles.length - 1)) {
+      updateReplayMode(true, candle.time);
+    }
+    setSelectedAssetId(newAssetId);
+  };
+
+  // Keyboard navigation for Space (play/pause), Left/Right arrow (step back/forward)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPlaying(prev => !prev);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        handleStepForward();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        handleStepBack();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleStepForward, handleStepBack]);
 
   // Order Placement Handler
   const handlePlaceOrder = (params: {
@@ -451,7 +582,7 @@ export const BacktestStudio: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <select
               value={selectedAssetId}
-              onChange={e => setSelectedAssetId(e.target.value)}
+              onChange={e => handleSelectAsset(e.target.value)}
               className="px-3 py-1.5 bg-surface rounded-xl border border-border/40 dark:border-white/[0.08] text-foreground text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
             >
               {SUPPORTED_ASSETS.map(asset => (
@@ -468,7 +599,7 @@ export const BacktestStudio: React.FC = () => {
               <button
                 key={tf.value}
                 type="button"
-                onClick={() => setSelectedTimeframe(tf.value)}
+                onClick={() => handleSelectTimeframe(tf.value)}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                   selectedTimeframe === tf.value
                     ? 'bg-primary text-white shadow-sm'
@@ -479,6 +610,14 @@ export const BacktestStudio: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {/* Replay Active Badge */}
+          {isReplayMode && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>REPLAY ACTIVE</span>
+            </div>
+          )}
 
           {/* Data Source Badge */}
           {dataSource && (
@@ -620,17 +759,13 @@ export const BacktestStudio: React.FC = () => {
                 onChangeSpeed={setSpeed}
                 currentIndex={currentIndex}
                 totalCandles={candles.length}
-                onSeek={idx => {
-                  setCurrentIndex(idx);
-                  if (candles[idx]) {
-                    engineRef.current.currentCandle = candles[idx];
-                    syncEngineState();
-                  }
-                }}
+                onSeek={handleSeek}
                 isCutMode={isCutMode}
                 onToggleCutMode={() => setIsCutMode(!isCutMode)}
                 currentBarTimeFormatted={currentBarTimeFormatted}
                 onJumpToDate={handleJumpToDate}
+                isReplayMode={isReplayMode}
+                onExitReplay={handleExitReplay}
               />
             </div>
           )}

@@ -28,6 +28,8 @@ interface ReplayControlsProps {
   onToggleCutMode: () => void;
   currentBarTimeFormatted?: string;
   onJumpToDate: (date: Date) => void;
+  isReplayMode?: boolean;
+  onExitReplay?: () => void;
 }
 
 export const ReplayControls: React.FC<ReplayControlsProps> = ({
@@ -44,7 +46,9 @@ export const ReplayControls: React.FC<ReplayControlsProps> = ({
   isCutMode,
   onToggleCutMode,
   currentBarTimeFormatted,
-  onJumpToDate
+  onJumpToDate,
+  isReplayMode = false,
+  onExitReplay
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -188,13 +192,32 @@ export const ReplayControls: React.FC<ReplayControlsProps> = ({
         </span>
       </div>
 
-      {/* Right: Date Info & Jump to Date (Calendar) */}
+      {/* Right: Date Info & Jump to Date (Calendar) & Exit Replay */}
       <div className="flex items-center gap-2 relative">
+        {/* Exit Replay Button */}
+        {isReplayMode && onExitReplay && (
+          <button
+            type="button"
+            onClick={onExitReplay}
+            title="Exit Bar Replay & Return to Live Real-Time Market"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all shadow-sm"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="hidden sm:inline">Exit Replay</span>
+            <span className="sm:hidden">Live</span>
+          </button>
+        )}
+
         {currentBarTimeFormatted && (
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 shadow-sm text-xs font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap"
             style={{ fontFamily: 'Arial, sans-serif' }}
           >
+            {isReplayMode && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary font-black uppercase tracking-wider mr-0.5">
+                REPLAY
+              </span>
+            )}
             <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>{currentBarTimeFormatted}</span>
           </div>

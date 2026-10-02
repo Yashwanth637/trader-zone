@@ -161,18 +161,34 @@ async function fetchBitfinexBatch(
 }
 
 /**
- * Fetch real market data for a given asset, timeframe, and optional center/start date.
- * Fetches up to multiple pages of real market historical data (1,000 to 3,000+ real candles)
- * allowing users to backtest over 1+ year old authentic market history.
+ * Fetch real market data for a given asset, timeframe, and optional center/start target timestamp.
+ * Supports historical bar replay across all timeframes (1m, 5m, 15m, 1h, 4h, 1D),
+ * ensuring historical replay dates (e.g. September 15) are preserved with sufficient pre-and-post context.
  */
 export async function fetchRealHistoricalCandles(
   assetId: string,
   timeframe: string,
-  startDate?: Date,
+  targetTimestamp?: Date | number,
   totalCandlesGoal: number = 1500
 ): Promise<{ candles: BacktestCandle[]; source: string }> {
   const asset = SUPPORTED_ASSETS.find(a => a.id === assetId) || SUPPORTED_ASSETS[0];
-  const cacheKey = `${asset.id}_${timeframe}_${startDate ? startDate.toISOString().split('T')[0] : 'latest'}`;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const tfSec = TIMEFRAMES.find(t => t.value === timeframe)?.seconds || 900;
+
+  let targetSec: number | undefined = undefined;
+  if (targetTimestamp !== undefined && targetTimestamp !== null) {
+    if (typeof targetTimestamp === 'number') {
+      targetSec = targetTimestamp > 1e11 ? Math.floor(targetTimestamp / 1000) : targetTimestamp;
+    } else if (targetTimestamp instanceof Date) {
+      targetSec = Math.floor(targetTimestamp.getTime() / 1000);
+    }
+  }
+
+  // If targetSec is within 3 minutes of now, treat as latest live data
+  const isLatest = !targetSec || (nowSec - targetSec < 180);
+
+  const targetKey = isLatest ? 'latest' : `${Math.floor(targetSec! / 3600) * 3600}`;
+  const cacheKey = `${asset.id}_${timeframe}_${targetKey}`;
 
   if (memoryCache.has(cacheKey)) {
     return { candles: memoryCache.get(cacheKey)!, source: 'Cache (Real Data)' };
@@ -181,8 +197,8 @@ export async function fetchRealHistoricalCandles(
   let candles: BacktestCandle[] = [];
   let source = 'Binance Real Market Feed';
 
-  // If no startDate provided, fetch latest market candles ending at current date & time
-  if (!startDate) {
+  // If no target or target is near live edge, fetch latest market candles ending at current date & time
+  if (isLatest) {
     let currentEnd: number | undefined = undefined;
     let attempts = 0;
     const maxPages = Math.ceil(totalCandlesGoal / 1000);
@@ -216,8 +232,18 @@ export async function fetchRealHistoricalCandles(
       if (batch.length < 500) break;
     }
   } else {
-    // If startDate specified, page forward from that date
-    let currentStart = startDate.getTime();
+    // Target historical date specified (e.g. Sep 15 during bar replay)
+    // We want ~40% (up to 600) candles BEFORE targetSec for historical chart context,
+    // and the remaining candles AFTER targetSec to replay forward.
+    const preCandlesDesired = Math.min(600, Math.floor(totalCandlesGoal * 0.4));
+    const postCandlesDesired = totalCandlesGoal - preCandlesDesired;
+
+    let startSec = targetSec! - (preCandlesDesired * tfSec);
+    if (targetSec! + (postCandlesDesired * tfSec) > nowSec) {
+      startSec = Math.min(startSec, nowSec - (totalCandlesGoal * tfSec));
+    }
+
+    let currentStart = Math.max(0, startSec * 1000);
     let attempts = 0;
     const maxPages = Math.ceil(totalCandlesGoal / 1000);
 
@@ -252,18 +278,24 @@ export async function fetchRealHistoricalCandles(
     }
   }
 
-  // Fallback: If network feed returned no candles, generate realistic market candles ending right now at current date & time
+  // Fallback: If network feed returned no candles, generate realistic market candles around targetSec (or nowSec)
   if (candles.length === 0) {
     source = 'Market Feed (Live Simulation)';
-    const nowSec = Math.floor(Date.now() / 1000);
-    const tfSec = TIMEFRAMES.find(t => t.value === timeframe)?.seconds || 900;
-    const count = Math.min(totalCandlesGoal, 1200);
+    const count = Math.min(totalCandlesGoal, 1500);
     const basePrice = asset.id.includes('BTC') ? 85200 : asset.id.includes('ETH') ? 2600 : asset.id.includes('SOL') ? 155 : asset.id.includes('EUR') ? 1.085 : 2650;
+
+    let endSec: number;
+    if (targetSec && !isLatest) {
+      const postBars = Math.floor(count * 0.6);
+      endSec = Math.min(nowSec, targetSec + postBars * tfSec);
+    } else {
+      endSec = nowSec;
+    }
 
     let curPrice = basePrice;
     const generated: BacktestCandle[] = [];
     for (let i = count - 1; i >= 0; i--) {
-      const time = nowSec - i * tfSec;
+      const time = endSec - i * tfSec;
       const volatility = curPrice * 0.002;
       const delta = (Math.random() - 0.495) * volatility;
       const open = parseFloat(curPrice.toFixed(asset.pipSize < 1 ? 4 : 2));
