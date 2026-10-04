@@ -1,18 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { TerminalProChart } from '../components/terminal/TerminalProChart';
+import { PineEditorPanel } from '../components/terminal/PineEditorPanel';
+import {
+  ChartSettingsModal,
+  TerminalChartTheme,
+  DEFAULT_CHART_THEME_DARK,
+  DEFAULT_CHART_THEME_LIGHT
+} from '../components/terminal/ChartSettingsModal';
 import { TradingViewWidget } from '../components/charts/TradingViewWidget';
 import { QuickCalculatorModal } from '../components/common/QuickCalculatorModal';
 import { Button } from '../components/ui/Button';
 import { useTheme } from '../context/ThemeContext';
-import { Tv, Calculator, Maximize2, Minimize2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { fetchRealHistoricalCandles, TIMEFRAMES } from '../lib/backtestDataService';
+import { executePineScript, IndicatorExecutionResult } from '../lib/pineScriptEngine';
+import { BacktestCandle } from '../types/backtest';
+import {
+  Tv,
+  Calculator,
+  Maximize2,
+  Minimize2,
+  Palette,
+  Terminal,
+  Layers,
+  Sparkles
+} from 'lucide-react';
 
 export const TerminalPage: React.FC = () => {
   const { theme } = useTheme();
-  const [symbol, setSymbol] = useState('OANDA:XAUUSD');
+  const { user } = useAuth();
+  const isDark = theme === 'dark';
+
+  // Active Symbol & Timeframe
+  const [symbol, setSymbol] = useState('BTCUSDT');
+  const [timeframe, setTimeframe] = useState('15m');
+  const [terminalMode, setTerminalMode] = useState<'pro' | 'tradingview'>('pro');
+
+  // Modals & Dock State
   const [calcOpen, setCalcOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isPineEditorOpen, setIsPineEditorOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Prevent entire page from scrolling when zooming or navigating inside the terminal
+  // Real Market Candles
+  const [candles, setCandles] = useState<BacktestCandle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Active Pine Script Indicator
+  const [activeIndicator, setActiveIndicator] = useState<IndicatorExecutionResult | null>(null);
+  const activeScriptKey = `tz_active_pinescript_${user?.id || 'guest'}`;
+
+  // Custom Candle & Canvas Colors (Persisted per user account)
+  const colorsKey = `tz_chart_colors_${user?.id || 'guest'}`;
+  const [chartColors, setChartColors] = useState<TerminalChartTheme>(() => {
+    try {
+      const saved = localStorage.getItem(colorsKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT;
+  });
+
+  // Keep colors aligned if theme changes and user hasn't set custom overrides
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(colorsKey);
+      if (!saved) {
+        setChartColors(isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT);
+      }
+    } catch {}
+  }, [isDark, colorsKey]);
+
+  // Lock outer window scroll to prevent entire page scrolling
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     const prevOverscroll = document.body.style.overscrollBehavior;
@@ -24,6 +83,66 @@ export const TerminalPage: React.FC = () => {
       document.body.style.overscrollBehavior = prevOverscroll;
     };
   }, []);
+
+  // Fetch real market candles for Pro Terminal
+  useEffect(() => {
+    let isCancelled = false;
+    setLoading(true);
+
+    fetchRealHistoricalCandles(symbol, timeframe, 1000).then(({ candles: fetched }) => {
+      if (!isCancelled) {
+        setCandles(fetched);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [symbol, timeframe]);
+
+  // Restore Active Indicator from User Account Storage
+  useEffect(() => {
+    if (candles.length === 0) return;
+    try {
+      const savedCode = localStorage.getItem(activeScriptKey);
+      if (savedCode) {
+        const res = executePineScript(savedCode, candles);
+        if (res.success) {
+          setActiveIndicator(res);
+        }
+      }
+    } catch {}
+  }, [candles, activeScriptKey]);
+
+  // Pine Script Execution Handler
+  const handleApplyScriptToChart = (code: string) => {
+    const result = executePineScript(code, candles);
+    if (result.success) {
+      setActiveIndicator(result);
+      try {
+        localStorage.setItem(activeScriptKey, code);
+      } catch {}
+      return { success: true };
+    }
+    return { success: false, error: result.error };
+  };
+
+  const handleRemoveIndicator = () => {
+    setActiveIndicator(null);
+    try {
+      localStorage.removeItem(activeScriptKey);
+    } catch {}
+  };
+
+  const handleSaveTheme = (newTheme: TerminalChartTheme) => {
+    setChartColors(newTheme);
+    try {
+      localStorage.setItem(colorsKey, JSON.stringify(newTheme));
+    } catch (e) {
+      console.error('Failed to save chart colors:', e);
+    }
+  };
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -44,54 +163,136 @@ export const TerminalPage: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Convert symbol for TradingView iframe mode if user toggles view
+  const getTradingViewSymbol = (s: string) => {
+    if (s === 'XAUUSD') return 'OANDA:XAUUSD';
+    if (s === 'EURUSDT') return 'FX:EURUSD';
+    if (s === 'GBPUSD') return 'FX:GBPUSD';
+    if (s === 'SPXUSD') return 'FOREXCOM:SPXUSD';
+    if (s === 'US30') return 'TVC:US30';
+    return `BINANCE:${s}`;
+  };
+
   return (
     <div
       ref={containerRef}
-      className={`h-full flex-1 flex flex-col overflow-hidden select-none space-y-2 min-h-0 ${
+      className={`h-full flex-1 flex flex-col overflow-hidden select-none min-h-0 bg-background ${
         isFullscreen ? 'fixed inset-0 z-50 p-2 bg-background h-screen w-screen' : ''
       }`}
       style={{ overscrollBehavior: 'contain' }}
       onWheel={(e) => {
-        // Stop mouse wheel bubbling to prevent window/page scrolling
+        // Prevent outer window scrolling
         e.stopPropagation();
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between shrink-0 px-1 py-1">
-        <div className="flex items-center gap-2.5">
+      {/* Top Header Toolbar */}
+      <div className="flex flex-wrap items-center justify-between shrink-0 px-2 py-1.5 gap-2 border-b border-border/40 bg-surface/60 backdrop-blur-md">
+        <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center">
-            <Tv className="w-4 h-4" />
+            <Terminal className="w-4 h-4" />
           </div>
           <div>
-            <h1 className="text-base font-black text-foreground tracking-tight">Institutional Web Terminal</h1>
-            <p className="text-[10px] text-muted hidden sm:block">Live multi-asset charting powered by TradingView</p>
+            <h1 className="text-sm font-black text-foreground tracking-tight flex items-center gap-1.5">
+              <span>Institutional Web Terminal</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/20 text-primary border border-primary/30 uppercase">
+                Pro
+              </span>
+            </h1>
+            <p className="text-[10px] text-muted hidden sm:block">
+              Custom Pine Script, Persistent Drawings & Institutional Execution
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Center / Right Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Asset Selector */}
           <select
             value={symbol}
             onChange={e => setSymbol(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-foreground font-bold focus:outline-none"
+            className="px-2.5 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-foreground font-bold focus:outline-none cursor-pointer"
           >
-            <option value="OANDA:XAUUSD">XAU / USD (Gold)</option>
-            <option value="FX:EURUSD">EUR / USD (Forex)</option>
-            <option value="FX:GBPUSD">GBP / USD (Forex)</option>
-            <option value="BINANCE:BTCUSDT">BTC / USDT (Crypto)</option>
-            <option value="BINANCE:ETHUSDT">ETH / USDT (Crypto)</option>
-            <option value="BINANCE:SOLUSDT">SOL / USDT (Crypto)</option>
-            <option value="FOREXCOM:SPXUSD">S&P 500 Index</option>
-            <option value="TVC:US30">US30 (Dow Jones)</option>
+            <option value="BTCUSDT">BTC / USDT (Bitcoin)</option>
+            <option value="ETHUSDT">ETH / USDT (Ethereum)</option>
+            <option value="XAUUSD">XAU / USD (Gold)</option>
+            <option value="SOLUSDT">SOL / USDT (Solana)</option>
+            <option value="EURUSDT">EUR / USD (Euro)</option>
+            <option value="XRPUSDT">XRP / USDT (Ripple)</option>
+            <option value="BNBUSDT">BNB / USDT (Binance)</option>
           </select>
 
-          <Button size="sm" variant="secondary" icon={<Calculator className="w-3.5 h-3.5" />} onClick={() => setCalcOpen(true)}>
-            Lot Calc
+          {/* Timeframe Selector */}
+          <div className="hidden sm:flex items-center bg-surface p-0.5 rounded-xl border border-border/60">
+            {TIMEFRAMES.map(tf => (
+              <button
+                key={tf.value}
+                type="button"
+                onClick={() => setTimeframe(tf.value)}
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  timeframe === tf.value
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Terminal Mode Switcher */}
+          <div className="hidden md:flex items-center bg-surface p-0.5 rounded-xl border border-border/60 text-xs">
+            <button
+              type="button"
+              onClick={() => setTerminalMode('pro')}
+              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                terminalMode === 'pro'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              Pro Terminal
+            </button>
+            <button
+              type="button"
+              onClick={() => setTerminalMode('tradingview')}
+              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                terminalMode === 'tradingview'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              TradingView Cloud
+            </button>
+          </div>
+
+          {/* Chart Colors & Settings Button */}
+          {terminalMode === 'pro' && (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className="p-1.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-muted hover:text-foreground transition-colors flex items-center gap-1 text-xs font-semibold"
+              title="Change Candle Colors & Settings"
+            >
+              <Palette className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden lg:inline text-[11px]">Colors</span>
+            </button>
+          )}
+
+          {/* Position Size Calculator */}
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Calculator className="w-3.5 h-3.5" />}
+            onClick={() => setCalcOpen(true)}
+          >
+            Calc
           </Button>
 
+          {/* Fullscreen Button */}
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated text-muted hover:text-foreground transition-colors"
+            className="p-1.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-muted hover:text-foreground transition-colors"
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -99,20 +300,63 @@ export const TerminalPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Embedded Chart Full Height - Guaranteed 100% Stretch into Available Area */}
+      {/* Main Chart Workspace - Guaranteed 100% Sizing with Native Wheel Event Handling */}
       <div
         className="flex-1 w-full relative min-h-0 overflow-hidden"
         style={{ overscrollBehavior: 'contain' }}
         onWheel={(e) => e.stopPropagation()}
       >
         <div className="absolute inset-0 w-full h-full">
-          <TradingViewWidget symbol={symbol} theme={theme} className="w-full h-full" />
+          {terminalMode === 'pro' ? (
+            <TerminalProChart
+              symbol={symbol}
+              timeframe={timeframe}
+              theme={theme}
+              chartColors={chartColors}
+              activeIndicator={activeIndicator}
+              userId={user?.id}
+              candles={candles}
+              loading={loading}
+            />
+          ) : (
+            <TradingViewWidget
+              symbol={getTradingViewSymbol(symbol)}
+              interval={timeframe}
+              theme={theme}
+              className="w-full h-full"
+            />
+          )}
         </div>
       </div>
+
+      {/* Bottom Dock: Pine Script Editor & Custom Indicators Panel */}
+      {terminalMode === 'pro' && (
+        <PineEditorPanel
+          isOpen={isPineEditorOpen}
+          onToggle={() => setIsPineEditorOpen(!isPineEditorOpen)}
+          userId={user?.id}
+          onApplyScriptToChart={handleApplyScriptToChart}
+          onRemoveActiveIndicator={handleRemoveIndicator}
+          hasActiveIndicator={!!activeIndicator}
+          activeIndicatorName={activeIndicator?.name}
+        />
+      )}
+
+      {/* Chart Settings & Candle Colors Modal */}
+      {settingsOpen && (
+        <ChartSettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          currentTheme={chartColors}
+          onSaveTheme={handleSaveTheme}
+          isDarkAppTheme={isDark}
+        />
+      )}
 
       {/* Position Calculator Modal */}
       {calcOpen && <QuickCalculatorModal isOpen={calcOpen} onClose={() => setCalcOpen(false)} />}
     </div>
   );
 };
+
 
