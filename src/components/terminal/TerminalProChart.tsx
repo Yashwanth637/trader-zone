@@ -96,13 +96,22 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     const height = containerRef.current.clientHeight || 600;
     setDimensions({ width, height });
 
+    // Dynamically resolve chart background color with respect to active theme
+    const resolvedBg = isDark
+      ? (chartColors.backgroundColor && chartColors.backgroundColor !== '#ffffff'
+          ? chartColors.backgroundColor
+          : '#0a0d14')
+      : (chartColors.backgroundColor && chartColors.backgroundColor !== '#0a0d14' && chartColors.backgroundColor !== '#000000'
+          ? chartColors.backgroundColor
+          : '#ffffff');
+
     const chart = createChart(containerRef.current, {
       width,
       height,
       layout: {
         background: {
           type: ColorType.Solid,
-          color: chartColors.backgroundColor || (isDark ? '#0a0d14' : '#ffffff')
+          color: resolvedBg
         },
         textColor: isDark ? '#94a3b8' : '#475569',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
@@ -110,22 +119,22 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
       grid: {
         vertLines: {
           visible: chartColors.showGrid,
-          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
         },
         horzLines: {
           visible: chartColors.showGrid,
-          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
         }
       },
       crosshair: {
         mode: 0,
         vertLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(30, 41, 59, 0.4)',
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
           width: 1,
           style: LineStyle.Dashed
         },
         horzLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(30, 41, 59, 0.4)',
+          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
           width: 1,
           style: LineStyle.Dashed
         }
@@ -295,7 +304,7 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   }, [activeIndicator]);
 
   return (
-    <div className="w-full h-full relative select-none overflow-hidden bg-surface">
+    <div className={`w-full h-full relative select-none overflow-hidden ${isDark ? 'bg-[#0a0d14]' : 'bg-white'}`}>
       {/* Loading Overlay */}
       {loading && candles.length === 0 && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">

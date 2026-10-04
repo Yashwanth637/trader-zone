@@ -7,7 +7,6 @@ import {
   DEFAULT_CHART_THEME_DARK,
   DEFAULT_CHART_THEME_LIGHT
 } from '../components/terminal/ChartSettingsModal';
-import { TradingViewWidget } from '../components/charts/TradingViewWidget';
 import { QuickCalculatorModal } from '../components/common/QuickCalculatorModal';
 import { Button } from '../components/ui/Button';
 import { useTheme } from '../context/ThemeContext';
@@ -16,7 +15,6 @@ import { fetchRealHistoricalCandles, TIMEFRAMES } from '../lib/backtestDataServi
 import { executePineScript, IndicatorExecutionResult } from '../lib/pineScriptEngine';
 import { BacktestCandle } from '../types/backtest';
 import {
-  Tv,
   Calculator,
   Maximize2,
   Minimize2,
@@ -34,7 +32,6 @@ export const TerminalPage: React.FC = () => {
   // Active Symbol & Timeframe
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [timeframe, setTimeframe] = useState('15m');
-  const [terminalMode, setTerminalMode] = useState<'pro' | 'tradingview'>('pro');
 
   // Modals & Dock State
   const [calcOpen, setCalcOpen] = useState(false);
@@ -61,12 +58,20 @@ export const TerminalPage: React.FC = () => {
     return isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT;
   });
 
-  // Keep colors aligned if theme changes and user hasn't set custom overrides
+  // Keep colors aligned when theme changes (light <-> dark)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(colorsKey);
       if (!saved) {
         setChartColors(isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT);
+      } else {
+        const parsed = JSON.parse(saved);
+        if (!parsed.backgroundColor || parsed.backgroundColor === '#0a0d14' || parsed.backgroundColor === '#000000' || parsed.backgroundColor === '#ffffff') {
+          setChartColors(prev => ({
+            ...prev,
+            backgroundColor: isDark ? '#0a0d14' : '#ffffff'
+          }));
+        }
       }
     } catch {}
   }, [isDark, colorsKey]);
@@ -163,16 +168,6 @@ export const TerminalPage: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Convert symbol for TradingView iframe mode if user toggles view
-  const getTradingViewSymbol = (s: string) => {
-    if (s === 'XAUUSD') return 'OANDA:XAUUSD';
-    if (s === 'EURUSDT') return 'FX:EURUSD';
-    if (s === 'GBPUSD') return 'FX:GBPUSD';
-    if (s === 'SPXUSD') return 'FOREXCOM:SPXUSD';
-    if (s === 'US30') return 'TVC:US30';
-    return `BINANCE:${s}`;
-  };
-
   return (
     <div
       ref={containerRef}
@@ -239,44 +234,16 @@ export const TerminalPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Terminal Mode Switcher */}
-          <div className="hidden md:flex items-center bg-surface p-0.5 rounded-xl border border-border/60 text-xs">
-            <button
-              type="button"
-              onClick={() => setTerminalMode('pro')}
-              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                terminalMode === 'pro'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              Pro Terminal
-            </button>
-            <button
-              type="button"
-              onClick={() => setTerminalMode('tradingview')}
-              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                terminalMode === 'tradingview'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              TradingView Cloud
-            </button>
-          </div>
-
           {/* Chart Colors & Settings Button */}
-          {terminalMode === 'pro' && (
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              className="p-1.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-muted hover:text-foreground transition-colors flex items-center gap-1 text-xs font-semibold"
-              title="Change Candle Colors & Settings"
-            >
-              <Palette className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden lg:inline text-[11px]">Colors</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="p-1.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-muted hover:text-foreground transition-colors flex items-center gap-1 text-xs font-semibold"
+            title="Change Candle Colors & Settings"
+          >
+            <Palette className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden lg:inline text-[11px]">Colors</span>
+          </button>
 
           {/* Position Size Calculator */}
           <Button
@@ -307,40 +274,29 @@ export const TerminalPage: React.FC = () => {
         onWheel={(e) => e.stopPropagation()}
       >
         <div className="absolute inset-0 w-full h-full">
-          {terminalMode === 'pro' ? (
-            <TerminalProChart
-              symbol={symbol}
-              timeframe={timeframe}
-              theme={theme}
-              chartColors={chartColors}
-              activeIndicator={activeIndicator}
-              userId={user?.id}
-              candles={candles}
-              loading={loading}
-            />
-          ) : (
-            <TradingViewWidget
-              symbol={getTradingViewSymbol(symbol)}
-              interval={timeframe}
-              theme={theme}
-              className="w-full h-full"
-            />
-          )}
+          <TerminalProChart
+            symbol={symbol}
+            timeframe={timeframe}
+            theme={theme}
+            chartColors={chartColors}
+            activeIndicator={activeIndicator}
+            userId={user?.id}
+            candles={candles}
+            loading={loading}
+          />
         </div>
       </div>
 
       {/* Bottom Dock: Pine Script Editor & Custom Indicators Panel */}
-      {terminalMode === 'pro' && (
-        <PineEditorPanel
-          isOpen={isPineEditorOpen}
-          onToggle={() => setIsPineEditorOpen(!isPineEditorOpen)}
-          userId={user?.id}
-          onApplyScriptToChart={handleApplyScriptToChart}
-          onRemoveActiveIndicator={handleRemoveIndicator}
-          hasActiveIndicator={!!activeIndicator}
-          activeIndicatorName={activeIndicator?.name}
-        />
-      )}
+      <PineEditorPanel
+        isOpen={isPineEditorOpen}
+        onToggle={() => setIsPineEditorOpen(!isPineEditorOpen)}
+        userId={user?.id}
+        onApplyScriptToChart={handleApplyScriptToChart}
+        onRemoveActiveIndicator={handleRemoveIndicator}
+        hasActiveIndicator={!!activeIndicator}
+        activeIndicatorName={activeIndicator?.name}
+      />
 
       {/* Chart Settings & Candle Colors Modal */}
       {settingsOpen && (

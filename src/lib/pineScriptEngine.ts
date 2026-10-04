@@ -323,7 +323,11 @@ export function executePineScript(code: string, candles: CandleData[]): Indicato
         const plotColor = resolvePineColor(plotMatch[3], plotCount % 2 === 0 ? '#38bdf8' : '#f59e0b');
         const lineWidth = plotMatch[4] ? parseInt(plotMatch[4], 10) : 2;
 
-        const seriesData = env[varName];
+        let seriesData = env[varName];
+        if (typeof seriesData === 'number') {
+          seriesData = new Array(candles.length).fill(seriesData);
+        }
+
         if (Array.isArray(seriesData)) {
           const plotPoints: Array<{ time: number; value: number }> = [];
           for (let i = 0; i < seriesData.length; i++) {
@@ -439,10 +443,11 @@ export function executePineScript(code: string, candles: CandleData[]): Indicato
       }
     }
 
-    if (plots.length === 0) {
+    if (plots.length === 0 && hlines.length === 0) {
       return {
         success: false,
-        error: 'Script compiled, but no plot() statements were found to display.',
+        error:
+          'Script parsed, but no plot() or hline() statements were found to display. To draw on the chart, add a plot() statement, e.g.: plot(close, "My Line", color=color.cyan) or hline(70).',
         name: indicatorName,
         overlay: isOverlay,
         plots: [],
