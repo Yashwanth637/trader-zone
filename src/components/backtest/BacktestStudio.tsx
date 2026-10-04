@@ -17,6 +17,8 @@ import { DrawingToolbar } from './DrawingToolbar';
 import { ReplayControls } from './ReplayControls';
 import { BacktestOrderPanel } from './BacktestOrderPanel';
 import { BacktestTradeLog } from './BacktestTradeLog';
+import { TradingViewWidget } from '../charts/TradingViewWidget';
+import { useTheme } from '../../context/ThemeContext';
 import {
   Layers,
   Maximize2,
@@ -24,14 +26,70 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle2,
-  PenTool
+  PenTool,
+  BarChart3,
+  Radio
 } from 'lucide-react';
 
+const getTradingViewSymbol = (assetId: string): string => {
+  switch (assetId) {
+    case 'XAUUSD':
+      return 'OANDA:XAUUSD';
+    case 'EURUSDT':
+    case 'EURUSD':
+      return 'FX:EURUSD';
+    case 'GBPUSD':
+      return 'FX:GBPUSD';
+    case 'SPXUSD':
+      return 'FOREXCOM:SPXUSD';
+    case 'US30':
+      return 'TVC:US30';
+    case 'BTCUSDT':
+      return 'BINANCE:BTCUSDT';
+    case 'ETHUSDT':
+      return 'BINANCE:ETHUSDT';
+    case 'SOLUSDT':
+      return 'BINANCE:SOLUSDT';
+    case 'XRPUSDT':
+      return 'BINANCE:XRPUSDT';
+    case 'BNBUSDT':
+      return 'BINANCE:BNBUSDT';
+    default:
+      return `BINANCE:${assetId}`;
+  }
+};
+
+const getTradingViewInterval = (tf: string): string => {
+  switch (tf) {
+    case '1m':
+      return '1';
+    case '5m':
+      return '5';
+    case '15m':
+      return '15';
+    case '1h':
+      return '60';
+    case '4h':
+      return '240';
+    case '1d':
+    case '1D':
+      return 'D';
+    default:
+      return '15';
+  }
+};
+
 export const BacktestStudio: React.FC = () => {
+  const { theme } = useTheme();
+
+  // Chart Mode: Default to TradingView Chart widget as requested
+  const [chartMode, setChartMode] = useState<'tradingview' | 'replay'>('tradingview');
+
   // Strategy & Asset State
   const [strategyName, setStrategyName] = useState<string>('ICT Silver Bullet');
   const [selectedAssetId, setSelectedAssetId] = useState<string>('BTCUSDT');
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('15m');
+
 
   // Real Historical Market Candles
   const [candles, setCandles] = useState<BacktestCandle[]>([]);
@@ -611,8 +669,36 @@ export const BacktestStudio: React.FC = () => {
             ))}
           </div>
 
+          {/* Mode Switcher: TradingView Chart (Default) vs Bar Replay */}
+          <div className="flex items-center bg-surface p-1 rounded-xl border border-border/40 dark:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setChartMode('tradingview')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                chartMode === 'tradingview'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>TradingView Chart</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartMode('replay')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                chartMode === 'replay'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Bar Replay</span>
+            </button>
+          </div>
+
           {/* Replay Active Badge */}
-          {isReplayMode && (
+          {chartMode === 'replay' && isReplayMode && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[11px] font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               <span>REPLAY ACTIVE</span>
@@ -620,7 +706,7 @@ export const BacktestStudio: React.FC = () => {
           )}
 
           {/* Data Source Badge */}
-          {dataSource && (
+          {chartMode === 'replay' && dataSource && (
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px]">
               <CheckCircle2 className="w-3 h-3" />
               <span>{dataSource}</span>
@@ -658,7 +744,25 @@ export const BacktestStudio: React.FC = () => {
       }`}>
         {/* Chart Column (Takes full width in fullscreen, 3 cols otherwise) */}
         <div className={`${isFullscreen ? 'col-span-1 h-full' : 'lg:col-span-3'} flex flex-col space-y-3`}>
-          {loading ? (
+          {chartMode === 'tradingview' ? (
+            /* TradingView Advanced Chart Integration */
+            <div
+              className={`relative w-full rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] shadow-sm ${
+                isFullscreen
+                  ? 'flex-1 h-[calc(100vh-140px)] min-h-[500px]'
+                  : 'h-[620px]'
+              }`}
+              style={{ overscrollBehavior: 'contain' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              <TradingViewWidget
+                symbol={getTradingViewSymbol(selectedAssetId)}
+                interval={getTradingViewInterval(selectedTimeframe)}
+                theme={theme}
+                className="w-full h-full"
+              />
+            </div>
+          ) : loading ? (
             <div className={`w-full rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3 ${
               isFullscreen ? 'flex-1 h-full' : 'h-[540px]'
             }`}>
@@ -746,8 +850,8 @@ export const BacktestStudio: React.FC = () => {
             </div>
           )}
 
-          {/* Floating Replay Controls Bar */}
-          {!loading && candles.length > 0 && (
+          {/* Floating Replay Controls Bar (Only in Replay mode) */}
+          {chartMode === 'replay' && !loading && candles.length > 0 && (
             <div className="shrink-0">
               <ReplayControls
                 isPlaying={isPlaying}

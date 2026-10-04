@@ -53,6 +53,7 @@ const AppLayout: React.FC = () => {
   const location = useLocation();
   const isLanding = location.pathname === '/' || location.pathname === '/landing';
   const isLogin = location.pathname === '/login';
+  const isTerminal = location.pathname === '/terminal';
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,9 +106,11 @@ const AppLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <main
-        className={`flex-1 transition-all duration-300 p-4 md:p-6 ${
-          collapsed ? 'md:ml-16' : 'md:ml-64'
-        }`}
+        className={`flex-1 transition-all duration-300 ${
+          isTerminal
+            ? 'p-2 md:p-3 h-[calc(100vh-4rem)] overflow-hidden flex flex-col'
+            : 'p-4 md:p-6'
+        } ${collapsed ? 'md:ml-16' : 'md:ml-64'}`}
       >
         <Routes>
           <Route path="/dashboard" element={<DashboardPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
@@ -142,7 +145,8 @@ const AppLayout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <Footer collapsed={collapsed} />
+      {!isTerminal && <Footer collapsed={collapsed} />}
+
 
       {/* Global Modals */}
       {addTradeOpen && <AddTradeModal isOpen={addTradeOpen} onClose={() => setAddTradeOpen(false)} />}
