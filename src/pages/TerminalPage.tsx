@@ -45,6 +45,7 @@ export const TerminalPage: React.FC = () => {
 
   // Real Market Candles & Live Streaming
   const [candles, setCandles] = useState<BacktestCandle[]>([]);
+  const candlesRef = useRef<BacktestCandle[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveTick, setLiveTick] = useState<LiveKlineTick | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
@@ -95,6 +96,7 @@ export const TerminalPage: React.FC = () => {
     fetchRealHistoricalCandles(symbol, timeframe, 1000).then(({ candles: fetched }) => {
       if (!isCancelled) {
         setCandles(fetched);
+        candlesRef.current = fetched;
         setLoading(false);
       }
     });
@@ -126,32 +128,22 @@ export const TerminalPage: React.FC = () => {
         setLiveTick(tick);
         setCurrentPrice(tick.close);
 
-        // When a candle closes, append/update candles dataset
+        // When a candle closes, update internal dataset ref for indicators without triggering full React re-renders
         if (tick.isClosed) {
-          setCandles(prev => {
-            const updated = [...prev];
-            const idx = updated.findIndex(c => c.time === tick.time);
-            if (idx >= 0) {
-              updated[idx] = {
-                time: tick.time,
-                open: tick.open,
-                high: tick.high,
-                low: tick.low,
-                close: tick.close,
-                volume: tick.volume
-              };
-            } else {
-              updated.push({
-                time: tick.time,
-                open: tick.open,
-                high: tick.high,
-                low: tick.low,
-                close: tick.close,
-                volume: tick.volume
-              });
-            }
-            return updated;
-          });
+          const idx = candlesRef.current.findIndex(c => c.time === tick.time);
+          const closedCandle: BacktestCandle = {
+            time: tick.time,
+            open: tick.open,
+            high: tick.high,
+            low: tick.low,
+            close: tick.close,
+            volume: tick.volume
+          };
+          if (idx >= 0) {
+            candlesRef.current[idx] = closedCandle;
+          } else {
+            candlesRef.current.push(closedCandle);
+          }
         }
       },
       lastCandle
@@ -178,7 +170,8 @@ export const TerminalPage: React.FC = () => {
 
   // Pine Script Execution Handler
   const handleApplyScriptToChart = (code: string) => {
-    const result = executePineScript(code, candles);
+    const dataset = candlesRef.current.length > 0 ? candlesRef.current : candles;
+    const result = executePineScript(code, dataset);
     if (result.success) {
       setActiveIndicator(result);
       try {
@@ -288,35 +281,6 @@ export const TerminalPage: React.FC = () => {
                 {tf.label}
               </button>
             ))}
-          </div>
-
-          {/* Live Market Price & Bar Countdown Pill */}
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-card border border-border/80 text-xs shadow-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span
-                className={`font-mono font-bold ${
-                  liveTick && currentPrice && liveTick.close < liveTick.open
-                    ? 'text-rose-400'
-                    : 'text-emerald-400'
-                }`}
-              >
-                {currentPrice !== null
-                  ? `$${currentPrice.toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: currentPrice > 100 ? 2 : 4
-                    })}`
-                  : 'Live Feed'}
-              </span>
-            </div>
-            <div className="h-3 w-px bg-border/60" />
-            <div className="flex items-center gap-1 font-mono text-[11px] font-semibold text-muted">
-              <Clock className="w-3.5 h-3.5 text-sky-400" />
-              <span className="font-bold text-foreground">{barCountdown.formatted}</span>
-            </div>
           </div>
 
           {/* Chart Colors & Settings Button */}

@@ -54,6 +54,8 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   const indicatorSeriesRef = useRef<any[]>([]);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const countdownPriceLineRef = useRef<IPriceLine | null>(null);
+  const loadedSymbolTfRef = useRef<string>('');
+  const userLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   // Canvas Dimensions
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -207,6 +209,15 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
 
     seriesRef.current = candlestickSeries;
 
+    // Subscribe to visible range changes to preserve user's exact pan and zoom position
+    const timeScale = chart.timeScale();
+    const handleRangeChange = (newRange: any) => {
+      if (newRange) {
+        userLogicalRangeRef.current = newRange;
+      }
+    };
+    timeScale.subscribeVisibleLogicalRangeChange(handleRangeChange);
+
     // Feed candles if available
     if (candles.length > 0) {
       const formatted = candles.map(c => ({
@@ -217,7 +228,14 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
         close: c.close
       }));
       candlestickSeries.setData(formatted);
-      chart.timeScale().fitContent();
+      if (userLogicalRangeRef.current) {
+        try {
+          chart.timeScale().setVisibleLogicalRange(userLogicalRangeRef.current);
+        } catch {}
+      } else {
+        chart.timeScale().fitContent();
+      }
+      loadedSymbolTfRef.current = `${symbol}_${timeframe}`;
     }
 
     // Resize Observer for 100% fluid responsive scaling
@@ -227,6 +245,11 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
         if (newWidth > 0 && newHeight > 0) {
           setDimensions({ width: newWidth, height: newHeight });
           chart.applyOptions({ width: newWidth, height: newHeight });
+          if (userLogicalRangeRef.current) {
+            try {
+              chart.timeScale().setVisibleLogicalRange(userLogicalRangeRef.current);
+            } catch {}
+          }
         }
       }
     });
@@ -235,6 +258,9 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
 
     return () => {
       resizeObserver.disconnect();
+      try {
+        timeScale.unsubscribeVisibleLogicalRangeChange(handleRangeChange);
+      } catch {}
       if (countdownPriceLineRef.current && seriesRef.current) {
         try {
           seriesRef.current.removePriceLine(countdownPriceLineRef.current);
@@ -254,24 +280,33 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     chartColors.borderUpColor,
     chartColors.borderDownColor,
     chartColors.wickUpColor,
-    chartColors.wickDownColor
+    chartColors.wickDownColor,
+    symbol,
+    timeframe
   ]);
 
-  // Update Candle Data when candles change
+  // Update Candle Data ONLY when switching symbol or timeframe
+  // NEVER call fitContent() on live ticks or candle closes so user's viewport stays locked in place!
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return;
+    const currentKey = `${symbol}_${timeframe}`;
 
-    const formatted = candles.map(c => ({
-      time: c.time as any,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close
-    }));
+    if (loadedSymbolTfRef.current !== currentKey) {
+      loadedSymbolTfRef.current = currentKey;
+      userLogicalRangeRef.current = null;
 
-    seriesRef.current.setData(formatted);
-    chartRef.current?.timeScale().fitContent();
-  }, [candles]);
+      const formatted = candles.map(c => ({
+        time: c.time as any,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close
+      }));
+
+      seriesRef.current.setData(formatted);
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [candles, symbol, timeframe]);
 
   // Apply Real-Time Live Market Kline Ticks Directly
   useEffect(() => {
@@ -383,17 +418,6 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     }
   }, [activeIndicator]);
 
-  const formatDisplayPrice = (val: number | null | undefined): string => {
-    if (val === null || val === undefined) return '--';
-    if (val >= 1000) {
-      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    } else if (val >= 1) {
-      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
-    } else {
-      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })}`;
-    }
-  };
-
   return (
     <div
       className="w-full h-full relative select-none overflow-hidden"
@@ -443,55 +467,6 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
             <span>Tools</span>
           </button>
         )}
-      </div>
-
-      {/* Floating Live Market & Bar Countdown HUD (Top Right) */}
-      <div className="absolute top-3 right-16 sm:right-20 z-20 pointer-events-auto">
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/70 shadow-lg text-xs font-semibold">
-          {/* Live Pulse Indicator */}
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-[10px] font-black tracking-wider text-emerald-400 uppercase">LIVE</span>
-          </div>
-
-          <div className="h-3 w-px bg-border/60" />
-
-          {/* Live Price */}
-          <div
-            className={`font-mono font-bold ${
-              liveTick && liveTick.close < liveTick.open ? 'text-rose-400' : 'text-emerald-400'
-            }`}
-          >
-            {formatDisplayPrice(currentPrice)}
-          </div>
-
-          <div className="h-3 w-px bg-border/60" />
-
-          {/* Timeframe Countdown */}
-          <div className="flex items-center gap-1.5 font-mono text-[11px]">
-            <Clock className="w-3.5 h-3.5 text-sky-400" />
-            <span className="font-bold text-foreground">{countdown || '--:--'}</span>
-            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-surface border border-border text-muted">
-              {timeframe}
-            </span>
-          </div>
-
-          {/* Mini Elapsed Bar Progress */}
-          {countdownPercent !== undefined && (
-            <div
-              className="w-10 h-1.5 bg-surface rounded-full overflow-hidden border border-border/40 hidden md:block"
-              title={`${Math.round(countdownPercent)}% of active bar completed`}
-            >
-              <div
-                className="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.max(0, countdownPercent))}%` }}
-              />
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Canvas Mount Target */}
