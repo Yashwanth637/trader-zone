@@ -82,8 +82,8 @@ const getTradingViewInterval = (tf: string): string => {
 export const BacktestStudio: React.FC = () => {
   const { theme } = useTheme();
 
-  // Chart Mode: Default to TradingView Chart widget as requested
-  const [chartMode, setChartMode] = useState<'tradingview' | 'replay'>('tradingview');
+  // Chart Mode: Default to Bar Replay (Lightweight Charts backtesting engine)
+  const [chartMode, setChartMode] = useState<'replay' | 'tradingview'>('replay');
 
   // Strategy & Asset State
   const [strategyName, setStrategyName] = useState<string>('ICT Silver Bullet');
@@ -669,20 +669,8 @@ export const BacktestStudio: React.FC = () => {
             ))}
           </div>
 
-          {/* Mode Switcher: TradingView Chart (Default) vs Bar Replay */}
+          {/* Mode Switcher: Bar Replay Engine (Default) vs Live TradingView Feed */}
           <div className="flex items-center bg-surface p-1 rounded-xl border border-border/40 dark:border-white/[0.08]">
-            <button
-              type="button"
-              onClick={() => setChartMode('tradingview')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                chartMode === 'tradingview'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-muted hover:text-foreground'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>TradingView Chart</span>
-            </button>
             <button
               type="button"
               onClick={() => setChartMode('replay')}
@@ -693,7 +681,19 @@ export const BacktestStudio: React.FC = () => {
               }`}
             >
               <Radio className="w-3.5 h-3.5" />
-              <span>Bar Replay</span>
+              <span>Bar Replay (Backtesting)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartMode('tradingview')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                chartMode === 'tradingview'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Live TradingView Feed</span>
             </button>
           </div>
 
@@ -791,7 +791,7 @@ export const BacktestStudio: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className={`relative w-full ${isFullscreen ? 'flex-1 h-[calc(100%-65px)] min-h-[480px]' : 'h-[540px]'}`}>
+            <div className={`relative w-full ${isFullscreen ? 'flex-1 h-[calc(100%-65px)] min-h-[480px]' : 'h-[600px]'}`}>
               {/* Drawing Toolbar Overlay on Left with Hide Option (Items 2 & 5) */}
               <div className="absolute top-3 left-3 z-20">
                 {isToolbarVisible ? (
