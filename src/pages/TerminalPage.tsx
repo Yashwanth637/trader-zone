@@ -58,20 +58,12 @@ export const TerminalPage: React.FC = () => {
     return isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT;
   });
 
-  // Keep colors aligned when theme changes (light <-> dark)
+  // Only set initial default if user hasn't saved a custom theme
   useEffect(() => {
     try {
       const saved = localStorage.getItem(colorsKey);
       if (!saved) {
         setChartColors(isDark ? DEFAULT_CHART_THEME_DARK : DEFAULT_CHART_THEME_LIGHT);
-      } else {
-        const parsed = JSON.parse(saved);
-        if (!parsed.backgroundColor || parsed.backgroundColor === '#0a0d14' || parsed.backgroundColor === '#000000' || parsed.backgroundColor === '#ffffff') {
-          setChartColors(prev => ({
-            ...prev,
-            backgroundColor: isDark ? '#0a0d14' : '#ffffff'
-          }));
-        }
       }
     } catch {}
   }, [isDark, colorsKey]);

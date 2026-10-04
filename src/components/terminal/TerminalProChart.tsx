@@ -96,14 +96,25 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     const height = containerRef.current.clientHeight || 600;
     setDimensions({ width, height });
 
-    // Dynamically resolve chart background color with respect to active theme
-    const resolvedBg = isDark
-      ? (chartColors.backgroundColor && chartColors.backgroundColor !== '#ffffff'
-          ? chartColors.backgroundColor
-          : '#0a0d14')
-      : (chartColors.backgroundColor && chartColors.backgroundColor !== '#0a0d14' && chartColors.backgroundColor !== '#000000'
-          ? chartColors.backgroundColor
-          : '#ffffff');
+    // Use user-selected background color directly, or fallback to theme default
+    const canvasBg = chartColors.backgroundColor || (isDark ? '#0a0d14' : '#ffffff');
+    const isBgLight = (() => {
+      if (!canvasBg || typeof canvasBg !== 'string') return false;
+      const clean = canvasBg.replace('#', '');
+      if (clean.length === 3) {
+        const r = parseInt(clean[0] + clean[0], 16);
+        const g = parseInt(clean[1] + clean[1], 16);
+        const b = parseInt(clean[2] + clean[2], 16);
+        return (r * 299 + g * 587 + b * 114) / 1000 > 130;
+      }
+      if (clean.length === 6) {
+        const r = parseInt(clean.substring(0, 2), 16);
+        const g = parseInt(clean.substring(2, 4), 16);
+        const b = parseInt(clean.substring(4, 6), 16);
+        return (r * 299 + g * 587 + b * 114) / 1000 > 130;
+      }
+      return false;
+    })();
 
     const chart = createChart(containerRef.current, {
       width,
@@ -111,30 +122,30 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
       layout: {
         background: {
           type: ColorType.Solid,
-          color: resolvedBg
+          color: canvasBg
         },
-        textColor: isDark ? '#94a3b8' : '#475569',
+        textColor: isBgLight ? '#475569' : '#94a3b8',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       },
       grid: {
         vertLines: {
           visible: chartColors.showGrid,
-          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
+          color: isBgLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)'
         },
         horzLines: {
           visible: chartColors.showGrid,
-          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
+          color: isBgLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)'
         }
       },
       crosshair: {
         mode: 0,
         vertLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
+          color: isBgLight ? 'rgba(30, 41, 59, 0.55)' : 'rgba(255, 255, 255, 0.45)',
           width: 1,
           style: LineStyle.Dashed
         },
         horzLine: {
-          color: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(30, 41, 59, 0.55)',
+          color: isBgLight ? 'rgba(30, 41, 59, 0.55)' : 'rgba(255, 255, 255, 0.45)',
           width: 1,
           style: LineStyle.Dashed
         }
@@ -304,7 +315,10 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   }, [activeIndicator]);
 
   return (
-    <div className={`w-full h-full relative select-none overflow-hidden ${isDark ? 'bg-[#0a0d14]' : 'bg-white'}`}>
+    <div
+      className="w-full h-full relative select-none overflow-hidden"
+      style={{ backgroundColor: chartColors.backgroundColor || (isDark ? '#0a0d14' : '#ffffff') }}
+    >
       {/* Loading Overlay */}
       {loading && candles.length === 0 && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, RotateCcw, Palette, Sliders } from 'lucide-react';
 import { Button } from '../ui/Button';
 
@@ -60,6 +60,10 @@ export const ChartSettingsModal: React.FC<ChartSettingsModalProps> = ({
   isDarkAppTheme
 }) => {
   const [themeState, setThemeState] = useState<TerminalChartTheme>(currentTheme);
+
+  useEffect(() => {
+    setThemeState(currentTheme);
+  }, [currentTheme, isOpen]);
 
   if (!isOpen) return null;
 
