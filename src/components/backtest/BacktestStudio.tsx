@@ -749,18 +749,20 @@ export const BacktestStudio: React.FC = () => {
             <div
               className={`relative w-full rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] shadow-sm ${
                 isFullscreen
-                  ? 'flex-1 h-[calc(100vh-140px)] min-h-[500px]'
-                  : 'h-[620px]'
+                  ? 'flex-1 h-[calc(100vh-120px)] min-h-[500px]'
+                  : 'h-[660px]'
               }`}
               style={{ overscrollBehavior: 'contain' }}
               onWheel={(e) => e.stopPropagation()}
             >
-              <TradingViewWidget
-                symbol={getTradingViewSymbol(selectedAssetId)}
-                interval={getTradingViewInterval(selectedTimeframe)}
-                theme={theme}
-                className="w-full h-full"
-              />
+              <div className="absolute inset-0 w-full h-full">
+                <TradingViewWidget
+                  symbol={getTradingViewSymbol(selectedAssetId)}
+                  interval={getTradingViewInterval(selectedTimeframe)}
+                  theme={theme}
+                  className="w-full h-full"
+                />
+              </div>
             </div>
           ) : loading ? (
             <div className={`w-full rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3 ${

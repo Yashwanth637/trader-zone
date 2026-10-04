@@ -48,7 +48,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
   return (
     <div
-      className={`tradingview-widget-container w-full h-full relative rounded-xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-surface ${className}`}
+      className={`tradingview-widget-container w-full h-full relative rounded-xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col ${className}`}
       style={{ width: '100%', height: '100%', overscrollBehavior: 'contain' }}
       onWheel={(e) => {
         // Prevent wheel events from bubbling up and scrolling parent pages
@@ -59,11 +59,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
         key={`${symbol}_${theme}_${interval}`}
         title={`TradingView Advanced Chart - ${symbol}`}
         src={iframeSrc}
-        className="w-full h-full block border-0"
+        className="w-full h-full flex-1 block border-0"
         style={{
           width: '100%',
           height: '100%',
-          minHeight: '480px',
           border: 'none',
           display: 'block'
         }}

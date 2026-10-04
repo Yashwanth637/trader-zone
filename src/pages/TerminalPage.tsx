@@ -47,8 +47,8 @@ export const TerminalPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className={`space-y-2 h-full flex flex-col overflow-hidden select-none ${
-        isFullscreen ? 'fixed inset-0 z-50 p-2 bg-background' : ''
+      className={`h-full flex-1 flex flex-col overflow-hidden select-none space-y-2 min-h-0 ${
+        isFullscreen ? 'fixed inset-0 z-50 p-2 bg-background h-screen w-screen' : ''
       }`}
       style={{ overscrollBehavior: 'contain' }}
       onWheel={(e) => {
@@ -99,13 +99,15 @@ export const TerminalPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Embedded Chart Full Height with Guaranteed Wheel Containment */}
+      {/* Embedded Chart Full Height - Guaranteed 100% Stretch into Available Area */}
       <div
         className="flex-1 w-full relative min-h-0 overflow-hidden"
         style={{ overscrollBehavior: 'contain' }}
         onWheel={(e) => e.stopPropagation()}
       >
-        <TradingViewWidget symbol={symbol} theme={theme} className="w-full h-full" />
+        <div className="absolute inset-0 w-full h-full">
+          <TradingViewWidget symbol={symbol} theme={theme} className="w-full h-full" />
+        </div>
       </div>
 
       {/* Position Calculator Modal */}
