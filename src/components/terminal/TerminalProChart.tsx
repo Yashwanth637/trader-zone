@@ -60,8 +60,8 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   // Canvas Dimensions
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
-  // Drawing Tools State
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  // Drawing Tools State (Minimized by default)
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
   const [activeTool, setActiveTool] = useState<DrawingType>('cursor');
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
 
