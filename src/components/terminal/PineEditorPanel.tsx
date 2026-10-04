@@ -47,8 +47,12 @@ export const PineEditorPanel: React.FC<PineEditorPanelProps> = ({
   );
 
   // Active working script
-  const [currentScriptId, setCurrentScriptId] = useState<string>('builtin_ema_ribbon');
-  const [scriptTitle, setScriptTitle] = useState<string>('EMA Ribbon (20, 50, 200)');
+  const [currentScriptId, setCurrentScriptId] = useState<string>(
+    BUILT_IN_PINE_TEMPLATES[0].id
+  );
+  const [scriptTitle, setScriptTitle] = useState<string>(
+    BUILT_IN_PINE_TEMPLATES[0].name
+  );
   const [scriptCode, setScriptCode] = useState<string>(
     BUILT_IN_PINE_TEMPLATES[0].code
   );

@@ -12,6 +12,7 @@ import {
 import { BacktestCandle, BacktestDrawing, DrawingType } from '../../types/backtest';
 import { DrawingOverlay } from '../backtest/DrawingOverlay';
 import { DrawingToolbar } from '../backtest/DrawingToolbar';
+import { IndicatorZonesOverlay } from './IndicatorZonesOverlay';
 import { TerminalChartTheme } from './ChartSettingsModal';
 import { IndicatorExecutionResult } from '../../lib/pineScriptEngine';
 import { Loader2, PenTool } from 'lucide-react';
@@ -371,6 +372,17 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
         className="w-full h-full"
         style={{ overscrollBehavior: 'contain' }}
       />
+
+      {/* Visual Pine Script Zone Corridors Overlay (e.g. Yashwanth's Indicator Horizon Zones) */}
+      {activeIndicator?.boxes && activeIndicator.boxes.length > 0 && (
+        <IndicatorZonesOverlay
+          chart={chartRef.current}
+          series={seriesRef.current}
+          boxes={activeIndicator.boxes}
+          width={dimensions.width}
+          height={dimensions.height}
+        />
+      )}
 
       {/* SVG Interactive Drawing Overlay */}
       <DrawingOverlay
