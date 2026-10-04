@@ -130,6 +130,24 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
           style: LineStyle.Dashed
         }
       },
+      handleScale: {
+        mouseWheel: true,
+        pinch: true,
+        axisPressedMouseMove: {
+          time: true,
+          price: true
+        },
+        axisDoubleClickReset: {
+          time: true,
+          price: true
+        }
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true
+      },
       timeScale: {
         borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         timeVisible: true,
