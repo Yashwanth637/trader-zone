@@ -15,7 +15,8 @@ import { DrawingToolbar } from '../backtest/DrawingToolbar';
 import { IndicatorZonesOverlay } from './IndicatorZonesOverlay';
 import { TerminalChartTheme } from './ChartSettingsModal';
 import { IndicatorExecutionResult } from '../../lib/pineScriptEngine';
-import { Loader2, PenTool } from 'lucide-react';
+import { LiveKlineTick } from '../../lib/liveMarketStreamService';
+import { Loader2, PenTool, Clock, Radio } from 'lucide-react';
 
 interface TerminalProChartProps {
   symbol: string;
@@ -26,6 +27,10 @@ interface TerminalProChartProps {
   userId?: string;
   candles: BacktestCandle[];
   loading: boolean;
+  liveTick?: LiveKlineTick | null;
+  currentPrice?: number | null;
+  countdown?: string;
+  countdownPercent?: number;
 }
 
 export const TerminalProChart: React.FC<TerminalProChartProps> = ({
@@ -36,7 +41,11 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   activeIndicator,
   userId,
   candles,
-  loading
+  loading,
+  liveTick,
+  currentPrice,
+  countdown,
+  countdownPercent
 }) => {
   const isDark = theme === 'dark';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,6 +53,7 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const indicatorSeriesRef = useRef<any[]>([]);
   const priceLinesRef = useRef<IPriceLine[]>([]);
+  const countdownPriceLineRef = useRef<IPriceLine | null>(null);
 
   // Canvas Dimensions
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -225,6 +235,12 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
 
     return () => {
       resizeObserver.disconnect();
+      if (countdownPriceLineRef.current && seriesRef.current) {
+        try {
+          seriesRef.current.removePriceLine(countdownPriceLineRef.current);
+        } catch {}
+        countdownPriceLineRef.current = null;
+      }
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
@@ -256,6 +272,58 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     seriesRef.current.setData(formatted);
     chartRef.current?.timeScale().fitContent();
   }, [candles]);
+
+  // Apply Real-Time Live Market Kline Ticks Directly
+  useEffect(() => {
+    if (!seriesRef.current || !liveTick) return;
+    try {
+      seriesRef.current.update({
+        time: liveTick.time as any,
+        open: liveTick.open,
+        high: liveTick.high,
+        low: liveTick.low,
+        close: liveTick.close
+      });
+    } catch (e) {
+      console.error('Error updating live tick on chart series:', e);
+    }
+  }, [liveTick]);
+
+  // Synchronize Live Price Line and Bar Close Countdown Timer on Right Price Scale
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || currentPrice === null || currentPrice === undefined) {
+      if (countdownPriceLineRef.current && series) {
+        try {
+          series.removePriceLine(countdownPriceLineRef.current);
+        } catch {}
+        countdownPriceLineRef.current = null;
+      }
+      return;
+    }
+
+    const isPriceUp = liveTick ? liveTick.close >= liveTick.open : true;
+    const lineColor = isPriceUp ? chartColors.upColor : chartColors.downColor;
+    const lineTitle = countdown ? `⏱ ${countdown}` : '';
+
+    if (!countdownPriceLineRef.current) {
+      countdownPriceLineRef.current = series.createPriceLine({
+        price: currentPrice,
+        color: lineColor,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: lineTitle
+      });
+    } else {
+      countdownPriceLineRef.current.applyOptions({
+        price: currentPrice,
+        color: lineColor,
+        title: lineTitle,
+        axisLabelVisible: true
+      });
+    }
+  }, [currentPrice, countdown, liveTick?.close, liveTick?.open, chartColors.upColor, chartColors.downColor]);
 
   // Render Active Pine Script Indicator Plots
   useEffect(() => {
@@ -315,6 +383,17 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     }
   }, [activeIndicator]);
 
+  const formatDisplayPrice = (val: number | null | undefined): string => {
+    if (val === null || val === undefined) return '--';
+    if (val >= 1000) {
+      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else if (val >= 1) {
+      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+    } else {
+      return `$${val.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })}`;
+    }
+  };
+
   return (
     <div
       className="w-full h-full relative select-none overflow-hidden"
@@ -364,6 +443,55 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
             <span>Tools</span>
           </button>
         )}
+      </div>
+
+      {/* Floating Live Market & Bar Countdown HUD (Top Right) */}
+      <div className="absolute top-3 right-16 sm:right-20 z-20 pointer-events-auto">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/70 shadow-lg text-xs font-semibold">
+          {/* Live Pulse Indicator */}
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-[10px] font-black tracking-wider text-emerald-400 uppercase">LIVE</span>
+          </div>
+
+          <div className="h-3 w-px bg-border/60" />
+
+          {/* Live Price */}
+          <div
+            className={`font-mono font-bold ${
+              liveTick && liveTick.close < liveTick.open ? 'text-rose-400' : 'text-emerald-400'
+            }`}
+          >
+            {formatDisplayPrice(currentPrice)}
+          </div>
+
+          <div className="h-3 w-px bg-border/60" />
+
+          {/* Timeframe Countdown */}
+          <div className="flex items-center gap-1.5 font-mono text-[11px]">
+            <Clock className="w-3.5 h-3.5 text-sky-400" />
+            <span className="font-bold text-foreground">{countdown || '--:--'}</span>
+            <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-surface border border-border text-muted">
+              {timeframe}
+            </span>
+          </div>
+
+          {/* Mini Elapsed Bar Progress */}
+          {countdownPercent !== undefined && (
+            <div
+              className="w-10 h-1.5 bg-surface rounded-full overflow-hidden border border-border/40 hidden md:block"
+              title={`${Math.round(countdownPercent)}% of active bar completed`}
+            >
+              <div
+                className="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, countdownPercent))}%` }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Canvas Mount Target */}

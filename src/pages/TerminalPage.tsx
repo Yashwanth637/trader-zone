@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { fetchRealHistoricalCandles, TIMEFRAMES } from '../lib/backtestDataService';
 import { executePineScript, IndicatorExecutionResult } from '../lib/pineScriptEngine';
+import { subscribeLiveKlineFeed, getBarCountdown, LiveKlineTick } from '../lib/liveMarketStreamService';
 import { BacktestCandle } from '../types/backtest';
 import {
   Calculator,
@@ -21,7 +22,9 @@ import {
   Palette,
   Terminal,
   Layers,
-  Sparkles
+  Sparkles,
+  Clock,
+  Radio
 } from 'lucide-react';
 
 export const TerminalPage: React.FC = () => {
@@ -40,9 +43,12 @@ export const TerminalPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Real Market Candles
+  // Real Market Candles & Live Streaming
   const [candles, setCandles] = useState<BacktestCandle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveTick, setLiveTick] = useState<LiveKlineTick | null>(null);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [barCountdown, setBarCountdown] = useState(() => getBarCountdown('15m'));
 
   // Active Pine Script Indicator
   const [activeIndicator, setActiveIndicator] = useState<IndicatorExecutionResult | null>(null);
@@ -97,6 +103,64 @@ export const TerminalPage: React.FC = () => {
       isCancelled = true;
     };
   }, [symbol, timeframe]);
+
+  // Keep active timeframe countdown ticking every second
+  useEffect(() => {
+    setBarCountdown(getBarCountdown(timeframe));
+    const interval = setInterval(() => {
+      setBarCountdown(getBarCountdown(timeframe));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timeframe]);
+
+  // Real-time Live Market Kline Streaming Subscription
+  useEffect(() => {
+    if (candles.length === 0) return;
+    const lastCandle = candles[candles.length - 1];
+    setCurrentPrice(lastCandle.close);
+
+    const unsubscribe = subscribeLiveKlineFeed(
+      symbol,
+      timeframe,
+      (tick: LiveKlineTick) => {
+        setLiveTick(tick);
+        setCurrentPrice(tick.close);
+
+        // When a candle closes, append/update candles dataset
+        if (tick.isClosed) {
+          setCandles(prev => {
+            const updated = [...prev];
+            const idx = updated.findIndex(c => c.time === tick.time);
+            if (idx >= 0) {
+              updated[idx] = {
+                time: tick.time,
+                open: tick.open,
+                high: tick.high,
+                low: tick.low,
+                close: tick.close,
+                volume: tick.volume
+              };
+            } else {
+              updated.push({
+                time: tick.time,
+                open: tick.open,
+                high: tick.high,
+                low: tick.low,
+                close: tick.close,
+                volume: tick.volume
+              });
+            }
+            return updated;
+          });
+        }
+      },
+      lastCandle
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [symbol, timeframe, candles.length > 0 ? candles[0].time : 0]);
 
   // Restore Active Indicator from User Account Storage
   useEffect(() => {
@@ -226,6 +290,35 @@ export const TerminalPage: React.FC = () => {
             ))}
           </div>
 
+          {/* Live Market Price & Bar Countdown Pill */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-card border border-border/80 text-xs shadow-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span
+                className={`font-mono font-bold ${
+                  liveTick && currentPrice && liveTick.close < liveTick.open
+                    ? 'text-rose-400'
+                    : 'text-emerald-400'
+                }`}
+              >
+                {currentPrice !== null
+                  ? `$${currentPrice.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: currentPrice > 100 ? 2 : 4
+                    })}`
+                  : 'Live Feed'}
+              </span>
+            </div>
+            <div className="h-3 w-px bg-border/60" />
+            <div className="flex items-center gap-1 font-mono text-[11px] font-semibold text-muted">
+              <Clock className="w-3.5 h-3.5 text-sky-400" />
+              <span className="font-bold text-foreground">{barCountdown.formatted}</span>
+            </div>
+          </div>
+
           {/* Chart Colors & Settings Button */}
           <button
             type="button"
@@ -275,6 +368,10 @@ export const TerminalPage: React.FC = () => {
             userId={user?.id}
             candles={candles}
             loading={loading}
+            liveTick={liveTick}
+            currentPrice={currentPrice}
+            countdown={barCountdown.formatted}
+            countdownPercent={barCountdown.progressPercent}
           />
         </div>
       </div>
