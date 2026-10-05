@@ -280,31 +280,44 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
     chartColors.borderUpColor,
     chartColors.borderDownColor,
     chartColors.wickUpColor,
-    chartColors.wickDownColor,
-    symbol,
-    timeframe
+    chartColors.wickDownColor
   ]);
 
-  // Update Candle Data ONLY when switching symbol or timeframe
+  // Update Candle Data when switching symbol or timeframe
   // NEVER call fitContent() on live ticks or candle closes so user's viewport stays locked in place!
   useEffect(() => {
-    if (!seriesRef.current || candles.length === 0) return;
+    if (!seriesRef.current) return;
     const currentKey = `${symbol}_${timeframe}`;
 
+    // If symbol or timeframe changed:
     if (loadedSymbolTfRef.current !== currentKey) {
-      loadedSymbolTfRef.current = currentKey;
+      // Immediately remove previous asset's countdown price line
+      if (countdownPriceLineRef.current) {
+        try {
+          seriesRef.current.removePriceLine(countdownPriceLineRef.current);
+        } catch {}
+        countdownPriceLineRef.current = null;
+      }
+
+      // Reset user logical range for the new pair/timeframe
       userLogicalRangeRef.current = null;
 
-      const formatted = candles.map(c => ({
-        time: c.time as any,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close
-      }));
+      if (candles.length > 0) {
+        loadedSymbolTfRef.current = currentKey;
+        const formatted = candles.map(c => ({
+          time: c.time as any,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close
+        }));
 
-      seriesRef.current.setData(formatted);
-      chartRef.current?.timeScale().fitContent();
+        seriesRef.current.setData(formatted);
+        chartRef.current?.timeScale().fitContent();
+      } else {
+        // Clear old candles immediately while new pair candles are loading
+        seriesRef.current.setData([]);
+      }
     }
   }, [candles, symbol, timeframe]);
 
@@ -327,7 +340,7 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
   // Synchronize Live Price Line and Bar Close Countdown Timer on Right Price Scale
   useEffect(() => {
     const series = seriesRef.current;
-    if (!series || currentPrice === null || currentPrice === undefined) {
+    if (!series || currentPrice === null || currentPrice === undefined || candles.length === 0) {
       if (countdownPriceLineRef.current && series) {
         try {
           series.removePriceLine(countdownPriceLineRef.current);
@@ -358,7 +371,7 @@ export const TerminalProChart: React.FC<TerminalProChartProps> = ({
         axisLabelVisible: true
       });
     }
-  }, [currentPrice, countdown, liveTick?.close, liveTick?.open, chartColors.upColor, chartColors.downColor]);
+  }, [currentPrice, countdown, liveTick?.close, liveTick?.open, chartColors.upColor, chartColors.downColor, candles.length]);
 
   // Render Active Pine Script Indicator Plots
   useEffect(() => {

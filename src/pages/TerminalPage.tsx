@@ -32,8 +32,8 @@ export const TerminalPage: React.FC = () => {
   const { user } = useAuth();
   const isDark = theme === 'dark';
 
-  // Active Symbol & Timeframe
-  const [symbol, setSymbol] = useState('BTCUSDT');
+  // Active Symbol & Timeframe (Gold default)
+  const [symbol, setSymbol] = useState('XAUUSD');
   const [timeframe, setTimeframe] = useState('15m');
 
   // Modals & Dock State
@@ -92,11 +92,19 @@ export const TerminalPage: React.FC = () => {
   useEffect(() => {
     let isCancelled = false;
     setLoading(true);
+    setCandles([]);
+    candlesRef.current = [];
+    setCurrentPrice(null);
+    setLiveTick(null);
+    setActiveIndicator(null);
 
     fetchRealHistoricalCandles(symbol, timeframe, 1000).then(({ candles: fetched }) => {
       if (!isCancelled) {
         setCandles(fetched);
         candlesRef.current = fetched;
+        if (fetched.length > 0) {
+          setCurrentPrice(fetched[fetched.length - 1].close);
+        }
         setLoading(false);
       }
     });
@@ -117,7 +125,7 @@ export const TerminalPage: React.FC = () => {
 
   // Real-time Live Market Kline Streaming Subscription
   useEffect(() => {
-    if (candles.length === 0) return;
+    if (candles.length === 0 || loading) return;
     const lastCandle = candles[candles.length - 1];
     setCurrentPrice(lastCandle.close);
 
@@ -152,7 +160,7 @@ export const TerminalPage: React.FC = () => {
     return () => {
       unsubscribe();
     };
-  }, [symbol, timeframe, candles.length > 0 ? candles[0].time : 0]);
+  }, [symbol, timeframe, loading]);
 
   // Restore Active Indicator from User Account Storage
   useEffect(() => {
@@ -256,9 +264,9 @@ export const TerminalPage: React.FC = () => {
             onChange={e => setSymbol(e.target.value)}
             className="px-2.5 py-1.5 rounded-xl bg-surface-card border border-border text-xs text-foreground font-bold focus:outline-none cursor-pointer"
           >
+            <option value="XAUUSD">XAU / USD (Gold)</option>
             <option value="BTCUSDT">BTC / USDT (Bitcoin)</option>
             <option value="ETHUSDT">ETH / USDT (Ethereum)</option>
-            <option value="XAUUSD">XAU / USD (Gold)</option>
             <option value="SOLUSDT">SOL / USDT (Solana)</option>
             <option value="EURUSDT">EUR / USD (Euro)</option>
             <option value="XRPUSDT">XRP / USDT (Ripple)</option>
