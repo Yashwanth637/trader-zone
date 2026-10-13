@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { formatCurrency, formatSignedPnl } from '../lib/calculations';
+import { formatCurrency, formatSignedPnl, calculatePips, calculatePnlFromPrices } from '../lib/calculations';
 import { Trade } from '../types/trade';
 import { getCandlesForTrade, ReplayData, ReplayCandle } from '../lib/replayCandles';
 import {
@@ -318,30 +318,53 @@ export const ReplayPage: React.FC = () => {
     const currentCandle = replayData.candles[Math.min(currentStep - 1, replayData.candles.length - 1)];
     if (!currentCandle) return { pnl: 0, pips: 0, status: 'Pre-Entry' };
 
+    const trade = replayData.trade;
+
+    // Accurate completed pips: recalculate if exitPrice exists to sanitize any legacy corrupted values
+    const completedPips = (trade.exitPrice
+      ? calculatePips(trade.symbol, trade.direction, replayData.entryPrice, trade.exitPrice)
+      : trade.pips) || 0;
+
     if (currentStep >= replayData.exitIndex) {
       return {
-        pnl: replayData.trade.netPnl,
-        pips: replayData.trade.pips || 0,
+        pnl: trade.netPnl,
+        pips: completedPips,
         status: 'Trade Completed'
       };
     }
 
     // In-trade floating price
     const currentPrice = currentCandle.close;
-    const diff = replayData.trade.direction === 'BUY'
+    const floatingPips = calculatePips(trade.symbol, trade.direction, replayData.entryPrice, currentPrice);
+
+    // Calculate floating PnL accurately:
+    // When the trade has exitPrice and a recorded netPnl, we calculate the exact PnL rate per price unit.
+    // This perfectly honors the broker's specific leverage, contract sizing, and commission structure.
+    const totalExitPriceDiff = trade.exitPrice
+      ? (trade.direction === 'BUY' ? trade.exitPrice - replayData.entryPrice : replayData.entryPrice - trade.exitPrice)
+      : 0;
+
+    const currentPriceDiff = trade.direction === 'BUY'
       ? currentPrice - replayData.entryPrice
       : replayData.entryPrice - currentPrice;
 
-    const sym = replayData.trade.symbol.toUpperCase();
-    let pipMultiplier = 10000;
-    if (sym.includes('JPY')) pipMultiplier = 100;
-    else if (sym.includes('XAU') || sym.includes('GOLD')) pipMultiplier = 10;
-    else if (sym.includes('BTC') || sym.includes('US30')) pipMultiplier = 1;
+    let floatingPnl: number;
 
-    const floatingPips = parseFloat((diff * pipMultiplier).toFixed(1));
-    let pipValue = 10;
-    if (sym.includes('BTC')) pipValue = 1;
-    const floatingPnl = parseFloat((floatingPips * pipValue * replayData.trade.lotSize).toFixed(2));
+    if (trade.exitPrice && Math.abs(totalExitPriceDiff) > 0.00001 && typeof trade.netPnl === 'number') {
+      // Calculate rate: PnL dollars per unit of price movement
+      const pnlRate = Math.abs(trade.netPnl / totalExitPriceDiff);
+      floatingPnl = parseFloat((currentPriceDiff * pnlRate).toFixed(2));
+    } else {
+      // Fallback: standard asset contract sizing
+      const calc = calculatePnlFromPrices(
+        trade.symbol,
+        trade.direction,
+        trade.lotSize,
+        replayData.entryPrice,
+        currentPrice
+      );
+      floatingPnl = calc.netPnl;
+    }
 
     return {
       pnl: floatingPnl,
@@ -516,7 +539,7 @@ export const ReplayPage: React.FC = () => {
                   {formatSignedPnl(floatingStats.pnl)}
                 </div>
                 <div className="text-[10px] font-mono text-muted">
-                  Floating Pips: {floatingStats.pips}
+                  {floatingStats.status === 'Trade Completed' ? 'Realized Pips' : 'Floating Pips'}: {floatingStats.pips}
                 </div>
               </div>
             </div>

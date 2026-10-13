@@ -119,6 +119,28 @@ export function detectTradingSession(isoTime: string): TradingSession {
   return 'Off-Hours';
 }
 
+export function isCryptoOrIndex(symbol: string): boolean {
+  if (!symbol) return false;
+  const sym = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cryptos = [
+    'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC',
+    'LINK', 'LTC', 'NEAR', 'ATOM', 'SHIB', 'PEPE', 'SUI', 'APT', 'ARB', 'OP',
+    'TIA', 'INJ', 'FTM', 'RENDER', 'FET', 'ICP', 'FIL', 'XLM', 'ALGO', 'SAND',
+    'MANA', 'AXS', 'UNI', 'AAVE', 'MKR', 'CRV'
+  ];
+  const indices = [
+    'US30', 'DJI', 'NAS', 'USTEC', 'NDX', 'SPX', 'US500', 'DAX', 'GER',
+    'UK100', 'FTSE', 'NIFTY', 'BANKNIFTY', 'HK50', 'JP225', 'NIKKEI'
+  ];
+  return (
+    cryptos.some(c => sym.includes(c)) ||
+    indices.some(idx => sym.includes(idx)) ||
+    sym.includes('USDT') ||
+    sym.includes('USDC') ||
+    sym.includes('BUSD')
+  );
+}
+
 export function calculatePips(symbol: string, direction: Direction, entry: number, exit: number): number {
   if (!entry || !exit) return 0;
   const sym = symbol.toUpperCase();
@@ -128,8 +150,10 @@ export function calculatePips(symbol: string, direction: Direction, entry: numbe
     return parseFloat((diff * 100).toFixed(1));
   } else if (sym.includes('XAU') || sym.includes('GOLD')) {
     return parseFloat((diff * 10).toFixed(1));
-  } else if (sym.includes('BTC') || sym.includes('US30') || sym.includes('NAS') || sym.includes('SPX')) {
-    return parseFloat(diff.toFixed(1));
+  } else if (sym.includes('XAG') || sym.includes('SILVER') || sym.includes('OIL') || sym.includes('WTI') || sym.includes('BRENT')) {
+    return parseFloat((diff * 100).toFixed(1));
+  } else if (isCryptoOrIndex(sym)) {
+    return parseFloat(diff.toFixed(2));
   } else {
     // Standard Forex 4/5 digit
     return parseFloat((diff * 10000).toFixed(1));
@@ -150,8 +174,10 @@ export function calculatePnlFromPrices(
 
   let pipValuePerLot = 10; // Standard 100k contract Forex
   if (sym.includes('XAU') || sym.includes('GOLD')) {
-    pipValuePerLot = 10; // 100 oz contract: 0.1 move = $10
-  } else if (sym.includes('BTC') || sym.includes('ETH')) {
+    pipValuePerLot = 10; // 100 oz contract: 0.1 move = $10 ($1 move = $100)
+  } else if (sym.includes('XAG') || sym.includes('SILVER')) {
+    pipValuePerLot = 50; // 5000 oz contract: 0.01 move = $50
+  } else if (isCryptoOrIndex(sym)) {
     pipValuePerLot = 1;
   }
 
