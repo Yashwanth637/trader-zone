@@ -11,7 +11,10 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
-  Zap
+  Zap,
+  Edit2,
+  Check,
+  X
 } from 'lucide-react';
 import {
   EconomicEvent,
@@ -19,7 +22,9 @@ import {
   CURRENCY_METADATA,
   generateMonthlyCalendar,
   fetchLiveForexFactoryCalendar,
-  mergeCalendarData
+  mergeCalendarData,
+  saveEventActual,
+  calculateOutcome
 } from '../lib/eventCalendarService';
 import { EventDetailModal } from '../components/calendar/EventDetailModal';
 
@@ -81,6 +86,44 @@ export const EventCalendarPage: React.FC = () => {
   // Modal state
   const [selectedModalEvent, setSelectedModalEvent] = useState<EconomicEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+
+  // Direct inline actual value editing state
+  const [editingActualEventId, setEditingActualEventId] = useState<string | null>(null);
+  const [editingActualValue, setEditingActualValue] = useState<string>('');
+
+  const handleStartEditActual = (evt: EconomicEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingActualEventId(evt.id);
+    setEditingActualValue(evt.actual || '');
+  };
+
+  const handleSaveActual = (eventId: string, value: string) => {
+    saveEventActual(eventId, value);
+    const cleanVal = (!value || value.trim() === '' || value.trim() === '-') ? undefined : value.trim();
+
+    setMonthlyEvents(prev => prev.map(e => {
+      if (e.id === eventId) {
+        const newOutcome = calculateOutcome(cleanVal, e.forecast, e.specs.usualEffect);
+        return {
+          ...e,
+          actual: cleanVal,
+          outcome: newOutcome
+        };
+      }
+      return e;
+    }));
+
+    if (selectedModalEvent && selectedModalEvent.id === eventId) {
+      const newOutcome = calculateOutcome(cleanVal, selectedModalEvent.forecast, selectedModalEvent.specs.usualEffect);
+      setSelectedModalEvent({
+        ...selectedModalEvent,
+        actual: cleanVal,
+        outcome: newOutcome
+      });
+    }
+
+    setEditingActualEventId(null);
+  };
 
   // Load calendar when year or month changes
   useEffect(() => {
@@ -671,20 +714,60 @@ export const EventCalendarPage: React.FC = () => {
 
                             {/* Actual */}
                             <td className="py-3 px-4 text-right font-mono font-bold whitespace-nowrap">
-                              {evt.actual ? (
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-xs ${
-                                    evt.outcome === 'beat'
-                                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                                      : evt.outcome === 'miss'
-                                      ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                                      : 'text-foreground'
-                                  }`}
-                                >
-                                  {evt.actual}
-                                </span>
+                              {editingActualEventId === evt.id ? (
+                                <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                  <input
+                                    type="text"
+                                    autoFocus
+                                    value={editingActualValue}
+                                    onChange={e => setEditingActualValue(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') handleSaveActual(evt.id, editingActualValue);
+                                      if (e.key === 'Escape') setEditingActualEventId(null);
+                                    }}
+                                    placeholder="e.g. 0.3%"
+                                    className="w-16 px-1.5 py-0.5 text-xs font-mono text-right rounded border border-primary bg-surface text-foreground focus:outline-none shadow-xs"
+                                  />
+                                  <button
+                                    onClick={() => handleSaveActual(evt.id, editingActualValue)}
+                                    className="p-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                                    title="Save Actual"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingActualEventId(null)}
+                                    className="p-1 rounded bg-black/5 dark:bg-white/10 text-muted hover:text-foreground transition-colors"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
                               ) : (
-                                <span className="text-muted text-xs">-</span>
+                                <div
+                                  onClick={e => handleStartEditActual(evt, e)}
+                                  className="group/actual inline-flex items-center justify-end gap-1 cursor-pointer"
+                                  title="Click to edit or update actual value"
+                                >
+                                  {evt.actual ? (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-xs transition-all ${
+                                        evt.outcome === 'beat'
+                                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 group-hover/actual:ring-1 group-hover/actual:ring-emerald-500/40'
+                                          : evt.outcome === 'miss'
+                                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 group-hover/actual:ring-1 group-hover/actual:ring-rose-500/40'
+                                          : 'text-foreground group-hover/actual:bg-black/5 dark:group-hover/actual:bg-white/10'
+                                      }`}
+                                    >
+                                      {evt.actual}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted text-xs hover:text-primary transition-colors flex items-center gap-1">
+                                      <span>-</span>
+                                      <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover/actual:opacity-70 transition-opacity" />
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </td>
 
@@ -717,6 +800,7 @@ export const EventCalendarPage: React.FC = () => {
           setIsModalOpen(false);
           setSelectedModalEvent(null);
         }}
+        onUpdateActual={handleSaveActual}
       />
     </div>
   );

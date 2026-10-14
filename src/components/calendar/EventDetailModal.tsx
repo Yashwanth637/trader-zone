@@ -14,13 +14,24 @@ interface EventDetailModalProps {
   isOpen: boolean;
   event: EconomicEvent | null;
   onClose: () => void;
+  onUpdateActual?: (eventId: string, actual: string) => void;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   isOpen,
   event,
-  onClose
+  onClose,
+  onUpdateActual
 }) => {
+  const [isEditingActual, setIsEditingActual] = React.useState(false);
+  const [actualInput, setActualInput] = React.useState('');
+
+  useEffect(() => {
+    if (event) {
+      setActualInput(event.actual || '');
+      setIsEditingActual(false);
+    }
+  }, [event]);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -120,45 +131,90 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           {/* Metrics Trio: Actual vs Forecast vs Previous */}
           <div className="grid grid-cols-3 gap-3 p-4 rounded-xl bg-surface-card border border-border shadow-xs">
             {/* Actual */}
-            <div className="text-center p-3 rounded-lg bg-black/[0.02] dark:bg-black/30 border border-border">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                Actual
+            <div className="text-center p-3 rounded-lg bg-black/[0.02] dark:bg-black/30 border border-border relative group/act">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted px-0.5">
+                <span>Actual</span>
+                {onUpdateActual && !isEditingActual && (
+                  <button
+                    onClick={() => setIsEditingActual(true)}
+                    className="text-[10px] text-primary hover:underline font-semibold"
+                    title="Edit or update actual value"
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
-              <div
-                className={`text-xl sm:text-2xl font-black font-mono mt-1 ${
-                  event.outcome === 'beat'
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : event.outcome === 'miss'
-                    ? 'text-rose-600 dark:text-rose-400'
-                    : event.actual
-                    ? 'text-foreground'
-                    : 'text-muted'
-                }`}
-              >
-                {event.actual || 'Pending'}
-              </div>
-              {event.outcome && event.outcome !== 'pending' && (
-                <div
-                  className={`text-[10px] font-bold uppercase mt-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded ${
-                    event.outcome === 'beat'
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
-                      : event.outcome === 'miss'
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
-                      : 'bg-black/5 dark:bg-white/10 text-muted'
-                  }`}
-                >
-                  {event.outcome === 'beat' ? (
-                    <>
-                      <TrendingUp className="w-3 h-3" /> Beat
-                    </>
-                  ) : event.outcome === 'miss' ? (
-                    <>
-                      <TrendingDown className="w-3 h-3" /> Miss
-                    </>
-                  ) : (
-                    'In-Line'
-                  )}
+
+              {isEditingActual ? (
+                <div className="mt-2 space-y-1.5" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={actualInput}
+                    onChange={e => setActualInput(e.target.value)}
+                    placeholder="e.g. 0.3%"
+                    className="w-full text-center px-2 py-1 text-sm font-mono font-bold rounded-lg border border-primary bg-surface text-foreground focus:outline-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        onUpdateActual?.(event.id, actualInput);
+                        setIsEditingActual(false);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-primary text-white hover:bg-primary-dark transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActualInput(event.actual || '');
+                        setIsEditingActual(false);
+                      }}
+                      className="px-2 py-1 text-[10px] font-bold rounded-md bg-black/5 dark:bg-white/10 text-muted hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div
+                    className={`text-xl sm:text-2xl font-black font-mono mt-1 ${
+                      event.outcome === 'beat'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : event.outcome === 'miss'
+                        ? 'text-rose-600 dark:text-rose-400'
+                        : event.actual
+                        ? 'text-foreground'
+                        : 'text-muted'
+                    }`}
+                  >
+                    {event.actual || 'Pending'}
+                  </div>
+                  {event.outcome && event.outcome !== 'pending' && (
+                    <div
+                      className={`text-[10px] font-bold uppercase mt-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded ${
+                        event.outcome === 'beat'
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+                          : event.outcome === 'miss'
+                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
+                          : 'bg-black/5 dark:bg-white/10 text-muted'
+                      }`}
+                    >
+                      {event.outcome === 'beat' ? (
+                        <>
+                          <TrendingUp className="w-3 h-3" /> Beat
+                        </>
+                      ) : event.outcome === 'miss' ? (
+                        <>
+                          <TrendingDown className="w-3 h-3" /> Miss
+                        </>
+                      ) : (
+                        'In-Line'
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

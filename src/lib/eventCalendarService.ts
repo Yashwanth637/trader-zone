@@ -315,10 +315,38 @@ export function calculateOutcome(actual?: string, forecast?: string, usualEffect
   }
 }
 
+export const USER_ACTUALS_STORAGE_KEY = 'trader_zone_calendar_actuals_v1';
+
+export function getStoredActuals(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(USER_ACTUALS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveEventActual(eventId: string, actualValue: string): void {
+  try {
+    const stored = getStoredActuals();
+    if (!actualValue || actualValue.trim() === '' || actualValue.trim() === '-') {
+      delete stored[eventId];
+    } else {
+      stored[eventId] = actualValue.trim();
+    }
+    localStorage.setItem(USER_ACTUALS_STORAGE_KEY, JSON.stringify(stored));
+    // Invalidate calendar cache to force immediate re-render
+    localStorage.removeItem('forex_factory_live_cache_v9');
+    localStorage.removeItem('forex_factory_live_expiry_v9');
+  } catch (e) {}
+}
+
 /**
  * Convert raw Forex Factory events into application model
  */
 export function parseForexFactoryRawEvents(rawEvents: any[]): EconomicEvent[] {
+  const userOverrides = getStoredActuals();
+
   return rawEvents.map((item, idx) => {
     const country = (item.country || 'USD').toUpperCase();
     let impact: ImpactLevel = 'Low';
@@ -354,20 +382,25 @@ export function parseForexFactoryRawEvents(rawEvents: any[]): EconomicEvent[] {
     const forecast = item.forecast ? String(item.forecast).trim() : '-';
     const previous = item.previous ? String(item.previous).trim() : '-';
 
-    // Strict actual value rule: ONLY announced past events can have an actual value
-    const now = new Date();
-    const eventTime = item.date ? new Date(item.date) : null;
+    // Parse published actual value from the synchronized feed
     let actual: string | undefined = undefined;
-    if (eventTime && eventTime.getTime() <= now.getTime()) {
-      if (item.actual !== undefined && item.actual !== null && String(item.actual).trim() !== '' && String(item.actual).trim() !== '-') {
-        actual = String(item.actual).trim();
-      }
+    if (item.actual !== undefined && item.actual !== null && String(item.actual).trim() !== '' && String(item.actual).trim() !== '-') {
+      actual = String(item.actual).trim();
+    }
+
+    // Check for user-defined overrides in localStorage
+    const eventId = `ff-real-${idx}-${country}-${(item.title || '').replace(/\s+/g, '-').toLowerCase()}`;
+    const cleanTitleKey = `${country}-${(item.title || '').replace(/\s+/g, '-').toLowerCase()}`;
+    if (userOverrides[eventId]) {
+      actual = userOverrides[eventId];
+    } else if (userOverrides[cleanTitleKey]) {
+      actual = userOverrides[cleanTitleKey];
     }
 
     const outcome = calculateOutcome(actual, forecast, specs.usualEffect);
 
     return {
-      id: `ff-real-${idx}-${country}-${(item.title || '').replace(/\s+/g, '-').toLowerCase()}`,
+      id: eventId,
       title: item.title || 'Economic Event',
       country,
       date: dateStr || new Date().toISOString().split('T')[0],
@@ -763,8 +796,8 @@ export function generateMonthlyCalendar(year: number, monthIndex: number): Econo
  * Loads from bundled public/data/forex_factory_calendar.json with 0 CORS issues.
  */
 export async function fetchLiveForexFactoryCalendar(forceRefresh = false): Promise<EconomicEvent[]> {
-  const CACHE_KEY = 'forex_factory_live_cache_v8';
-  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v8';
+  const CACHE_KEY = 'forex_factory_live_cache_v9';
+  const CACHE_EXPIRY_KEY = 'forex_factory_live_expiry_v9';
 
   // 1. Try localStorage cache (unless forceRefresh is true)
   if (!forceRefresh) {
