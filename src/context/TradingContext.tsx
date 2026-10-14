@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { Trade, TradingAccount, TradingStrategy } from '../types/trade';
+import { Trade, TradingAccount, TradingStrategy, AccountTransaction } from '../types/trade';
 import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage, BehavioralAlert } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
@@ -56,6 +56,11 @@ interface TradingContextType {
   addAccount: (account: Omit<TradingAccount, 'id' | 'createdAt'>) => TradingAccount;
   updateAccount: (id: string, updates: Partial<TradingAccount>) => void;
   deleteAccount: (id: string) => void;
+
+  // Transactions (Deposits & Withdrawals)
+  transactions: AccountTransaction[];
+  addTransaction: (tx: Omit<AccountTransaction, 'id' | 'createdAt'>) => AccountTransaction;
+  deleteTransaction: (id: string) => void;
 
   addStrategy: (strategy: Omit<TradingStrategy, 'id'>) => void;
   updateStrategy: (id: string, updates: Partial<TradingStrategy>) => void;
@@ -149,6 +154,7 @@ const TradingContext = createContext<TradingContextType | undefined>(undefined);
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<TradingAccount[]>(() => Storage.getAccounts());
+  const [transactions, setTransactions] = useState<AccountTransaction[]>(() => Storage.getTransactions());
   const [trades, setTrades] = useState<Trade[]>(() => {
     const rawTrades = Storage.getTrades();
     const initialAccs = Storage.getAccounts();
@@ -269,6 +275,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     setTrades(sortTradesDescending(Storage.getTrades()));
     setAccounts(Storage.getAccounts());
+    setTransactions(Storage.getTransactions());
     setActiveAccountIdState(Storage.getActiveAccountId());
     setStrategies(Storage.getStrategies());
     setRules(Storage.getRules());
@@ -282,6 +289,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Auto-sync state to Storage
   useEffect(() => { Storage.saveTrades(trades); }, [trades]);
   useEffect(() => { Storage.saveAccounts(accounts); }, [accounts]);
+  useEffect(() => { Storage.saveTransactions(transactions); }, [transactions]);
   useEffect(() => { Storage.saveStrategies(strategies); }, [strategies]);
   useEffect(() => { Storage.saveRules(rules); }, [rules]);
   useEffect(() => { Storage.saveJournalEntries(journalEntries); }, [journalEntries]);
@@ -300,12 +308,18 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Find all trades for this account
       const accTrades = trades.filter(t => t.accountId === acc.id);
       const netPnl = accTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
+
+      // Find all deposits and withdrawals for this account
+      const accTxs = transactions.filter(t => t.accountId === acc.id);
+      const deposits = accTxs.filter(t => t.type === 'DEPOSIT').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const withdrawals = accTxs.filter(t => t.type === 'WITHDRAWAL').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
       return {
         ...acc,
-        currentBalance: Number(((acc.initialBalance || 0) + netPnl).toFixed(2))
+        currentBalance: Number(((acc.initialBalance || 0) + netPnl + deposits - withdrawals).toFixed(2))
       };
     });
-  }, [accounts, trades]);
+  }, [accounts, trades, transactions]);
 
   const activeAccount = useMemo(() => {
     if (activeAccountId === 'all') return undefined;
@@ -417,6 +431,20 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (activeAccountId === id) {
       setActiveAccountId(accounts.find(a => a.id !== id)?.id || 'all');
     }
+  };
+
+  const addTransaction = (txData: Omit<AccountTransaction, 'id' | 'createdAt'>): AccountTransaction => {
+    const newTx: AccountTransaction = {
+      ...txData,
+      id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      createdAt: new Date().toISOString()
+    };
+    setTransactions(prev => [newTx, ...prev]);
+    return newTx;
+  };
+
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const addStrategy = (stratData: Omit<TradingStrategy, 'id'>) => {
@@ -571,6 +599,9 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addAccount,
         updateAccount,
         deleteAccount,
+        transactions,
+        addTransaction,
+        deleteTransaction,
         addStrategy,
         updateStrategy,
         deleteStrategy,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/calculations';
@@ -21,6 +22,7 @@ import { DeltaStorage } from '../lib/deltaIndiaApi';
 import { TradingAccount } from '../types/trade';
 
 export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpenCsvImport }) => {
+  const navigate = useNavigate();
   const { accounts, addAccount, updateAccount, deleteAccount, activeAccountId, setActiveAccountId, cleanDuplicateTrades } = useTrading();
   const [modalOpen, setModalOpen] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
@@ -154,14 +156,20 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
           return (
             <div
               key={acc.id}
-              className={`premium-card p-6 space-y-4 border transition-all ${
+              onClick={() => navigate(`/broker-hub/account/${acc.id}`)}
+              className={`premium-card p-6 space-y-4 border transition-all cursor-pointer hover:border-primary/60 hover:shadow-lg group ${
                 isActive ? 'border-primary/50 shadow-glow-primary' : 'border-border'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-foreground">{acc.name}</h3>
+                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                      {acc.name}
+                      <span className="text-[10px] text-primary/70 font-normal hidden sm:inline-block group-hover:translate-x-0.5 transition-transform">
+                        (Deposit / Withdraw →)
+                      </span>
+                    </h3>
                     {isActive && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-white font-bold">
                         ACTIVE
@@ -175,13 +183,21 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
 
                 <div className="flex items-center gap-1.5">
                   {!isActive && (
-                    <Button size="sm" variant="outline" onClick={() => setActiveAccountId(acc.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveAccountId(acc.id);
+                      }}
+                    >
                       Select
                     </Button>
                   )}
                   {accounts.length > 1 && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (confirm(`Remove account ${acc.name}?`)) {
                           deleteAccount(acc.id);
                         }
@@ -206,7 +222,10 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                     <span className="text-[10px] text-muted uppercase font-bold">Initial Balance</span>
                     <button
                       type="button"
-                      onClick={() => handleOpenEditBalance(acc)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditBalance(acc);
+                      }}
                       className="text-[11px] text-primary hover:text-primary-hover font-bold flex items-center gap-1 cursor-pointer transition-colors"
                       title="Update starting balance"
                     >

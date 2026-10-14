@@ -100,3 +100,15 @@ export interface TradingStrategy {
   netPnl?: number;
   color?: string;
 }
+
+export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL';
+
+export interface AccountTransaction {
+  id: string;
+  accountId: string;
+  type: TransactionType;
+  amount: number;
+  date: string; // ISO date e.g. "2026-10-14"
+  notes?: string;
+  createdAt: string;
+}

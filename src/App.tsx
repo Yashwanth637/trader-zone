@@ -35,6 +35,7 @@ import { MarketHeatmapPage } from './pages/MarketHeatmapPage';
 import { ShareCardsPage } from './pages/ShareCardsPage';
 import { MarketHoursPage } from './pages/MarketHoursPage';
 import { BrokerHubPage } from './pages/BrokerHubPage';
+import { AccountDetailPage } from './pages/AccountDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TermsPage, PrivacyPage, DisclaimerPage } from './pages/LegalPages';
 
@@ -135,6 +136,7 @@ const AppLayout: React.FC = () => {
           <Route path="/share-cards" element={<ShareCardsPage />} />
           <Route path="/market-hours" element={<MarketHoursPage />} />
           <Route path="/broker-hub" element={<BrokerHubPage onOpenCsvImport={() => setCsvImportOpen(true)} />} />
+          <Route path="/broker-hub/account/:id" element={<AccountDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/terms" element={<TermsPage />} />

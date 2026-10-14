@@ -1,4 +1,4 @@
-import { Trade, TradingAccount, TradingStrategy } from '../types/trade';
+import { Trade, TradingAccount, TradingStrategy, AccountTransaction } from '../types/trade';
 import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
@@ -45,7 +45,8 @@ const KEYS = {
   VISION: 'tz_vision_v1',
   COACH: 'tz_coach_v1',
   PROFILE: 'tz_profile_v1',
-  RISK_LIMITS: 'tz_risk_limits_v1'
+  RISK_LIMITS: 'tz_risk_limits_v1',
+  TRANSACTIONS: 'tz_account_transactions_v1'
 };
 
 function getUserKey(baseKey: string): string {
@@ -120,6 +121,13 @@ export const Storage = {
   },
   saveAccounts(accounts: TradingAccount[]): void {
     setItem(getUserKey(KEYS.ACCOUNTS), accounts);
+  },
+
+  getTransactions(): AccountTransaction[] {
+    return getItem<AccountTransaction[]>(getUserKey(KEYS.TRANSACTIONS), []);
+  },
+  saveTransactions(transactions: AccountTransaction[]): void {
+    setItem(getUserKey(KEYS.TRANSACTIONS), transactions);
   },
 
   getActiveAccountId(): string {
