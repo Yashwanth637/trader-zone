@@ -39,6 +39,7 @@ export interface Trade {
   exitPrice?: number;
   stopLoss?: number;
   takeProfit?: number;
+  closedBy?: 'TP' | 'SL' | 'User';
   
   openTime: string; // ISO string
   closeTime?: string; // ISO string
@@ -111,4 +112,17 @@ export interface AccountTransaction {
   date: string; // ISO date e.g. "2026-10-14"
   notes?: string;
   createdAt: string;
+}
+
+export interface HundredTradesChallenge {
+  id: string;
+  name: string;
+  startDate: string; // ISO date string "YYYY-MM-DD"
+  targetTrades: number; // 100
+  targetDays: number; // 100
+  accountId: string; // 'all' or specific account id
+  startingBalance?: number;
+  notes?: string;
+  createdAt: string; // ISO string
+  status: 'ACTIVE' | 'COMPLETED';
 }

@@ -1,4 +1,4 @@
-import { Trade, TradingAccount, TradingStrategy, AccountTransaction } from '../types/trade';
+import { Trade, TradingAccount, TradingStrategy, AccountTransaction, HundredTradesChallenge } from '../types/trade';
 import { DailyJournalEntry, TradingRule } from '../types/journal';
 import { ChartVisionAnalysis, AICoachMessage } from '../types/ai';
 import { UserProfile, RiskLimits } from '../types/settings';
@@ -46,7 +46,8 @@ const KEYS = {
   COACH: 'tz_coach_v1',
   PROFILE: 'tz_profile_v1',
   RISK_LIMITS: 'tz_risk_limits_v1',
-  TRANSACTIONS: 'tz_account_transactions_v1'
+  TRANSACTIONS: 'tz_account_transactions_v1',
+  HUNDRED_TRADES_CHALLENGE: 'tz_100_trades_challenge_v1'
 };
 
 function getUserKey(baseKey: string): string {
@@ -128,6 +129,13 @@ export const Storage = {
   },
   saveTransactions(transactions: AccountTransaction[]): void {
     setItem(getUserKey(KEYS.TRANSACTIONS), transactions);
+  },
+
+  getHundredTradesChallenge(): HundredTradesChallenge | null {
+    return getItem<HundredTradesChallenge | null>(getUserKey(KEYS.HUNDRED_TRADES_CHALLENGE), null);
+  },
+  saveHundredTradesChallenge(challenge: HundredTradesChallenge | null): void {
+    setItem(getUserKey(KEYS.HUNDRED_TRADES_CHALLENGE), challenge);
   },
 
   getActiveAccountId(): string {

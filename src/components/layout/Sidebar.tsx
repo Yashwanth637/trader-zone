@@ -286,15 +286,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </NavLink>
 
-        {/* Progress Tracker */}
+        {/* 100 Trades Challenge */}
         <NavLink
           to="/progress-tracker"
           onClick={onMobileClose}
           className={({ isActive }) => navClass(isActive)}
-          title={collapsed ? "Progress Tracker" : undefined}
+          title={collapsed ? "100 Trades Challenge" : undefined}
         >
           <Target className="w-4 h-4 shrink-0 text-cyan-400" />
-          {!collapsed && <span>Progress Tracker</span>}
+          {!collapsed && <span>100 Trades Challenge</span>}
         </NavLink>
 
         {/* Market Hours */}
