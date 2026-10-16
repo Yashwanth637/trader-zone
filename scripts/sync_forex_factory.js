@@ -81,13 +81,16 @@ function isNonNumericEvent(title) {
 /**
  * High-precision matcher between Forex Factory calendar events and TradingView releases
  */
+/**
+ * High-precision matcher between Forex Factory calendar events and TradingView releases
+ */
 function matchTradingViewRelease(ff, tvList) {
   if (!ff.date) return null;
   const ffTime = new Date(ff.date).getTime();
   if (isNaN(ffTime) || ffTime > Date.now()) return null; // Pending future events have no actual yet
 
-  const ffTitle = (ff.title || '').toLowerCase();
-  const ffCountry = (ff.country || '').toUpperCase();
+  let ffTitle = (ff.title || '').toLowerCase().trim();
+  const ffCountry = (ff.country || '').toUpperCase().trim();
 
   if (isNonNumericEvent(ffTitle)) return null;
 
@@ -136,10 +139,19 @@ function matchTradingViewRelease(ff, tvList) {
 
     // Core matching (Core CPI, Core PPI, Core Retail Sales)
     const ffCore = ffTitle.includes('core');
-    const tvCore = tvTitle.includes('core');
+    const tvCore = tvTitle.includes('core') || tvTitle.includes('ex autos') || tvTitle.includes('ex food');
     if (ffCore && tvCore) score += 40;
     else if (!ffCore && !tvCore) score += 20;
     else score -= 50;
+
+    // Exact direct aliases
+    if (ffTitle.includes('natural gas storage') && tvTitle.includes('natural gas stocks')) score += 70;
+    if (ffTitle.includes('crude oil inventories') && tvTitle.includes('crude oil stocks')) score += 70;
+    if (ffTitle.includes('unemployment claims') && tvTitle.includes('initial jobless claims')) score += 70;
+    if (ffTitle.includes('philly fed') && tvTitle.includes('philadelphia fed')) score += 70;
+    if (ffTitle.includes('empire state') && tvTitle.includes('empire state')) score += 70;
+    if (ffTitle.includes('businessnz') && tvTitle.includes('business nz')) score += 70;
+    if (ffTitle.includes('goods trade balance') && tvTitle === 'goods trade balance') score += 70;
 
     // Domain mismatch guards
     if (ffTitle.includes('lending') && !tvTitle.includes('lending')) continue;
@@ -175,9 +187,63 @@ function matchTradingViewRelease(ff, tvList) {
 }
 
 /**
+ * Formats actual value string with consistent units based on Forex Factory forecast/previous
+ */
+function formatActualValue(rawActual, ffEvent) {
+  if (rawActual === null || rawActual === undefined) return undefined;
+  let val = String(rawActual).trim();
+  const forecast = (ffEvent.forecast || '').trim();
+  const previous = (ffEvent.previous || '').trim();
+  const benchmark = forecast || previous;
+
+  // Percentage
+  if (benchmark.endsWith('%')) {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      return `${num > 0 ? '' : ''}${num.toFixed(1)}%`;
+    }
+    if (!val.endsWith('%')) return `${val}%`;
+    return val;
+  }
+
+  // Billions (e.g. 76B, -21.9B)
+  if (benchmark.endsWith('B')) {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      // If benchmark had decimal e.g. -21.9B
+      return benchmark.includes('.') ? `${num.toFixed(1)}B` : `${Math.round(num)}B`;
+    }
+    if (!val.endsWith('B')) return `${val}B`;
+    return val;
+  }
+
+  // Millions (e.g. 0.2M, -3.2M)
+  if (benchmark.endsWith('M')) {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      return `${num.toFixed(1)}M`;
+    }
+    if (!val.endsWith('M')) return `${val}M`;
+    return val;
+  }
+
+  // Thousands (e.g. 199K)
+  if (benchmark.endsWith('K')) {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      return `${Math.round(num)}K`;
+    }
+    if (!val.endsWith('K')) return `${val}K`;
+    return val;
+  }
+
+  return val;
+}
+
+/**
  * Enriches Forex Factory events with live actual values from TradingView
  */
-async function enrichEventsWithActuals(events) {
+async function enrichEventsWithActuals(events, existingMap = new Map()) {
   if (!Array.isArray(events) || events.length === 0) return events;
 
   // Compute date range for TradingView query
@@ -197,21 +263,24 @@ async function enrichEventsWithActuals(events) {
   const toIso = new Date(maxDate.getTime() + 24 * 3600 * 1000).toISOString();
 
   const tvReleases = await fetchTradingViewEvents(fromIso, toIso);
-  if (tvReleases.length === 0) {
-    console.log('[Forex Factory Sync] No external actuals retrieved; retaining existing actuals.');
-    return events;
-  }
-
   let enrichedCount = 0;
+
   for (const evt of events) {
-    // If event already has an authentic actual value, keep it unless new data is available
+    const key = `${evt.country}_${evt.title}_${evt.date}`;
+
     const match = matchTradingViewRelease(evt, tvReleases);
     if (match) {
-      let val = String(match.actual);
-      if (match.unit === '%' && !val.includes('%')) val += '%';
-      else if (match.unit && !val.includes(match.unit)) val += match.unit;
-      evt.actual = val;
-      enrichedCount++;
+      const formatted = formatActualValue(match.actual, evt);
+      if (formatted) {
+        evt.actual = formatted;
+        enrichedCount++;
+        continue;
+      }
+    }
+
+    // If no new TV match, check if we previously preserved an authentic actual for this event
+    if (!evt.actual && existingMap.has(key)) {
+      evt.actual = existingMap.get(key);
     }
   }
 
@@ -429,9 +498,24 @@ async function main() {
     process.exit(1);
   }
 
+  // Load existing file if present so we never lose previously captured authentic actuals
+  const existingMap = new Map();
+  if (fs.existsSync(OUTPUT_FILE)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf8'));
+      if (Array.isArray(prev)) {
+        prev.forEach(p => {
+          if (p.country && p.title && p.date && p.actual && String(p.actual).trim() !== '' && p.actual !== '-') {
+            existingMap.set(`${p.country}_${p.title}_${p.date}`, p.actual);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
   // ENRICH WITH LIVE TRADINGVIEW ACTUAL VALUES
   console.log('[Forex Factory Sync] Enriching past events with live actual values from TradingView...');
-  const enriched = await enrichEventsWithActuals(events);
+  const enriched = await enrichEventsWithActuals(events, existingMap);
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(enriched, null, 2), 'utf-8');
   console.log(`[Forex Factory Sync] SUCCESS: Successfully saved ${enriched.length} events to ${OUTPUT_FILE}.`);

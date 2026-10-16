@@ -62,7 +62,7 @@
     "impact": "Low",
     "forecast": "0.8%",
     "previous": "0.5%",
-    "actual": "1%"
+    "actual": "1.0%"
   },
   {
     "title": "Bank Lending y/y",
@@ -222,7 +222,7 @@
     "impact": "Low",
     "forecast": "4.4%",
     "previous": "3.8%",
-    "actual": "5%"
+    "actual": "5.0%"
   },
   {
     "title": "ECB President Lagarde Speaks",
@@ -304,7 +304,7 @@
     "impact": "Low",
     "forecast": "7.4%",
     "previous": "7.5%",
-    "actual": "4.8%"
+    "actual": "7.2%"
   },
   {
     "title": "New Loans",
@@ -321,7 +321,7 @@
     "impact": "Low",
     "forecast": "",
     "previous": "3.80|1.6",
-    "actual": "3.8%"
+    "actual": "3.8"
   },
   {
     "title": "FOMC Member Bowman Speaks",
@@ -454,7 +454,8 @@
     "date": "2026-10-14T20:30:00-04:00",
     "impact": "High",
     "forecast": "4.6%",
-    "previous": "4.6%"
+    "previous": "4.6%",
+    "actual": "4.7%"
   },
   {
     "title": "FOMC Member Bowman Speaks",
@@ -475,7 +476,7 @@
   {
     "title": "RBA Annual Report",
     "country": "AUD",
-    "date": "2026-10-15T00:25:00-04:00",
+    "date": "2026-10-15T00:30:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": ""
@@ -494,7 +495,8 @@
     "date": "2026-10-15T00:30:00-04:00",
     "impact": "Low",
     "forecast": "-1.7%",
-    "previous": "-1.7%"
+    "previous": "-1.7%",
+    "actual": "-4.2%"
   },
   {
     "title": "GDP m/m",
@@ -502,7 +504,8 @@
     "date": "2026-10-15T02:00:00-04:00",
     "impact": "High",
     "forecast": "-0.1%",
-    "previous": "0.4%"
+    "previous": "0.4%",
+    "actual": "0.1%"
   },
   {
     "title": "Construction Output m/m",
@@ -510,7 +513,8 @@
     "date": "2026-10-15T02:00:00-04:00",
     "impact": "Low",
     "forecast": "0.0%",
-    "previous": "0.1%"
+    "previous": "0.1%",
+    "actual": "0.1%"
   },
   {
     "title": "Goods Trade Balance",
@@ -518,7 +522,8 @@
     "date": "2026-10-15T02:00:00-04:00",
     "impact": "Low",
     "forecast": "-21.9B",
-    "previous": "-21.0B"
+    "previous": "-21.0B",
+    "actual": "-18.0B"
   },
   {
     "title": "Index of Services 3m/3m",
@@ -534,7 +539,8 @@
     "date": "2026-10-15T02:00:00-04:00",
     "impact": "Low",
     "forecast": "-0.1%",
-    "previous": "0.2%"
+    "previous": "0.2%",
+    "actual": "0.1%"
   },
   {
     "title": "Manufacturing Production m/m",
@@ -542,7 +548,8 @@
     "date": "2026-10-15T02:00:00-04:00",
     "impact": "Low",
     "forecast": "-0.1%",
-    "previous": "0.9%"
+    "previous": "0.9%",
+    "actual": "0.1%"
   },
   {
     "title": "PPI m/m",
@@ -550,7 +557,8 @@
     "date": "2026-10-15T02:30:00-04:00",
     "impact": "Low",
     "forecast": "0.6%",
-    "previous": "0.7%"
+    "previous": "0.7%",
+    "actual": "0.3%"
   },
   {
     "title": "French Final CPI m/m",
@@ -558,7 +566,8 @@
     "date": "2026-10-15T02:45:00-04:00",
     "impact": "Low",
     "forecast": "-0.3%",
-    "previous": "-0.3%"
+    "previous": "-0.3%",
+    "actual": "-0.3%"
   },
   {
     "title": "MPC Member Greene Speaks",
@@ -598,7 +607,8 @@
     "date": "2026-10-15T05:00:00-04:00",
     "impact": "Low",
     "forecast": "0.0%",
-    "previous": "-0.1%"
+    "previous": "-0.1%",
+    "actual": "-0.5%"
   },
   {
     "title": "EU Economic Summit",
@@ -614,7 +624,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "Low",
     "forecast": "1.1%",
-    "previous": "-0.4%"
+    "previous": "-0.4%",
+    "actual": "1.5%"
   },
   {
     "title": "Wholesale Sales m/m",
@@ -622,7 +633,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "Low",
     "forecast": "-1.5%",
-    "previous": "0.3%"
+    "previous": "0.3%",
+    "actual": "1.5%"
   },
   {
     "title": "Core PPI m/m",
@@ -630,7 +642,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "High",
     "forecast": "0.3%",
-    "previous": "0.2%"
+    "previous": "0.2%",
+    "actual": "0.5%"
   },
   {
     "title": "Core Retail Sales m/m",
@@ -638,7 +651,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "High",
     "forecast": "0.6%",
-    "previous": "1.4%"
+    "previous": "1.4%",
+    "actual": "0.9%"
   },
   {
     "title": "PPI m/m",
@@ -646,7 +660,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "High",
     "forecast": "0.6%",
-    "previous": "0.4%"
+    "previous": "0.4%",
+    "actual": "1.3%"
   },
   {
     "title": "Retail Sales m/m",
@@ -654,7 +669,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "High",
     "forecast": "0.3%",
-    "previous": "1.2%"
+    "previous": "1.2%",
+    "actual": "0.2%"
   },
   {
     "title": "Philly Fed Manufacturing Index",
@@ -662,7 +678,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "Medium",
     "forecast": "28.2",
-    "previous": "37.8"
+    "previous": "37.8",
+    "actual": "20.9"
   },
   {
     "title": "Unemployment Claims",
@@ -670,7 +687,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "Medium",
     "forecast": "199K",
-    "previous": "197K"
+    "previous": "197K",
+    "actual": "199K"
   },
   {
     "title": "Empire State Manufacturing Index",
@@ -678,7 +696,8 @@
     "date": "2026-10-15T08:30:00-04:00",
     "impact": "Low",
     "forecast": "12.1",
-    "previous": "7.6"
+    "previous": "7.6",
+    "actual": "25.5"
   },
   {
     "title": "Business Inventories m/m",
@@ -686,7 +705,8 @@
     "date": "2026-10-15T10:00:00-04:00",
     "impact": "Low",
     "forecast": "0.4%",
-    "previous": "0.8%"
+    "previous": "0.8%",
+    "actual": "0.4%"
   },
   {
     "title": "IMF Meetings",
@@ -702,15 +722,17 @@
     "date": "2026-10-15T10:30:00-04:00",
     "impact": "Low",
     "forecast": "76B",
-    "previous": "85B"
+    "previous": "85B",
+    "actual": "67B"
   },
   {
     "title": "Crude Oil Inventories",
     "country": "USD",
     "date": "2026-10-15T12:00:00-04:00",
     "impact": "Low",
-    "forecast": "-0.2M",
-    "previous": "-3.2M"
+    "forecast": "0.2M",
+    "previous": "-3.2M",
+    "actual": "1.9M"
   },
   {
     "title": "FOMC Member Hammack Speaks",
@@ -726,7 +748,8 @@
     "date": "2026-10-15T17:30:00-04:00",
     "impact": "Low",
     "forecast": "",
-    "previous": "53.1"
+    "previous": "53.1",
+    "actual": "56.5"
   },
   {
     "title": "FPI m/m",
@@ -734,7 +757,8 @@
     "date": "2026-10-15T17:45:00-04:00",
     "impact": "Low",
     "forecast": "",
-    "previous": "0.3%"
+    "previous": "0.3%",
+    "actual": "-0.4%"
   },
   {
     "title": "BOE Gov Bailey Speaks",

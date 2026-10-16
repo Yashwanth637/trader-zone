@@ -815,7 +815,7 @@ export async function fetchLiveForexFactoryCalendar(forceRefresh = false): Promi
     }
   }
 
-  // 2. Fetch the bundled official Forex Factory JSON file from our own domain with cache-busting
+  // 2. Fetch the bundled official Forex Factory JSON file from our domain / GitHub Pages CDN
   // Zero CORS, Zero 429, Instantaneous load!
   let rawEvents: any[] | null = null;
 
@@ -824,6 +824,7 @@ export async function fetchLiveForexFactoryCalendar(forceRefresh = false): Promi
   const bust = Date.now();
 
   const candidateUrls = [
+    `https://raw.githubusercontent.com/Yashwanth637/trader-zone/gh-pages/data/forex_factory_calendar.json?_t=${bust}`,
     `${cleanBase}data/forex_factory_calendar.json?_t=${bust}`,
     `./data/forex_factory_calendar.json?_t=${bust}`,
     `/data/forex_factory_calendar.json?_t=${bust}`,
@@ -849,7 +850,7 @@ export async function fetchLiveForexFactoryCalendar(forceRefresh = false): Promi
     const parsedEvents = parseForexFactoryRawEvents(rawEvents);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(parsedEvents));
-      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + 5 * 60 * 1000));
+      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + 60 * 1000)); // 1-minute live freshness
     } catch (e) {}
     return parsedEvents;
   }

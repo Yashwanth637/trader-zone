@@ -131,7 +131,14 @@ export const EventCalendarPage: React.FC = () => {
     setMonthlyEvents(generated);
 
     // Synchronize live official Forex Factory feed across all month boundaries
-    syncLiveForexFactory(generated);
+    syncLiveForexFactory(generated, true);
+
+    // Auto-poll for newly released actual values every 60 seconds
+    const interval = setInterval(() => {
+      syncLiveForexFactory(undefined, true);
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [selectedYear, selectedMonth]);
 
   // Synchronize with Forex Factory live bundled feed
