@@ -12,6 +12,7 @@ import {
   TrendingDown,
   Share2
 } from 'lucide-react';
+import { MonthlyShareModal } from './MonthlyShareModal';
 
 interface HeroMetricsBannerProps {
   stats: SummaryStats;
@@ -92,6 +93,9 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
 
   // User display name
   const displayName = profile?.name || user?.name || 'Trader';
+
+  // Monthly Share Modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Calculate Balance (active account balance or aggregate)
   const totalBalance = useMemo(() => {
@@ -340,14 +344,26 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
         </div>
 
         {/* 6. THIS MONTH */}
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1 relative">
+        <div
+          onClick={() => setIsShareModalOpen(true)}
+          className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-primary/40 hover:dark:border-primary/50 shadow-sm dark:shadow-none transition-all space-y-1 relative cursor-pointer group"
+          title="Click to view & share monthly performance overview"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block group-hover:text-primary transition-colors">
               THIS MONTH
             </span>
-            <Link to="/share" title="Share Trading Stats" className="inline-flex items-center">
-              <Share2 className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer transition-colors" />
-            </Link>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShareModalOpen(true);
+              }}
+              title="Share Monthly Overview"
+              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 group-hover:text-primary transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
           </div>
           <div
             className={`text-xl sm:text-2xl font-black font-mono tracking-tight truncate ${
@@ -363,6 +379,17 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Monthly Performance Overview Share Modal */}
+      <MonthlyShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        trades={trades}
+        activeAccount={activeAccount}
+        profile={profile}
+        user={user}
+        thisMonthPnl={thisMonthPnl}
+      />
     </div>
   );
 };
