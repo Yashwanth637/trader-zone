@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { SummaryStats, formatCurrency } from '../../lib/calculations';
 import { Trade, TradingAccount } from '../../types/trade';
@@ -26,17 +26,33 @@ interface HeroMetricsBannerProps {
 /**
  * Vending machine / slot machine style running number counter
  * Rapidly counts from 0 to the target value with deceleration and exact decimal precision.
+ * Uses direct DOM ref updating to prevent component tree re-rendering artifacts.
  */
 export const VendingPnlCounter: React.FC<{
   targetValue: number;
   duration?: number;
 }> = ({ targetValue, duration = 1600 }) => {
-  const [currentVal, setCurrentVal] = useState(0);
+  const spanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     let animationFrameId: number;
     let startTime: number | null = null;
     const startVal = 0;
+
+    const formatVal = (v: number) => {
+      const isNeg = targetValue < -0.001;
+      const isPos = targetValue > 0.001;
+      const absVal = Math.abs(v);
+      const formattedAbs = absVal.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      return `${isNeg ? '-' : isPos ? '+' : ''}$${formattedAbs}`;
+    };
+
+    if (spanRef.current) {
+      spanRef.current.textContent = formatVal(0);
+    }
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -46,12 +62,15 @@ export const VendingPnlCounter: React.FC<{
       // Ease-out cubic deceleration curve
       const ease = 1 - Math.pow(1 - progress, 3);
       const val = startVal + (targetValue - startVal) * ease;
-      setCurrentVal(val);
+
+      if (spanRef.current) {
+        spanRef.current.textContent = formatVal(val);
+      }
 
       if (progress < 1) {
         animationFrameId = requestAnimationFrame(animate);
-      } else {
-        setCurrentVal(targetValue);
+      } else if (spanRef.current) {
+        spanRef.current.textContent = formatVal(targetValue);
       }
     };
 
@@ -61,16 +80,14 @@ export const VendingPnlCounter: React.FC<{
 
   const isNeg = targetValue < -0.001;
   const isPos = targetValue > 0.001;
-  const absVal = Math.abs(currentVal);
-
-  const formattedAbs = absVal.toLocaleString('en-US', {
+  const initialFormatted = Math.abs(0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
 
   return (
-    <span className="tabular-nums font-mono font-black">
-      {isNeg ? '-' : isPos ? '+' : ''}${formattedAbs}
+    <span ref={spanRef} className="tabular-nums font-mono font-black inline-block">
+      {isNeg ? '-' : isPos ? '+' : ''}${initialFormatted}
     </span>
   );
 };
@@ -164,15 +181,17 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* TOP HERO BANNER (Image 1 Style - Theme Adaptive for Dark and Light Mode) */}
-      <div className="p-6 md:p-8 rounded-3xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
-        {/* Subtle background glow */}
-        <div
-          className={`absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-10 dark:opacity-20 transition-all ${
-            isTotalPos ? 'bg-emerald-500' : isTotalNeg ? 'bg-rose-500' : 'bg-primary'
-          }`}
-        />
-
+      {/* TOP HERO BANNER (Image 1 Style - Seamless Theme Glow without dirty rect clipping) */}
+      <div
+        style={{
+          backgroundImage: isTotalPos
+            ? 'radial-gradient(circle 320px at 12% 28%, rgba(16, 185, 129, 0.14), transparent 75%)'
+            : isTotalNeg
+            ? 'radial-gradient(circle 320px at 12% 28%, rgba(244, 63, 94, 0.14), transparent 75%)'
+            : 'radial-gradient(circle 320px at 12% 28%, rgba(139, 92, 246, 0.12), transparent 75%)'
+        }}
+        className="p-6 md:p-8 rounded-3xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors"
+      >
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Left Block: Greeting + Name + SWAPPED POSITION: Giant Animated TOTAL P&L */}
           <div className="space-y-3">
@@ -198,13 +217,13 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
                 </span>
               </div>
 
-              {/* Giant Animated Vending Machine Value */}
+              {/* Giant Animated Vending Machine Value (clean text-shadow without layer-promoting drop-shadow) */}
               <div
                 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tight ${
                   isTotalPos
-                    ? 'text-emerald-600 dark:text-emerald-400 dark:drop-shadow-[0_2px_12px_rgba(52,211,153,0.25)]'
+                    ? 'text-emerald-600 dark:text-emerald-400 dark:[text-shadow:0_0_30px_rgba(52,211,153,0.3)]'
                     : isTotalNeg
-                    ? 'text-rose-600 dark:text-rose-400 dark:drop-shadow-[0_2px_12px_rgba(248,113,113,0.25)]'
+                    ? 'text-rose-600 dark:text-rose-400 dark:[text-shadow:0_0_30px_rgba(248,113,113,0.3)]'
                     : 'text-slate-900 dark:text-slate-200'
                 }`}
               >
