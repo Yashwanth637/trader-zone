@@ -16,7 +16,8 @@ import {
   DrawingType
 } from '../../types/backtest';
 import { useTheme } from '../../context/ThemeContext';
-import { DrawingOverlay } from './DrawingOverlay';
+import { TradingViewDrawingOverlay } from './TradingViewDrawingOverlay';
+import { BacktestPositionOverlay } from './BacktestPositionOverlay';
 import { Scissors } from 'lucide-react';
 
 interface BacktestChartProps {
@@ -36,6 +37,11 @@ interface BacktestChartProps {
   onApplyPositionToOrder?: (entry: number, sl: number, tp: number, side: 'BUY' | 'SELL') => void;
   onModifyPosition?: (params: { stopLoss?: number; takeProfit?: number }) => void;
   onModifyLimitOrder?: (orderId: string, price: number) => void;
+  onClosePosition?: () => void;
+  symbol?: string;
+  isMagnetMode?: boolean;
+  isDrawingLocked?: boolean;
+  isDrawingHidden?: boolean;
 }
 
 export const BacktestChart: React.FC<BacktestChartProps> = ({
@@ -54,7 +60,12 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
   onCancelCutMode,
   onApplyPositionToOrder,
   onModifyPosition,
-  onModifyLimitOrder
+  onModifyLimitOrder,
+  onClosePosition,
+  symbol = 'XAUUSD',
+  isMagnetMode = false,
+  isDrawingLocked = false,
+  isDrawingHidden = false
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -493,6 +504,28 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     ? seriesRef.current.priceToCoordinate(openPosition.entryPrice)
     : null;
 
+  const currentCandle = candles[currentIndex] || candles[candles.length - 1] || null;
+
+  const handleQuickAddTp = useCallback(() => {
+    if (!openPosition || !onModifyPosition) return;
+    const curP = currentCandle?.close || openPosition.entryPrice;
+    const delta = Math.abs(openPosition.entryPrice * 0.005);
+    const newTp = openPosition.side === 'BUY'
+      ? +(curP + delta).toFixed(2)
+      : +(curP - delta).toFixed(2);
+    onModifyPosition({ takeProfit: newTp });
+  }, [openPosition, currentCandle, onModifyPosition]);
+
+  const handleQuickAddSl = useCallback(() => {
+    if (!openPosition || !onModifyPosition) return;
+    const curP = currentCandle?.close || openPosition.entryPrice;
+    const delta = Math.abs(openPosition.entryPrice * 0.003);
+    const newSl = openPosition.side === 'BUY'
+      ? +(curP - delta).toFixed(2)
+      : +(curP + delta).toFixed(2);
+    onModifyPosition({ stopLoss: newSl });
+  }, [openPosition, currentCandle, onModifyPosition]);
+
   return (
     <div
       className="relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-border/40 dark:border-white/[0.08] bg-surface select-none"
@@ -500,8 +533,8 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       {/* Lightweight Charts DOM Canvas */}
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* SVG Interactive Drawing Overlay */}
-      <DrawingOverlay
+      {/* SVG Interactive TradingView-Grade Drawing Overlay */}
+      <TradingViewDrawingOverlay
         chart={chartRef.current}
         series={seriesRef.current}
         width={dimensions.width}
@@ -513,6 +546,10 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         selectedDrawingId={selectedDrawingId}
         onSelectDrawing={onSelectDrawing}
         onApplyPositionToOrder={onApplyPositionToOrder}
+        isMagnetMode={isMagnetMode}
+        isDrawingLocked={isDrawingLocked}
+        isDrawingHidden={isDrawingHidden}
+        candles={candles}
       />
 
       {/* Item 2: Interactive Bar Replay Cut Overlay (Scissors / Caesar Logo in middle) */}
@@ -638,154 +675,26 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         </svg>
       )}
 
-      {/* Item 1: Moveable Drag-and-Drop SL & TP Overlay System */}
+      {/* Item 1: FX Replay-style Solid Blue Entry, Dashed Amber SL, Dashed Green TP with Draggable Interactive Pills */}
+      <BacktestPositionOverlay
+        openPosition={openPosition}
+        currentCandle={currentCandle}
+        series={seriesRef.current}
+        chart={chartRef.current}
+        width={dimensions.width}
+        height={dimensions.height}
+        symbol={symbol}
+        onClosePosition={onClosePosition || (() => {})}
+        onModifyPosition={onModifyPosition || (() => {})}
+        onQuickAddTp={handleQuickAddTp}
+        onQuickAddSl={handleQuickAddSl}
+      />
+
+      {/* Moveable Pending Limit Orders */}
       <svg
         className="absolute inset-0 pointer-events-none z-20"
         style={{ width: dimensions.width, height: dimensions.height }}
       >
-        {/* Entry Line Indicator */}
-        {entryY !== null && openPosition && (
-          <g>
-            <line
-              x1={0}
-              y1={entryY}
-              x2={dimensions.width - 65}
-              y2={entryY}
-              stroke="#38bdf8"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-            />
-            <rect
-              x={12}
-              y={entryY - 10}
-              width={120}
-              height={20}
-              rx={5}
-              fill="#0f172a"
-              stroke="#38bdf8"
-              strokeWidth={1}
-            />
-            <text
-              x={72}
-              y={entryY + 4}
-              fill="#38bdf8"
-              fontSize={10}
-              fontFamily="Arial, sans-serif"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              ENTRY: {openPosition.entryPrice}
-            </text>
-          </g>
-        )}
-
-        {/* Moveable Stop Loss (SL) Line & Drag Pill */}
-        {slY !== null && openPosition?.stopLoss !== undefined && (
-          <g
-            className="pointer-events-auto cursor-ns-resize group"
-            onPointerDown={handleStartDrag('SL', undefined, openPosition.stopLoss)}
-          >
-            {/* Wide Invisible Hit Zone for Effortless Grabbing Anywhere on Line */}
-            <line
-              x1={0}
-              y1={slY}
-              x2={dimensions.width - 65}
-              y2={slY}
-              stroke="transparent"
-              strokeWidth={28}
-            />
-
-            {/* Visible Dashed Red Line */}
-            <line
-              x1={0}
-              y1={slY}
-              x2={dimensions.width - 65}
-              y2={slY}
-              stroke="#f43f5e"
-              strokeWidth={activeDrag?.type === 'SL' ? 3 : 2}
-              strokeDasharray={activeDrag?.type === 'SL' ? 'none' : '6 3'}
-              className="group-hover:stroke-width-[3] transition-all"
-            />
-
-            {/* Draggable Stop Loss Handle Badge */}
-            <rect
-              x={dimensions.width - 240}
-              y={slY - 13}
-              width={165}
-              height={26}
-              rx={7}
-              fill="#f43f5e"
-              stroke="#ffffff"
-              strokeWidth={activeDrag?.type === 'SL' ? 2 : 1}
-              className="drop-shadow-lg group-hover:brightness-110 active:scale-95 transition-transform"
-            />
-            <text
-              x={dimensions.width - 158}
-              y={slY + 5}
-              fill="#ffffff"
-              fontSize={11}
-              fontFamily="Arial, sans-serif"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              ↕ SL: {openPosition.stopLoss} (Drag)
-            </text>
-          </g>
-        )}
-
-        {/* Moveable Take Profit (TP) Line & Drag Pill */}
-        {tpY !== null && openPosition?.takeProfit !== undefined && (
-          <g
-            className="pointer-events-auto cursor-ns-resize group"
-            onPointerDown={handleStartDrag('TP', undefined, openPosition.takeProfit)}
-          >
-            {/* Wide Invisible Hit Zone */}
-            <line
-              x1={0}
-              y1={tpY}
-              x2={dimensions.width - 65}
-              y2={tpY}
-              stroke="transparent"
-              strokeWidth={28}
-            />
-
-            {/* Visible Dashed Emerald Line */}
-            <line
-              x1={0}
-              y1={tpY}
-              x2={dimensions.width - 65}
-              y2={tpY}
-              stroke="#10b981"
-              strokeWidth={activeDrag?.type === 'TP' ? 3 : 2}
-              strokeDasharray={activeDrag?.type === 'TP' ? 'none' : '6 3'}
-              className="group-hover:stroke-width-[3] transition-all"
-            />
-
-            {/* Draggable Take Profit Handle Badge */}
-            <rect
-              x={dimensions.width - 240}
-              y={tpY - 13}
-              width={165}
-              height={26}
-              rx={7}
-              fill="#10b981"
-              stroke="#ffffff"
-              strokeWidth={activeDrag?.type === 'TP' ? 2 : 1}
-              className="drop-shadow-lg group-hover:brightness-110 active:scale-95 transition-transform"
-            />
-            <text
-              x={dimensions.width - 158}
-              y={tpY + 5}
-              fill="#ffffff"
-              fontSize={11}
-              fontFamily="Arial, sans-serif"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              ↕ TP: {openPosition.takeProfit} (Drag)
-            </text>
-          </g>
-        )}
 
         {/* Moveable Pending Limit Orders */}
         {pendingOrders.map(order => {

@@ -9,9 +9,20 @@ export interface BacktestCandle {
 
 export type DrawingType = 
   | 'cursor'
+  | 'crosshair'
   | 'trendline'
+  | 'ray'
+  | 'info_line'
+  | 'horizontal_line'
   | 'horizontal_ray'
+  | 'vertical_line'
+  | 'fib_retracement'
   | 'rectangle'
+  | 'circle'
+  | 'brush'
+  | 'text'
+  | 'callout'
+  | 'price_label'
   | 'long_position'
   | 'short_position'
   | 'measure';
@@ -26,14 +37,18 @@ export interface BacktestDrawing {
   type: DrawingType;
   points: ChartPoint[];
   color: string;
+  lineWidth?: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  fillColor?: string;
   label?: string;
+  text?: string;
+  fontSize?: number;
   // For position tools:
   entryPrice?: number;
   stopLossPrice?: number;
   takeProfitPrice?: number;
   riskRewardRatio?: number;
-  // For rectangle / zones:
-  fillColor?: string;
+  isLocked?: boolean;
 }
 
 export type OrderType = 'MARKET' | 'LIMIT';

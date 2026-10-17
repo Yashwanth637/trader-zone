@@ -14,6 +14,8 @@ import {
 import { BacktestEngine } from '../../lib/backtestEngine';
 import { BacktestChart } from './BacktestChart';
 import { DrawingToolbar } from './DrawingToolbar';
+import { TradingViewDrawingToolbar } from './TradingViewDrawingToolbar';
+import { OneClickExecutionDock } from './OneClickExecutionDock';
 import { ReplayControls } from './ReplayControls';
 import { BacktestOrderPanel } from './BacktestOrderPanel';
 import { BacktestTradeLog } from './BacktestTradeLog';
@@ -72,6 +74,11 @@ export const BacktestStudio: React.FC = () => {
     tp: number;
     side: TradeSide;
   } | null>(null);
+
+  // TradingView Drawing System Controls
+  const [isMagnetMode, setIsMagnetMode] = useState<boolean>(false);
+  const [isDrawingLocked, setIsDrawingLocked] = useState<boolean>(false);
+  const [isDrawingHidden, setIsDrawingHidden] = useState<boolean>(false);
 
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -431,7 +438,7 @@ export const BacktestStudio: React.FC = () => {
 
   // Order Placement Handler
   const handlePlaceOrder = (params: {
-    type: OrderType;
+    type?: OrderType;
     side: TradeSide;
     quantity: number;
     price?: number;
@@ -441,7 +448,7 @@ export const BacktestStudio: React.FC = () => {
   }) => {
     if (!candles[currentIndex]) return;
 
-    if (params.type === 'MARKET') {
+    if (!params.type || params.type === 'MARKET') {
       engineRef.current.enterMarketOrder(
         params.side,
         params.quantity,
@@ -687,37 +694,35 @@ export const BacktestStudio: React.FC = () => {
             </div>
           ) : (
             <div className={`relative w-full ${isFullscreen ? 'flex-1 h-[calc(100%-65px)] min-h-[480px]' : 'h-[600px]'}`}>
-              {/* Drawing Toolbar Overlay on Left with Hide Option (Items 2 & 5) */}
-              <div className="absolute top-3 left-3 z-20">
+              {/* Drawing Toolbar Overlay on Left (TradingView-Grade System) */}
+              <div className="absolute top-3 left-3 z-30">
                 {isToolbarVisible ? (
-                  <DrawingToolbar
+                  <TradingViewDrawingToolbar
                     activeTool={activeTool}
-                    onSelectTool={tool => {
+                    onSelectTool={(tool) => {
                       setActiveTool(tool);
-                      if (tool !== 'cursor') {
+                      if (tool !== 'cursor' && tool !== 'crosshair') {
                         setSelectedDrawingId(null);
                       }
                     }}
-                    onDeleteSelected={() => {
-                      if (selectedDrawingId) {
-                        handleUpdateDrawings(drawings.filter(d => d.id !== selectedDrawingId));
-                        setSelectedDrawingId(null);
-                      }
-                    }}
+                    isMagnetMode={isMagnetMode}
+                    onToggleMagnet={() => setIsMagnetMode(prev => !prev)}
+                    isLocked={isDrawingLocked}
+                    onToggleLock={() => setIsDrawingLocked(prev => !prev)}
+                    isHidden={isDrawingHidden}
+                    onToggleHide={() => setIsDrawingHidden(prev => !prev)}
                     onClearAll={() => {
                       handleUpdateDrawings([]);
                       setSelectedDrawingId(null);
                     }}
-                    canDelete={!!selectedDrawingId}
                     drawingCount={drawings.length}
-                    onHide={() => setIsToolbarVisible(false)}
                   />
                 ) : (
                   <button
                     type="button"
                     onClick={() => setIsToolbarVisible(true)}
                     title="Show Drawing Tools"
-                    className="p-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground shadow-lg flex items-center gap-1.5 text-xs font-semibold hover:border-primary/40 transition-all"
+                    className="p-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground shadow-lg flex items-center gap-1.5 text-xs font-semibold hover:border-primary/40 transition-all cursor-pointer"
                   >
                     <PenTool className="w-4 h-4 text-primary" />
                     <span>Tools</span>
@@ -743,14 +748,24 @@ export const BacktestStudio: React.FC = () => {
                 onApplyPositionToOrder={handleApplyPositionToOrder}
                 onModifyPosition={handleModifyPosition}
                 onModifyLimitOrder={handleModifyLimitOrder}
+                onClosePosition={handleClosePosition}
+                symbol={selectedAssetId}
+                isMagnetMode={isMagnetMode}
+                isDrawingLocked={isDrawingLocked}
+                isDrawingHidden={isDrawingHidden}
               />
             </div>
           )}
 
-          {/* Floating Replay Controls Bar */}
+          {/* FX Replay One-Click Trading Dock & Replay Playback */}
           {!loading && candles.length > 0 && (
             <div className="shrink-0">
-              <ReplayControls
+              <OneClickExecutionDock
+                currentCandle={currentCandle}
+                virtualBalance={engineState.virtualBalance}
+                virtualEquity={engineState.virtualEquity}
+                openPosition={engineState.openPosition}
+                onExecuteMarketOrder={handlePlaceOrder}
                 isPlaying={isPlaying}
                 onTogglePlay={() => setIsPlaying(!isPlaying)}
                 onStepForward={handleStepForward}
@@ -763,10 +778,8 @@ export const BacktestStudio: React.FC = () => {
                 onSeek={handleSeek}
                 isCutMode={isCutMode}
                 onToggleCutMode={() => setIsCutMode(!isCutMode)}
-                currentBarTimeFormatted={currentBarTimeFormatted}
-                onJumpToDate={handleJumpToDate}
-                isReplayMode={isReplayMode}
-                onExitReplay={handleExitReplay}
+                currentBarTimeFormatted={currentBarTimeFormatted || ''}
+                symbol={selectedAssetId}
               />
             </div>
           )}
