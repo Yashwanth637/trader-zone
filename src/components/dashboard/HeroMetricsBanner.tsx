@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { SummaryStats, formatCurrency } from '../../lib/calculations';
 import { Trade, TradingAccount } from '../../types/trade';
 import { UserProfile } from '../../types/settings';
@@ -159,11 +160,11 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* TOP HERO BANNER (Image 1 Style) */}
-      <div className="p-6 md:p-8 rounded-3xl bg-[#0f1115] border border-white/[0.08] shadow-2xl relative overflow-hidden">
+      {/* TOP HERO BANNER (Image 1 Style - Theme Adaptive for Dark and Light Mode) */}
+      <div className="p-6 md:p-8 rounded-3xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
         {/* Subtle background glow */}
         <div
-          className={`absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-20 ${
+          className={`absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-10 dark:opacity-20 transition-all ${
             isTotalPos ? 'bg-emerald-500' : isTotalNeg ? 'bg-rose-500' : 'bg-primary'
           }`}
         />
@@ -172,23 +173,23 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
           {/* Left Block: Greeting + Name + SWAPPED POSITION: Giant Animated TOTAL P&L */}
           <div className="space-y-3">
             <div>
-              <span className="text-xs md:text-sm text-slate-400 font-medium block">
+              <span className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium block">
                 {greeting}
               </span>
-              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                 {displayName}
               </h2>
             </div>
 
             <div className="space-y-1 pt-1">
               {/* Stat Pill Label */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08]">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]">
                 {isTotalPos ? (
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+                  <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 )}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   TOTAL P&L
                 </span>
               </div>
@@ -197,10 +198,10 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
               <div
                 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tight ${
                   isTotalPos
-                    ? 'text-emerald-400 drop-shadow-[0_2px_12px_rgba(52,211,153,0.25)]'
+                    ? 'text-emerald-600 dark:text-emerald-400 dark:drop-shadow-[0_2px_12px_rgba(52,211,153,0.25)]'
                     : isTotalNeg
-                    ? 'text-rose-400 drop-shadow-[0_2px_12px_rgba(248,113,113,0.25)]'
-                    : 'text-slate-200'
+                    ? 'text-rose-600 dark:text-rose-400 dark:drop-shadow-[0_2px_12px_rgba(248,113,113,0.25)]'
+                    : 'text-slate-900 dark:text-slate-200'
                 }`}
               >
                 <VendingPnlCounter targetValue={stats.netPnl} duration={1600} />
@@ -211,33 +212,33 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
           {/* Right Block: 4 Mini Cards (Balance, Swapped TODAY'S P&L, Best Day, Streak) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 lg:gap-3.5 shrink-0">
             {/* 1. BALANCE */}
-            <div className="p-3.5 rounded-2xl bg-[#171920]/90 border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                <Wallet className="w-3.5 h-3.5 text-slate-400" />
+            <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#121217] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                <Wallet className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                 <span>BALANCE</span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-white tracking-tight truncate">
+              <div className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white tracking-tight truncate">
                 {formatCurrency(totalBalance)}
               </div>
             </div>
 
             {/* 2. SWAPPED POSITION: TODAY'S P&L */}
-            <div className="p-3.5 rounded-2xl bg-[#171920]/90 border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+            <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#121217] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                 {isTodayPos ? (
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+                  <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 )}
                 <span>TODAY'S P&L</span>
               </div>
               <div
                 className={`text-base sm:text-lg font-black font-mono tracking-tight truncate ${
                   isTodayPos
-                    ? 'text-emerald-400'
+                    ? 'text-emerald-600 dark:text-emerald-400'
                     : isTodayNeg
-                    ? 'text-rose-400'
-                    : 'text-slate-300'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {isTodayPos ? '+' : ''}
@@ -246,26 +247,26 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             </div>
 
             {/* 3. BEST DAY */}
-            <div className="p-3.5 rounded-2xl bg-[#171920]/90 border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
-              <div className="flex items-center gap-1.5 text-amber-400/90 text-[10px] font-bold uppercase tracking-wider">
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#121217] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400/90 text-[10px] font-bold uppercase tracking-wider">
+                <Trophy className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>BEST DAY</span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-amber-300 tracking-tight truncate">
+              <div className="text-base sm:text-lg font-black font-mono text-amber-600 dark:text-amber-300 tracking-tight truncate">
                 {bestDayPnl > 0 ? `+${formatCurrency(bestDayPnl)}` : '$0.00'}
               </div>
             </div>
 
             {/* 4. STREAK */}
-            <div className="p-3.5 rounded-2xl bg-[#171920]/90 border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1.5 min-w-[105px]">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+            <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#121217] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] transition-colors space-y-1.5 min-w-[105px]">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                 <Flame
                   className={`w-3.5 h-3.5 ${
                     isStreakWin
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-600 dark:text-emerald-400'
                       : isStreakLoss
-                      ? 'text-rose-400'
-                      : 'text-slate-400'
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-slate-500 dark:text-slate-400'
                   }`}
                 />
                 <span>STREAK</span>
@@ -273,10 +274,10 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
               <div
                 className={`text-base sm:text-lg font-black font-mono tracking-tight ${
                   isStreakWin
-                    ? 'text-emerald-400'
+                    ? 'text-emerald-600 dark:text-emerald-400'
                     : isStreakLoss
-                    ? 'text-rose-400'
-                    : 'text-slate-300'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {streakDisplay}
@@ -286,73 +287,75 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
         </div>
       </div>
 
-      {/* 6-CARD SECONDARY METRICS ROW (Image 1 Bottom Row) */}
+      {/* 6-CARD SECONDARY METRICS ROW (Image 1 Bottom Row - Theme Adaptive) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* 1. WIN RATE */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             WIN RATE
           </span>
-          <div className="text-xl sm:text-2xl font-black font-mono text-white tracking-tight">
+          <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
             {stats.winRate.toFixed(0)}%
           </div>
         </div>
 
         {/* 2. TOTAL TRADES */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             TOTAL TRADES
           </span>
-          <div className="text-xl sm:text-2xl font-black font-mono text-white tracking-tight">
+          <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
             {stats.totalTrades}
           </div>
         </div>
 
         {/* 3. BIGGEST WIN */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             BIGGEST WIN
           </span>
-          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-400 tracking-tight truncate">
+          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
             {stats.largestWin > 0 ? `+${formatCurrency(stats.largestWin)}` : '$0.00'}
           </div>
         </div>
 
         {/* 4. AVG WIN */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             AVG WIN
           </span>
-          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-400 tracking-tight truncate">
+          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
             {stats.avgWin > 0 ? `+${formatCurrency(stats.avgWin)}` : '$0.00'}
           </div>
         </div>
 
         {/* 5. AVG LOSS */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
             AVG LOSS
           </span>
-          <div className="text-xl sm:text-2xl font-black font-mono text-rose-400 tracking-tight truncate">
+          <div className="text-xl sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tracking-tight truncate">
             {stats.avgLoss > 0 ? formatCurrency(stats.avgLoss) : '$0.00'}
           </div>
         </div>
 
         {/* 6. THIS MONTH */}
-        <div className="p-4 rounded-2xl bg-[#111318] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-1 relative">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#0b0b0e] border border-slate-200/90 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] shadow-sm dark:shadow-none transition-colors space-y-1 relative">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               THIS MONTH
             </span>
-            <Share2 className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-pointer transition-colors" />
+            <Link to="/share" title="Share Trading Stats" className="inline-flex items-center">
+              <Share2 className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer transition-colors" />
+            </Link>
           </div>
           <div
             className={`text-xl sm:text-2xl font-black font-mono tracking-tight truncate ${
               isMonthPos
-                ? 'text-emerald-400'
+                ? 'text-emerald-600 dark:text-emerald-400'
                 : isMonthNeg
-                ? 'text-rose-400'
-                : 'text-slate-300'
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'text-slate-700 dark:text-slate-300'
             }`}
           >
             {isMonthPos ? '+' : ''}
