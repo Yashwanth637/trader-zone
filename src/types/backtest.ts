@@ -30,6 +30,7 @@ export type DrawingType =
 export interface ChartPoint {
   time: number; // Unix timestamp in seconds
   price: number;
+  logicalIndex?: number;
 }
 
 export interface BacktestDrawing {

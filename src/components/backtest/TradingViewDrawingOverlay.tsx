@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { BacktestDrawing, DrawingType, ChartPoint, BacktestCandle } from '../../types/backtest';
 import { useTheme } from '../../context/ThemeContext';
-import { Trash2, Lock, Unlock, Palette, Check } from 'lucide-react';
+import { Trash2, Lock, Unlock, Palette, Check, X } from 'lucide-react';
 
 interface TradingViewDrawingOverlayProps {
   chart: IChartApi | null;
@@ -70,15 +70,36 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
   const [snapPoint, setSnapPoint] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
   const [, setTick] = useState(0);
 
+  // In-memory drawings buffer during active drag to eliminate localStorage freeze
+  const [localDrawings, setLocalDrawings] = useState<BacktestDrawing[]>(drawings);
+  useEffect(() => {
+    setLocalDrawings(drawings);
+  }, [drawings]);
+
   // Drag and Move state
   const [dragState, setDragState] = useState<DragState | null>(null);
 
-  // Subscribe to chart view change events to re-project coordinates on pan & zoom
+  // Clipboard for Cut / Copy / Paste (Item 2)
+  const clipboardRef = useRef<BacktestDrawing | null>(null);
+
+  // Asset Pip multiplier for measuring tool
+  const pipMultiplier = React.useMemo(() => {
+    if (symbol.includes('XAU') || symbol.includes('GOLD')) return 10; // 0.1 per pip in Gold
+    if (symbol.includes('BTC') || symbol.includes('ETH')) return 1;
+    return 10000; // 0.0001 per pip in FX
+  }, [symbol]);
+
+  // Subscribe to chart view change events to re-project coordinates on pan & zoom with requestAnimationFrame throttling
   useEffect(() => {
     if (!chart) return;
 
+    let rafId: number | null = null;
     const handleRangeChange = () => {
-      setTick(t => t + 1);
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        setTick(t => (t + 1) % 1000000);
+        rafId = null;
+      });
     };
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
@@ -87,25 +108,72 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
     return () => {
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleRangeChange);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [chart]);
 
-  // Screen <-> Chart coordinate conversion
+  // Fail-Safe Screen <-> Chart coordinate conversion
   const toScreen = useCallback((point: ChartPoint): { x: number; y: number } | null => {
     if (!chart || !series) return null;
-    const x = chart.timeScale().timeToCoordinate(point.time as any);
+
+    let x = chart.timeScale().timeToCoordinate(point.time as any);
+    if (x === null) {
+      if (point.logicalIndex !== undefined) {
+        x = chart.timeScale().logicalToCoordinate(point.logicalIndex as any);
+      }
+      if (x === null && candles.length > 0) {
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < candles.length; i++) {
+          const diff = Math.abs(candles[i].time - point.time);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        }
+        x = chart.timeScale().timeToCoordinate(candles[closestIdx].time as any);
+        if (x === null) {
+          x = chart.timeScale().logicalToCoordinate(closestIdx as any);
+        }
+      }
+    }
+
     const y = series.priceToCoordinate(point.price);
     if (x === null || y === null || isNaN(x) || isNaN(y)) return null;
     return { x, y };
-  }, [chart, series]);
+  }, [chart, series, candles]);
 
   const toChart = useCallback((x: number, y: number): ChartPoint | null => {
     if (!chart || !series) return null;
-    const time = chart.timeScale().coordinateToTime(x) as number | null;
+
     const price = series.coordinateToPrice(y);
-    if (time === null || price === null || isNaN(price)) return null;
-    return { time, price: parseFloat(price.toFixed(4)) };
-  }, [chart, series]);
+    if (price === null || isNaN(price)) return null;
+
+    const logical = chart.timeScale().coordinateToLogical(x);
+    let time = chart.timeScale().coordinateToTime(x) as number | null;
+
+    if (time === null && logical !== null && candles.length > 0) {
+      const roundedLogical = Math.round(logical);
+      if (roundedLogical >= 0 && roundedLogical < candles.length) {
+        time = candles[roundedLogical].time;
+      } else if (roundedLogical >= candles.length) {
+        const lastCandle = candles[candles.length - 1];
+        const step = candles.length > 1 ? candles[candles.length - 1].time - candles[candles.length - 2].time : 60;
+        time = lastCandle.time + (roundedLogical - (candles.length - 1)) * step;
+      } else {
+        const firstCandle = candles[0];
+        const step = candles.length > 1 ? candles[1].time - candles[0].time : 60;
+        time = firstCandle.time + roundedLogical * step;
+      }
+    }
+
+    if (time === null) return null;
+    return {
+      time,
+      price: parseFloat(price.toFixed(4)),
+      logicalIndex: logical !== null ? parseFloat(logical.toFixed(2)) : undefined
+    };
+  }, [chart, series, candles]);
 
   // Magnet mode calculation: Snaps to nearest bar's Open, High, Low, or Close
   const calculateMagnetSnap = useCallback((mouseX: number, mouseY: number): { x: number; y: number; price: number; time: number } | null => {
@@ -114,7 +182,6 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
     const time = chart.timeScale().coordinateToTime(mouseX) as number | null;
     if (time === null) return null;
 
-    // Find closest candle
     let closestCandle = candles[0];
     let minTimeDiff = Infinity;
     for (const c of candles) {
@@ -150,13 +217,81 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
       }
     }
 
-    if (minDist <= 32) {
+    if (minDist <= 36) {
       return { x: candleX, y: closestLevel.y, price: closestLevel.price, time: closestCandle.time };
     }
     return null;
   }, [isMagnetMode, chart, series, candles]);
 
-  // Mouse Move Event
+  // Global Keyboard Shortcuts (Escape to cancel draft, Delete/Backspace, Cmd+C, Cmd+V, Cmd+X)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      // Escape: cancel current drawing draft or deselect
+      if (e.key === 'Escape') {
+        if (currentPoints.length > 0) {
+          setCurrentPoints([]);
+          onToolUsed();
+        } else if (selectedDrawingId) {
+          onSelectDrawing(null);
+        }
+      }
+
+      // Delete or Backspace: remove selected drawing
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedDrawingId) {
+        e.preventDefault();
+        const updated = drawings.filter(d => d.id !== selectedDrawingId);
+        onUpdateDrawings(updated);
+        onSelectDrawing(null);
+      }
+
+      // Copy: Cmd+C / Ctrl+C
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && selectedDrawingId) {
+        const found = drawings.find(d => d.id === selectedDrawingId);
+        if (found) {
+          clipboardRef.current = found;
+        }
+      }
+
+      // Cut: Cmd+X / Ctrl+X
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x' && selectedDrawingId) {
+        const found = drawings.find(d => d.id === selectedDrawingId);
+        if (found) {
+          clipboardRef.current = found;
+          const updated = drawings.filter(d => d.id !== selectedDrawingId);
+          onUpdateDrawings(updated);
+          onSelectDrawing(null);
+        }
+      }
+
+      // Paste: Cmd+V / Ctrl+V
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v' && clipboardRef.current) {
+        const copy = { ...clipboardRef.current };
+        const newId = 'draw_' + Date.now();
+        // Offset points slightly
+        const offsetPoints = copy.points.map(p => ({
+          ...p,
+          price: parseFloat((p.price * 1.002).toFixed(4))
+        }));
+        const pastedDrawing: BacktestDrawing = {
+          ...copy,
+          id: newId,
+          points: offsetPoints
+        };
+        onUpdateDrawings([...drawings, pastedDrawing]);
+        onSelectDrawing(newId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentPoints, selectedDrawingId, drawings, onToolUsed, onSelectDrawing, onUpdateDrawings]);
+
+  // Mouse Move Event: updates hover coordinate, magnet snap, and handles live dragging in memory
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -172,12 +307,12 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
       setSnapPoint(null);
     }
 
-    // Handle Dragging
+    // Live Dragging (Updates in-memory only for 60fps buttery movement)
     if (dragState) {
       const dx = x - dragState.startMouseX;
       const dy = y - dragState.startMouseY;
 
-      const updated = drawings.map(d => {
+      const updated = localDrawings.map(d => {
         if (d.id !== dragState.drawingId) return d;
 
         if (dragState.mode === 'MOVE') {
@@ -199,7 +334,6 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
           copy[dragState.pointIndex] = newChart;
           return { ...d, points: copy };
         } else if (dragState.mode === 'POINT' && dragState.handleKey) {
-          // Long/Short Position drag
           const currentChart = toChart(x, y);
           if (!currentChart) return d;
 
@@ -220,11 +354,11 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
         return d;
       });
 
-      onUpdateDrawings(updated);
+      setLocalDrawings(updated);
     }
   };
 
-  // Mouse Down Event: Tool placement & Selection
+  // Mouse Down Event: Tool placement (Click 1 -> Move -> Click 2)
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     if (effectiveLocked) return;
     if (activeTool === 'cursor' || activeTool === 'crosshair') return;
@@ -240,7 +374,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
     const chartPoint = snapPoint ? { time: snapPoint.time, price: snapPoint.price } : toChart(targetX, targetY);
     if (!chartPoint) return;
 
-    // Single-point tools
+    // Single-point tools (Instant 1-click placement)
     if (activeTool === 'horizontal_line' || activeTool === 'horizontal_ray' || activeTool === 'vertical_line' || activeTool === 'price_label') {
       const newDrawing: BacktestDrawing = {
         id: 'draw_' + Date.now(),
@@ -251,6 +385,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
         lineStyle: 'solid'
       };
       onUpdateDrawings([...drawings, newDrawing]);
+      onSelectDrawing(newDrawing.id);
       onToolUsed();
       return;
     }
@@ -258,7 +393,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
     // Long & Short Position Tool (One-click default box placement)
     if (activeTool === 'long_position' || activeTool === 'short_position') {
       const isLong = activeTool === 'long_position';
-      const offset = chartPoint.price * 0.005; // 0.5% default target / stop
+      const offset = chartPoint.price * 0.005;
       const sl = isLong ? chartPoint.price - offset : chartPoint.price + offset;
       const tp = isLong ? chartPoint.price + (offset * 2) : chartPoint.price - (offset * 2);
 
@@ -273,47 +408,61 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
         riskRewardRatio: 2.0
       };
       onUpdateDrawings([...drawings, newDrawing]);
+      onSelectDrawing(newDrawing.id);
+      if (onApplyPositionToOrder) {
+        onApplyPositionToOrder(chartPoint.price, newDrawing.stopLossPrice!, newDrawing.takeProfitPrice!, isLong ? 'BUY' : 'SELL');
+      }
       onToolUsed();
       return;
     }
 
-    // Multi-point tools: Trendline, Fib, Rectangle, Circle, Measure
+    // Two-point tools: Trendline, Ray, Fib, Rectangle, Circle, Measure (Click 1 -> move -> Click 2)
     if (currentPoints.length === 0) {
       setCurrentPoints([chartPoint]);
     } else {
-      const finalPoints = [...currentPoints, chartPoint];
+      const p1 = currentPoints[0];
+      const p2 = chartPoint;
+      const finalPoints = [p1, p2];
+
       const newDrawing: BacktestDrawing = {
         id: 'draw_' + Date.now(),
         type: activeTool,
         points: finalPoints,
-        color: activeTool === 'fib_retracement' ? '#f59e0b' : activeTool === 'rectangle' ? '#10b981' : '#2962ff',
-        fillColor: activeTool === 'rectangle' ? 'rgba(16, 185, 129, 0.12)' : undefined,
+        color: activeTool === 'fib_retracement' ? '#f59e0b' : activeTool === 'rectangle' ? '#10b981' : activeTool === 'measure' ? '#2962ff' : '#2962ff',
+        fillColor: activeTool === 'rectangle' ? 'rgba(16, 185, 129, 0.12)' : activeTool === 'measure' ? 'rgba(41, 98, 255, 0.12)' : undefined,
         lineWidth: 1.5,
         lineStyle: 'solid'
       };
+
       onUpdateDrawings([...drawings, newDrawing]);
       setCurrentPoints([]);
+      onSelectDrawing(newDrawing.id);
       onToolUsed();
     }
   };
 
+  // Mouse Up Event: Commit dragged state to parent & localStorage
   const handleMouseUp = () => {
-    setDragState(null);
+    if (dragState) {
+      onUpdateDrawings(localDrawings);
+      setDragState(null);
+    }
   };
 
-  if (isHidden) return null;
-
   // Selected Drawing helper
-  const selectedDrawing = drawings.find(d => d.id === selectedDrawingId);
+  const selectedDrawing = localDrawings.find(d => d.id === selectedDrawingId);
   const selectedDrawingCenter = selectedDrawing?.points[0] ? toScreen(selectedDrawing.points[0]) : null;
+
+  const isDrafting = currentPoints.length > 0;
+  const isToolActive = activeTool !== 'cursor' && activeTool !== 'crosshair';
 
   return (
     <svg
       ref={containerRef}
       className={`absolute inset-0 z-20 select-none overflow-visible ${
-        activeTool !== 'cursor' && activeTool !== 'crosshair'
+        isToolActive || isDrafting
           ? 'cursor-crosshair pointer-events-auto'
-          : 'pointer-events-auto'
+          : 'pointer-events-none'
       }`}
       style={{ width, height }}
       onMouseMove={handleMouseMove}
@@ -334,7 +483,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
       )}
 
       {/* Render All Completed Drawings */}
-      {!effectiveHidden && drawings.map(d => {
+      {!effectiveHidden && localDrawings.map(d => {
         const isSelected = d.id === selectedDrawingId;
 
         // 1. Horizontal Line / Ray
@@ -348,7 +497,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
           return (
             <g
               key={d.id}
-              className="cursor-pointer group"
+              className="pointer-events-auto cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectDrawing(d.id);
@@ -360,7 +509,17 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                 x2={width - 65}
                 y2={sc.y}
                 stroke="transparent"
-                strokeWidth={14}
+                strokeWidth={16}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setDragState({
+                    drawingId: d.id,
+                    mode: 'MOVE',
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startPoints: d.points
+                  });
+                }}
               />
               <line
                 x1={startX}
@@ -369,9 +528,15 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                 y2={sc.y}
                 stroke={d.color || '#2563eb'}
                 strokeWidth={isSelected ? (d.lineWidth || 1.5) + 1 : (d.lineWidth || 1.5)}
-                strokeDasharray={d.lineStyle === 'dashed' ? '5 4' : undefined}
-                className="group-hover:opacity-80 transition-opacity"
+                strokeDasharray={d.lineStyle === 'dashed' ? '6 4' : d.lineStyle === 'dotted' ? '2 2' : 'none'}
               />
+              {/* Price Scale Badge on Right Axis */}
+              <g transform={`translate(${width - 65}, ${sc.y - 10})`}>
+                <rect x={0} y={0} width={60} height={20} rx={4} fill={d.color || '#2563eb'} />
+                <text x={30} y={14} fill="#ffffff" fontSize={10} fontWeight="bold" textAnchor="middle">
+                  {pt.price.toFixed(2)}
+                </text>
+              </g>
               {isSelected && (
                 <circle
                   cx={sc.x}
@@ -380,45 +545,60 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                   fill="#2962ff"
                   stroke="#ffffff"
                   strokeWidth={1.5}
-                  className="cursor-grab active:cursor-grabbing"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setDragState({
-                      drawingId: d.id,
-                      mode: 'MOVE',
-                      startMouseX: e.clientX,
-                      startMouseY: e.clientY,
-                      startPoints: d.points
-                    });
-                  }}
                 />
               )}
             </g>
           );
         }
 
-        // 2. Trendline & Ray
+        // 2. Trend Line / Ray
         if (d.type === 'trendline' || d.type === 'ray') {
           if (d.points.length < 2) return null;
           const p1 = toScreen(d.points[0]);
           const p2 = toScreen(d.points[1]);
           if (!p1 || !p2) return null;
 
+          let endX = p2.x;
+          let endY = p2.y;
+
+          if (d.type === 'ray') {
+            const slope = (p2.y - p1.y) / (p2.x - p1.x || 1);
+            endX = width - 65;
+            endY = p1.y + slope * (endX - p1.x);
+          }
+
           return (
             <g
               key={d.id}
-              className="cursor-pointer group"
+              className="pointer-events-auto cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectDrawing(d.id);
               }}
             >
-              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={16} />
               <line
                 x1={p1.x}
                 y1={p1.y}
-                x2={p2.x}
-                y2={p2.y}
+                x2={endX}
+                y2={endY}
+                stroke="transparent"
+                strokeWidth={18}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setDragState({
+                    drawingId: d.id,
+                    mode: 'MOVE',
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startPoints: d.points
+                  });
+                }}
+              />
+              <line
+                x1={p1.x}
+                y1={p1.y}
+                x2={endX}
+                y2={endY}
                 stroke={d.color || '#2962ff'}
                 strokeWidth={isSelected ? (d.lineWidth || 1.5) + 1 : (d.lineWidth || 1.5)}
               />
@@ -427,10 +607,11 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                   <circle
                     cx={p1.x}
                     cy={p1.y}
-                    r={4.5}
+                    r={5}
                     fill="#2962ff"
                     stroke="#ffffff"
                     strokeWidth={1.5}
+                    className="cursor-move"
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       setDragState({
@@ -446,10 +627,11 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                   <circle
                     cx={p2.x}
                     cy={p2.y}
-                    r={4.5}
+                    r={5}
                     fill="#2962ff"
                     stroke="#ffffff"
                     strokeWidth={1.5}
+                    className="cursor-move"
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       setDragState({
@@ -495,13 +677,23 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
           return (
             <g
               key={d.id}
-              className="cursor-pointer group"
+              className="pointer-events-auto cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectDrawing(d.id);
               }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setDragState({
+                  drawingId: d.id,
+                  mode: 'MOVE',
+                  startMouseX: e.clientX,
+                  startMouseY: e.clientY,
+                  startPoints: d.points
+                });
+              }}
             >
-              {fibRatios.map((fib, idx) => {
+              {fibRatios.map((fib) => {
                 const targetPrice = highPrice - (diff * fib.level);
                 const targetY = series?.priceToCoordinate(targetPrice);
                 if (targetY === null || targetY === undefined) return null;
@@ -549,7 +741,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
           return (
             <g
               key={d.id}
-              className="cursor-pointer group"
+              className="pointer-events-auto cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectDrawing(d.id);
@@ -564,18 +756,169 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                 stroke={d.color || '#10b981'}
                 strokeWidth={isSelected ? 2 : 1}
                 rx={2}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setDragState({
+                    drawingId: d.id,
+                    mode: 'MOVE',
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startPoints: d.points
+                  });
+                }}
               />
               {isSelected && (
                 <>
-                  <circle cx={p1.x} cy={p1.y} r={4.5} fill="#2962ff" stroke="#fff" strokeWidth={1.5} />
-                  <circle cx={p2.x} cy={p2.y} r={4.5} fill="#2962ff" stroke="#fff" strokeWidth={1.5} />
+                  <circle
+                    cx={p1.x}
+                    cy={p1.y}
+                    r={5}
+                    fill="#2962ff"
+                    stroke="#fff"
+                    strokeWidth={1.5}
+                    className="cursor-move"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setDragState({
+                        drawingId: d.id,
+                        mode: 'POINT',
+                        pointIndex: 0,
+                        startMouseX: e.clientX,
+                        startMouseY: e.clientY,
+                        startPoints: d.points
+                      });
+                    }}
+                  />
+                  <circle
+                    cx={p2.x}
+                    cy={p2.y}
+                    r={5}
+                    fill="#2962ff"
+                    stroke="#fff"
+                    strokeWidth={1.5}
+                    className="cursor-move"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setDragState({
+                        drawingId: d.id,
+                        mode: 'POINT',
+                        pointIndex: 1,
+                        startMouseX: e.clientX,
+                        startMouseY: e.clientY,
+                        startPoints: d.points
+                      });
+                    }}
+                  />
                 </>
               )}
             </g>
           );
         }
 
-        // 5. Long / Short Position Tool (Exact TradingView Pro Box)
+        // 5. Measure Tool (Exact TradingView Ruler HUD)
+        if (d.type === 'measure') {
+          if (d.points.length < 2) return null;
+          const p1 = toScreen(d.points[0]);
+          const p2 = toScreen(d.points[1]);
+          if (!p1 || !p2) return null;
+
+          const rx = Math.min(p1.x, p2.x);
+          const ry = Math.min(p1.y, p2.y);
+          const rw = Math.max(20, Math.abs(p1.x - p2.x));
+          const rh = Math.max(10, Math.abs(p1.y - p2.y));
+
+          const priceDiff = d.points[1].price - d.points[0].price;
+          const percentDiff = (priceDiff / (d.points[0].price || 1)) * 100;
+          const pipsDiff = Math.abs(priceDiff) * pipMultiplier;
+
+          let barCount = 1;
+          if (candles.length > 0) {
+            const minT = Math.min(d.points[0].time, d.points[1].time);
+            const maxT = Math.max(d.points[0].time, d.points[1].time);
+            barCount = candles.filter(c => c.time >= minT && c.time <= maxT).length || 1;
+          }
+
+          const timeSec = Math.abs(d.points[1].time - d.points[0].time);
+          const hours = Math.floor(timeSec / 3600);
+          const mins = Math.floor((timeSec % 3600) / 60);
+          const timeLabel = hours > 24 ? `${Math.floor(hours / 24)}d ${hours % 24}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+          const midX = rx + rw / 2;
+          const midY = ry + rh / 2;
+
+          return (
+            <g
+              key={d.id}
+              className="pointer-events-auto cursor-pointer group"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectDrawing(d.id);
+              }}
+            >
+              {/* Measure Box */}
+              <rect
+                x={rx}
+                y={ry}
+                width={rw}
+                height={rh}
+                fill="rgba(41, 98, 255, 0.12)"
+                stroke="#2962ff"
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                rx={4}
+              />
+              {/* Measure HUD Chip */}
+              <g transform={`translate(${Math.max(10, midX - 95)}, ${Math.max(10, midY - 16)})`}>
+                <rect
+                  x={0}
+                  y={0}
+                  width={190}
+                  height={32}
+                  rx={8}
+                  fill={isDark ? '#0b0c10' : '#ffffff'}
+                  stroke="#2962ff"
+                  strokeWidth={1.5}
+                  className="drop-shadow-lg"
+                />
+                <text
+                  x={85}
+                  y={15}
+                  fill={priceDiff >= 0 ? '#10b981' : '#f43f5e'}
+                  fontSize={10.5}
+                  fontWeight="bold"
+                  fontFamily="Arial, sans-serif"
+                  textAnchor="middle"
+                >
+                  {priceDiff >= 0 ? `+${priceDiff.toFixed(2)}` : priceDiff.toFixed(2)} ({priceDiff >= 0 ? `+${percentDiff.toFixed(2)}%` : `${percentDiff.toFixed(2)}%`})
+                </text>
+                <text
+                  x={85}
+                  y={27}
+                  fill={isDark ? '#94a3b8' : '#64748b'}
+                  fontSize={9.5}
+                  fontFamily="Arial, sans-serif"
+                  textAnchor="middle"
+                >
+                  {pipsDiff.toFixed(1)} pips • {barCount} bars ({timeLabel})
+                </text>
+                {/* Dismiss button */}
+                <g
+                  transform="translate(175, 16)"
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateDrawings(drawings.filter(item => item.id !== d.id));
+                  }}
+                >
+                  <circle cx={0} cy={0} r={7} fill="transparent" className="hover:fill-rose-500/20" />
+                  <path d="M-3 -3 L3 3 M3 -3 L-3 3" stroke="#f43f5e" strokeWidth={1.5} strokeLinecap="round" />
+                </g>
+              </g>
+            </g>
+          );
+        }
+
+        // 6. Long / Short Position Tool (Exact TradingView Pro Box)
         if (d.type === 'long_position' || d.type === 'short_position') {
           const isLong = d.type === 'long_position';
           const p = d.points[0];
@@ -599,50 +942,64 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
           const lossBoxY = Math.min(entryCoordY, slCoordY);
           const lossBoxH = Math.abs(entryCoordY - slCoordY);
 
-          const rr = (Math.abs(tp - entry) / Math.max(0.0001, Math.abs(entry - sl))).toFixed(2);
-
           return (
             <g
               key={d.id}
-              className="cursor-pointer group"
+              className="pointer-events-auto cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectDrawing(d.id);
               }}
             >
-              {/* Profit Target Box (Green) */}
+              {/* Green Profit Zone */}
               <rect
                 x={boxLeft}
                 y={profitBoxY}
                 width={boxWidth}
                 height={profitBoxH}
-                fill="rgba(16, 185, 129, 0.18)"
+                fill="rgba(16, 185, 129, 0.16)"
                 stroke="#10b981"
                 strokeWidth={1}
+                rx={1}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setDragState({
+                    drawingId: d.id,
+                    mode: 'MOVE',
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startPoints: d.points
+                  });
+                }}
               />
-              <text x={boxLeft + 8} y={profitBoxY + 16} fill="#10b981" fontSize={10} fontWeight="bold">
-                TP: {tp.toFixed(2)}
-              </text>
-
-              {/* Loss Stop Box (Red) */}
+              {/* Red Loss Zone */}
               <rect
                 x={boxLeft}
                 y={lossBoxY}
                 width={boxWidth}
                 height={lossBoxH}
-                fill="rgba(244, 63, 94, 0.18)"
+                fill="rgba(244, 63, 94, 0.16)"
                 stroke="#f43f5e"
                 strokeWidth={1}
+                rx={1}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setDragState({
+                    drawingId: d.id,
+                    mode: 'MOVE',
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startPoints: d.points
+                  });
+                }}
               />
-              <text x={boxLeft + 8} y={lossBoxY + lossBoxH - 8} fill="#f43f5e" fontSize={10} fontWeight="bold">
-                SL: {sl.toFixed(2)}
-              </text>
-
-              {/* Center Risk/Reward Badge */}
-              <g transform={`translate(${boxLeft + boxWidth / 2}, ${entryCoordY - 11})`}>
-                <rect x={-45} y={0} width={90} height={22} rx={11} fill="#0f172a" stroke="#2563eb" strokeWidth={1} />
-                <text x={0} y={15} fill="#ffffff" fontSize={10} fontWeight="black" textAnchor="middle">
-                  R:R {rr}
+              {/* Entry Line */}
+              <line x1={boxLeft} y1={entryCoordY} x2={boxLeft + boxWidth} y2={entryCoordY} stroke="#ffffff" strokeWidth={1.5} />
+              {/* Central R:R Badge */}
+              <g transform={`translate(${boxLeft + 15}, ${entryCoordY - 11})`}>
+                <rect x={0} y={0} width={110} height={22} rx={6} fill="#0f172a" stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+                <text x={55} y={15} fill="#ffffff" fontSize={10} fontWeight="bold" textAnchor="middle">
+                  R:R: {d.riskRewardRatio || '2.00'}
                 </text>
               </g>
 
@@ -656,6 +1013,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                     fill="#10b981"
                     stroke="#fff"
                     strokeWidth={1.5}
+                    className="cursor-ns-resize"
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       setDragState({
@@ -675,6 +1033,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
                     fill="#f43f5e"
                     stroke="#fff"
                     strokeWidth={1.5}
+                    className="cursor-ns-resize"
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       setDragState({
@@ -696,16 +1055,16 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
         return null;
       })}
 
-      {/* Rubber-band Drafting Preview when drawing multi-point tools */}
-      {currentPoints.length > 0 && hoverCoord && (
-        <g className="pointer-events-none opacity-70">
+      {/* Live Rubber-Band Drafting Preview when drawing multi-point tools */}
+      {isDrafting && hoverCoord && (
+        <g className="pointer-events-none opacity-80">
           {(() => {
             const startScreen = toScreen(currentPoints[0]);
             if (!startScreen) return null;
             const endX = snapPoint ? snapPoint.x : hoverCoord.x;
             const endY = snapPoint ? snapPoint.y : hoverCoord.y;
 
-            if (activeTool === 'trendline' || activeTool === 'fib_retracement') {
+            if (activeTool === 'trendline' || activeTool === 'ray') {
               return (
                 <line
                   x1={startScreen.x}
@@ -719,17 +1078,42 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
               );
             }
             if (activeTool === 'rectangle') {
+              const rx = Math.min(startScreen.x, endX);
+              const ry = Math.min(startScreen.y, endY);
+              const rw = Math.abs(startScreen.x - endX);
+              const rh = Math.abs(startScreen.y - endY);
               return (
                 <rect
-                  x={Math.min(startScreen.x, endX)}
-                  y={Math.min(startScreen.y, endY)}
-                  width={Math.abs(startScreen.x - endX)}
-                  height={Math.abs(startScreen.y - endY)}
-                  fill="rgba(41, 98, 255, 0.1)"
-                  stroke="#2962ff"
-                  strokeWidth={1}
+                  x={rx}
+                  y={ry}
+                  width={rw}
+                  height={rh}
+                  fill="rgba(16, 185, 129, 0.12)"
+                  stroke="#10b981"
+                  strokeWidth={1.5}
                   strokeDasharray="4 4"
                 />
+              );
+            }
+            if (activeTool === 'measure') {
+              const rx = Math.min(startScreen.x, endX);
+              const ry = Math.min(startScreen.y, endY);
+              const rw = Math.abs(startScreen.x - endX);
+              const rh = Math.abs(startScreen.y - endY);
+              return (
+                <g>
+                  <rect
+                    x={rx}
+                    y={ry}
+                    width={rw}
+                    height={rh}
+                    fill="rgba(41, 98, 255, 0.12)"
+                    stroke="#2962ff"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                  />
+                  <line x1={startScreen.x} y1={startScreen.y} x2={endX} y2={endY} stroke="#2962ff" strokeWidth={1} />
+                </g>
               );
             }
             return null;
@@ -764,7 +1148,7 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
               fill={c}
               className="cursor-pointer hover:scale-110 transition-transform"
               onClick={() => {
-                const updated = drawings.map(d => d.id === selectedDrawing.id ? { ...d, color: c } : d);
+                const updated = localDrawings.map(d => d.id === selectedDrawing.id ? { ...d, color: c } : d);
                 onUpdateDrawings(updated);
               }}
             />
@@ -775,7 +1159,8 @@ export const TradingViewDrawingOverlay: React.FC<TradingViewDrawingOverlayProps>
             transform="translate(115, 8)"
             className="cursor-pointer text-muted hover:text-rose-500"
             onClick={() => {
-              onUpdateDrawings(drawings.filter(d => d.id !== selectedDrawing.id));
+              const updated = localDrawings.filter(d => d.id !== selectedDrawing.id);
+              onUpdateDrawings(updated);
               onSelectDrawing(null);
             }}
           >

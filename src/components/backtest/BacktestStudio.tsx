@@ -30,11 +30,16 @@ import {
 } from 'lucide-react';
 
 export const BacktestStudio: React.FC = () => {
-  // Strategy & Asset State
-  const [strategyName, setStrategyName] = useState<string>('ICT Silver Bullet');
-  const [selectedAssetId, setSelectedAssetId] = useState<string>('BTCUSDT');
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>('15m');
-
+  // Strategy & Asset State (Persisted across tab/page switches)
+  const [strategyName, setStrategyName] = useState<string>(() => {
+    return localStorage.getItem('tz_backtest_strategy') || 'ICT Silver Bullet';
+  });
+  const [selectedAssetId, setSelectedAssetId] = useState<string>(() => {
+    return localStorage.getItem('tz_backtest_asset') || 'XAUUSD';
+  });
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>(() => {
+    return localStorage.getItem('tz_backtest_timeframe') || '1h';
+  });
 
   // Real Historical Market Candles
   const [candles, setCandles] = useState<BacktestCandle[]>([]);
@@ -42,27 +47,35 @@ export const BacktestStudio: React.FC = () => {
   const [dataSource, setDataSource] = useState<string>('');
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Replay State
+  // Replay State & Target Timestamp (Persisted across tab/page switches)
+  const savedReplayTarget = localStorage.getItem('tz_backtest_replay_target');
+  const savedReplayMode = localStorage.getItem('tz_backtest_replay_mode') === 'true';
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(1);
   const [isCutMode, setIsCutMode] = useState<boolean>(false);
-  const [isReplayMode, setIsReplayMode] = useState<boolean>(false);
-  const isReplayModeRef = useRef<boolean>(false);
-  const replayTargetTimeRef = useRef<number | null>(null);
+  const [isReplayMode, setIsReplayMode] = useState<boolean>(savedReplayMode);
+  const isReplayModeRef = useRef<boolean>(savedReplayMode);
+  const replayTargetTimeRef = useRef<number | null>(savedReplayTarget ? parseInt(savedReplayTarget, 10) : null);
 
   const updateReplayMode = useCallback((active: boolean, targetTimestampSec?: number) => {
     setIsReplayMode(active);
     isReplayModeRef.current = active;
+    localStorage.setItem('tz_backtest_replay_mode', String(active));
     if (active && targetTimestampSec !== undefined) {
       replayTargetTimeRef.current = targetTimestampSec;
+      localStorage.setItem('tz_backtest_replay_target', String(targetTimestampSec));
     } else if (!active) {
       replayTargetTimeRef.current = null;
+      localStorage.removeItem('tz_backtest_replay_target');
     }
   }, []);
 
-  // Drawings State & Toolbar Visibility (Item 5)
-  const [isToolbarVisible, setIsToolbarVisible] = useState<boolean>(true);
+  // Drawings State & Toolbar Visibility (Hidden by default as requested by user)
+  const [isToolbarVisible, setIsToolbarVisible] = useState<boolean>(() => {
+    return localStorage.getItem('tz_backtest_toolbar_visible') === 'true';
+  });
   const [activeTool, setActiveTool] = useState<DrawingType>('cursor');
   const [drawings, setDrawings] = useState<BacktestDrawing[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
@@ -182,12 +195,20 @@ export const BacktestStudio: React.FC = () => {
     }
   }, [selectedAssetId, selectedTimeframe]);
 
-  // Persist drawings whenever they change
-  const handleUpdateDrawings = (newDrawings: BacktestDrawing[]) => {
+  // Debounced drawing persistence to eliminate mousemove lag
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const handleUpdateDrawings = useCallback((newDrawings: BacktestDrawing[]) => {
     setDrawings(newDrawings);
     const key = `tz_backtest_drawings_${selectedAssetId}_${selectedTimeframe}`;
-    localStorage.setItem(key, JSON.stringify(newDrawings));
-  };
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(newDrawings));
+      } catch (e) {
+        console.error('Failed to save drawings', e);
+      }
+    }, 150);
+  }, [selectedAssetId, selectedTimeframe]);
 
   // Load 100% Real Historical Market Candles
   const loadMarketData = useCallback(async (customTargetDate?: Date, forceLive: boolean = false) => {
@@ -205,6 +226,15 @@ export const BacktestStudio: React.FC = () => {
         updateReplayMode(true, targetTimeSec);
       } else if (isReplayModeRef.current && replayTargetTimeRef.current) {
         targetTimeSec = replayTargetTimeRef.current;
+      } else {
+        const savedTime = localStorage.getItem('tz_backtest_last_time');
+        if (savedTime) {
+          const t = parseInt(savedTime, 10);
+          if (!isNaN(t) && t > 0) {
+            targetTimeSec = t;
+            updateReplayMode(true, t);
+          }
+        }
       }
 
       const res = await fetchRealHistoricalCandles(
@@ -235,11 +265,15 @@ export const BacktestStudio: React.FC = () => {
           engineRef.current.currentCandle = res.candles[closestIdx];
           // Keep target time locked to the exact matched candle time
           replayTargetTimeRef.current = res.candles[closestIdx].time;
+          localStorage.setItem('tz_backtest_last_time', String(res.candles[closestIdx].time));
         } else {
           // Live Mode: Always open the chart for current date & time (the latest candle)
           const latestIndex = Math.max(0, res.candles.length - 1);
           setCurrentIndex(latestIndex);
           engineRef.current.currentCandle = res.candles[latestIndex];
+          if (res.candles[latestIndex]) {
+            localStorage.setItem('tz_backtest_last_time', String(res.candles[latestIndex].time));
+          }
         }
 
         // Only clear open positions if asset changed
@@ -343,6 +377,7 @@ export const BacktestStudio: React.FC = () => {
       if (index < candles.length - 1 || isReplayModeRef.current) {
         updateReplayMode(true, candle.time);
       }
+      localStorage.setItem('tz_backtest_last_time', String(candle.time));
       engineRef.current.currentCandle = candle;
       syncEngineState();
     }
@@ -354,6 +389,7 @@ export const BacktestStudio: React.FC = () => {
     const cutCandle = candles[index];
     if (cutCandle) {
       updateReplayMode(true, cutCandle.time);
+      localStorage.setItem('tz_backtest_last_time', String(cutCandle.time));
       engineRef.current.currentCandle = cutCandle;
     }
     setCurrentIndex(index);
@@ -364,6 +400,7 @@ export const BacktestStudio: React.FC = () => {
   const handleJumpToDate = (targetDate: Date) => {
     const targetSec = Math.floor(targetDate.getTime() / 1000);
     updateReplayMode(true, targetSec);
+    localStorage.setItem('tz_backtest_last_time', String(targetSec));
 
     if (candles.length > 0 && targetSec >= candles[0].time && targetSec <= candles[candles.length - 1].time) {
       let closestIdx = 0;
@@ -389,6 +426,7 @@ export const BacktestStudio: React.FC = () => {
   const handleExitReplay = () => {
     updateReplayMode(false);
     setIsPlaying(false);
+    localStorage.removeItem('tz_backtest_last_time');
     loadMarketData(undefined, true);
   };
 
@@ -398,8 +436,10 @@ export const BacktestStudio: React.FC = () => {
     const candle = candles[currentIndex];
     if (candle && (isReplayModeRef.current || currentIndex < candles.length - 1)) {
       updateReplayMode(true, candle.time);
+      localStorage.setItem('tz_backtest_last_time', String(candle.time));
     }
     setSelectedTimeframe(newTf);
+    localStorage.setItem('tz_backtest_timeframe', newTf);
   };
 
   // Asset switch handler preserving historical replay position
@@ -408,8 +448,10 @@ export const BacktestStudio: React.FC = () => {
     const candle = candles[currentIndex];
     if (candle && (isReplayModeRef.current || currentIndex < candles.length - 1)) {
       updateReplayMode(true, candle.time);
+      localStorage.setItem('tz_backtest_last_time', String(candle.time));
     }
     setSelectedAssetId(newAssetId);
+    localStorage.setItem('tz_backtest_asset', newAssetId);
   };
 
   // Keyboard navigation for Space (play/pause), Left/Right arrow (step back/forward)
@@ -575,7 +617,10 @@ export const BacktestStudio: React.FC = () => {
                 <input
                   type="text"
                   value={strategyName}
-                  onChange={e => setStrategyName(e.target.value)}
+                  onChange={e => {
+                    setStrategyName(e.target.value);
+                    localStorage.setItem('tz_backtest_strategy', e.target.value);
+                  }}
                   className="text-base font-black text-foreground bg-transparent border-b border-dashed border-border/40 hover:border-primary focus:border-primary focus:outline-none transition-colors"
                   title="Click to rename strategy"
                 />
@@ -716,15 +761,22 @@ export const BacktestStudio: React.FC = () => {
                       setSelectedDrawingId(null);
                     }}
                     drawingCount={drawings.length}
+                    onHide={() => {
+                      setIsToolbarVisible(false);
+                      localStorage.setItem('tz_backtest_toolbar_visible', 'false');
+                    }}
                   />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setIsToolbarVisible(true)}
+                    onClick={() => {
+                      setIsToolbarVisible(true);
+                      localStorage.setItem('tz_backtest_toolbar_visible', 'true');
+                    }}
                     title="Show Drawing Tools"
-                    className="p-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground shadow-lg flex items-center gap-1.5 text-xs font-semibold hover:border-primary/40 transition-all cursor-pointer"
+                    className="p-2 px-2.5 rounded-xl bg-surface-card/90 backdrop-blur-md border border-border/40 dark:border-white/[0.08] text-muted hover:text-foreground shadow-lg flex items-center gap-1.5 text-xs font-semibold hover:border-primary/40 transition-all cursor-pointer hover:scale-105 active:scale-95"
                   >
-                    <PenTool className="w-4 h-4 text-primary" />
+                    <PenTool className="w-3.5 h-3.5 text-primary" />
                     <span>Tools</span>
                   </button>
                 )}

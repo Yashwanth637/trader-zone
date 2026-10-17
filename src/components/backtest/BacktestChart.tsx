@@ -161,8 +161,13 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     chartRef.current = chart;
     seriesRef.current = series;
 
+    let rafId: number | null = null;
     const handleRangeChange = () => {
-      setRangeTick(t => t + 1);
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        setRangeTick(t => (t + 1) % 1000000);
+        rafId = null;
+      });
     };
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
@@ -184,6 +189,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     return () => {
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleRangeChange);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       observer.disconnect();
       chart.remove();
     };
@@ -550,6 +556,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         isDrawingLocked={isDrawingLocked}
         isDrawingHidden={isDrawingHidden}
         candles={candles}
+        symbol={symbol}
       />
 
       {/* Item 2: Interactive Bar Replay Cut Overlay (Scissors / Caesar Logo in middle) */}

@@ -20,6 +20,7 @@ import {
   Circle,
   PenTool,
   ChevronRight,
+  ChevronLeft,
   Activity,
   Layers,
   Sparkles
@@ -50,6 +51,7 @@ interface TradingViewDrawingToolbarProps {
   onToggleHide: () => void;
   onClearAll: () => void;
   drawingCount: number;
+  onHide?: () => void;
 }
 
 export const TradingViewDrawingToolbar: React.FC<TradingViewDrawingToolbarProps> = ({
@@ -62,7 +64,8 @@ export const TradingViewDrawingToolbar: React.FC<TradingViewDrawingToolbarProps>
   isHidden,
   onToggleHide,
   onClearAll,
-  drawingCount
+  drawingCount,
+  onHide
 }) => {
   const [openFlyout, setOpenFlyout] = useState<string | null>(null);
 
@@ -270,6 +273,21 @@ export const TradingViewDrawingToolbar: React.FC<TradingViewDrawingToolbarProps>
       >
         <Trash2 className="w-4 h-4" />
       </button>
+
+      {/* Hide / Collapse Toolbar (User request) */}
+      {onHide && (
+        <>
+          <div className="w-6 h-px bg-border/60 my-1" />
+          <button
+            type="button"
+            onClick={onHide}
+            title="Hide Drawing Toolbar"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </>
+      )}
     </div>
   );
 };
