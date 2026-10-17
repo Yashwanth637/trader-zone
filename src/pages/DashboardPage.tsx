@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
-import { StatCard } from '../components/ui/StatCard';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { filterTradesByPeriod, formatCurrency, sortTradesDescending } from '../lib/calculations';
@@ -9,6 +9,7 @@ import {
   calculateTradeScores,
   calculateTradingActivity
 } from '../lib/scoreCalculations';
+import { HeroMetricsBanner } from '../components/dashboard/HeroMetricsBanner';
 import { TradeScoreCard } from '../components/dashboard/TradeScoreCard';
 import { TradingActivityCard } from '../components/dashboard/TradingActivityCard';
 import { AnalyticsOverviewGrid } from '../components/dashboard/AnalyticsOverviewGrid';
@@ -28,7 +29,8 @@ import {
 } from 'lucide-react';
 
 export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAddTrade }) => {
-  const { accountTrades, activeAccount, stats, behavioralAlerts } = useTrading();
+  const { user } = useAuth();
+  const { accountTrades, activeAccount, accounts, profile, stats, behavioralAlerts } = useTrading();
   const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
 
   const filteredTrades = filterTradesByPeriod(accountTrades, period);
@@ -110,48 +112,15 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Net P&L"
-          value={formatCurrency(period === 'all' ? stats.netPnl : periodPnl)}
-          subValue={
-            activeAccount
-              ? `${periodPnl >= 0 ? '+' : ''}${((periodPnl / activeAccount.initialBalance) * 100).toFixed(2)}% Return`
-              : undefined
-          }
-          trend={periodPnl >= 0 ? 'positive' : 'negative'}
-          icon={<DollarSign className="w-5 h-5" />}
-          iconBg={periodPnl >= 0 ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' : 'bg-rose-500/15 text-rose-500 border-rose-500/30'}
-        />
-
-        <StatCard
-          label="Win Rate"
-          value={`${(period === 'all' ? stats.winRate : periodWinRate).toFixed(1)}%`}
-          subValue={`${stats.winningTrades}W - ${stats.losingTrades}L (${stats.breakEvenTrades} BE)`}
-          trend={stats.winRate >= 50 ? 'positive' : 'negative'}
-          icon={<Percent className="w-5 h-5" />}
-          iconBg="bg-primary/15 text-primary border border-primary/30"
-        />
-
-        <StatCard
-          label="Profit Factor"
-          value={stats.profitFactor.toFixed(2)}
-          subValue={`Avg Win: ${formatCurrency(stats.avgWin)} | Avg Loss: ${formatCurrency(stats.avgLoss)}`}
-          trend={stats.profitFactor >= 1.5 ? 'positive' : 'neutral'}
-          icon={<TrendingUp className="w-5 h-5" />}
-          iconBg="bg-violet-500/15 text-violet-500 border border-violet-500/30"
-        />
-
-        <StatCard
-          label="Max Drawdown"
-          value={`${stats.maxDrawdownPercent.toFixed(1)}%`}
-          subValue={`-${formatCurrency(stats.maxDrawdownUsd)} peak-to-valley`}
-          trend={stats.maxDrawdownPercent < 5 ? 'positive' : 'negative'}
-          icon={<AlertTriangle className="w-5 h-5" />}
-          iconBg="bg-amber-500/15 text-amber-500 border border-amber-500/30"
-        />
-      </div>
+      {/* Hero Metrics Banner (Image 1 Design with Swapped Total P&L / Today's P&L and Vending Counter) */}
+      <HeroMetricsBanner
+        stats={stats}
+        trades={accountTrades}
+        activeAccount={activeAccount}
+        accounts={accounts}
+        profile={profile}
+        user={user}
+      />
 
       {/* AI Behavioral Recommendation Banner */}
       <div className="premium-card p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
