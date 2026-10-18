@@ -109,17 +109,23 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
               <div className="font-bold text-amber-200">Delta Exchange India Order History Detected</div>
               <div className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
                 ✓ Cancelled & zero-filled order clutter automatically filtered out<br />
-                ✓ Contract quantities divided by 100 into standard lots<br />
+                ✓ Contract quantities converted to standard lots (1 lot = 1,000 contracts)<br />
                 ✓ Round-trip positions paired with accurate DD-MM-YYYY timestamps
               </div>
             </div>
           </div>
         )}
 
-        {parsedCount !== null && (
+        {parsedCount !== null && parsedCount > 0 && (
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center gap-2 text-xs text-primary-light">
             <FileSpreadsheet className="w-4 h-4 shrink-0" />
             <span>Ready to import <strong>{parsedCount}</strong> detected trades.</span>
+          </div>
+        )}
+
+        {parsedCount === 0 && csvText.trim().length > 30 && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+            No completed round-trip trades detected in this text. Make sure your statement includes closed execution orders.
           </div>
         )}
 

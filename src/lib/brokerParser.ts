@@ -1,11 +1,18 @@
 import { Trade, Direction, AssetClass } from '../types/trade';
 import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
-import { isDeltaIndiaCsv, parseDeltaIndiaCsv, parseUniversalDate } from './deltaIndiaParser';
+import { isDeltaIndiaCsv, parseDeltaIndiaCsv, parseUniversalDate, cleanNumber } from './deltaIndiaParser';
 
 export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
-  // Check if this is a Delta Exchange India CSV export
+  // 1. Check if this is a Delta Exchange India CSV export
   if (isDeltaIndiaCsv(csvText)) {
-    return parseDeltaIndiaCsv(csvText, accountId);
+    try {
+      const deltaTrades = parseDeltaIndiaCsv(csvText, accountId);
+      if (deltaTrades.length > 0) {
+        return deltaTrades;
+      }
+    } catch (err) {
+      console.warn('Delta parser threw an error, falling back to generic parser:', err);
+    }
   }
 
   const lines = csvText.trim().split(/\r?\n/);
@@ -21,10 +28,24 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
     if (!line) continue;
 
     // Handle comma or semicolon or tab separated
-    const delimiter = line.includes(';') ? ';' : line.includes('\t') ? '\t' : ',';
+    const delimiter = line.includes(';') && !line.includes(',') ? ';' : line.includes('\t') && !line.includes(',') ? '\t' : ',';
     const cols = line.split(delimiter).map(c => c.replace(/^["']|["']$/g, '').trim());
 
-    if (cols.length < 5) continue;
+    if (cols.length < 4) continue;
+
+    // Skip duplicate headers if files were merged
+    const col0 = (cols[0] || '').toLowerCase();
+    const col1 = (cols[1] || '').toLowerCase();
+    if (
+      col0.includes('ticket') ||
+      col0.includes('time') ||
+      col0.includes('date') ||
+      col1.includes('item') ||
+      col1.includes('symbol') ||
+      col0.includes('order')
+    ) {
+      continue;
+    }
 
     try {
       let ticket = `CSV-${Date.now()}-${i}`;
@@ -41,43 +62,46 @@ export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
       let commission = 0;
       let swap = 0;
 
-      if (header.includes('ticket') || header.includes('order')) {
+      if (header.includes('ticket') || header.includes('order') || header.includes('item')) {
         // Typical MT4/MT5 statement
         ticket = cols[0] || ticket;
         openTime = cols[1] ? parseUniversalDate(cols[1]).toISOString() : openTime;
         direction = cols[2]?.toLowerCase().includes('sell') ? 'SELL' : 'BUY';
-        const rawSize = parseFloat(cols[3]) || 1.0;
+        const rawSize = cleanNumber(cols[3], 1.0);
         // If raw size in CSV is contracts (e.g. 50 in CSV), convert to actual lot size (0.05)
         lotSize = rawSize >= 10 ? parseFloat((rawSize / 1000).toFixed(5)) : rawSize;
         symbol = (cols[4] || 'EURUSD').toUpperCase();
-        entryPrice = parseFloat(cols[5]) || 0;
-        stopLoss = parseFloat(cols[6]) || undefined;
-        takeProfit = parseFloat(cols[7]) || undefined;
+        entryPrice = cleanNumber(cols[5], 0);
+        const slVal = cleanNumber(cols[6], NaN);
+        stopLoss = !isNaN(slVal) && slVal > 0 ? slVal : undefined;
+        const tpVal = cleanNumber(cols[7], NaN);
+        takeProfit = !isNaN(tpVal) && tpVal > 0 ? tpVal : undefined;
         closeTime = cols[8] ? parseUniversalDate(cols[8]).toISOString() : undefined;
-        exitPrice = cols[9] ? parseFloat(cols[9]) : undefined;
-        commission = cols[10] ? parseFloat(cols[10]) : 0;
-        swap = cols[12] ? parseFloat(cols[12]) : 0;
-        netPnl = cols[13] ? parseFloat(cols[13]) : 0;
+        const exitVal = cleanNumber(cols[9], NaN);
+        exitPrice = !isNaN(exitVal) && exitVal > 0 ? exitVal : undefined;
+        commission = cleanNumber(cols[10], 0);
+        swap = cleanNumber(cols[12], 0);
+        netPnl = cleanNumber(cols[13], 0);
       } else {
         // Generic CSV: Date, Symbol, Type, Lots, Entry, Exit, PnL
         openTime = cols[0] ? parseUniversalDate(cols[0]).toISOString() : openTime;
         symbol = (cols[1] || 'EURUSD').toUpperCase();
         direction = cols[2]?.toLowerCase().includes('sell') || cols[2]?.toLowerCase().includes('short') ? 'SELL' : 'BUY';
-        const rawSize = parseFloat(cols[3]) || 1.0;
-        // If raw size in CSV is contracts (e.g. 50 in CSV), convert to actual lot size (0.05)
+        const rawSize = cleanNumber(cols[3], 1.0);
         lotSize = rawSize >= 10 ? parseFloat((rawSize / 1000).toFixed(5)) : rawSize;
-        entryPrice = parseFloat(cols[4]) || 0;
-        exitPrice = cols[5] ? parseFloat(cols[5]) : undefined;
-        netPnl = cols[6] ? parseFloat(cols[6]) : 0;
+        entryPrice = cleanNumber(cols[4], 0);
+        const exitVal = cleanNumber(cols[5], NaN);
+        exitPrice = !isNaN(exitVal) && exitVal > 0 ? exitVal : undefined;
+        netPnl = cleanNumber(cols[6], 0);
         closeTime = exitPrice ? openTime : undefined;
       }
 
       let assetClass: AssetClass = 'Forex';
       if (symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL')) {
         assetClass = 'Crypto';
-      } else if (symbol.includes('XAU') || symbol.includes('GOLD') || symbol.includes('OIL')) {
+      } else if (symbol.includes('XAU') || symbol.includes('GOLD') || symbol.includes('OIL') || symbol.includes('SILVER')) {
         assetClass = 'Commodities';
-      } else if (symbol.includes('US30') || symbol.includes('NAS') || symbol.includes('SPX') || symbol.includes('GER30')) {
+      } else if (symbol.includes('US30') || symbol.includes('NAS') || symbol.includes('SPX') || symbol.includes('GER30') || symbol.includes('NIFTY')) {
         assetClass = 'Indices';
       }
 
