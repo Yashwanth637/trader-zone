@@ -87,21 +87,22 @@ export const OneClickExecutionDock: React.FC<OneClickExecutionDockProps> = ({
 
     // Pip size based on asset (e.g. 0.1 for Gold, 0.0001 for EURUSD, 1 for BTC)
     const pipSize = symbol.includes('XAU') ? 0.1 : symbol.includes('BTC') ? 1.0 : 0.0001;
+    const effectiveSlPips = usePresets && slPips > 0 ? slPips : 30;
+    const effectiveTpRatio = usePresets && tpRatio > 0 ? tpRatio : 2.0;
 
-    let stopLoss: number | undefined = undefined;
-    let takeProfit: number | undefined = undefined;
+    const slDistance = Math.max(effectiveSlPips * pipSize, currentPrice * 0.005);
+    const tpDistance = slDistance * effectiveTpRatio;
+    const decimals = symbol.includes('EUR') || symbol.includes('GBP') || symbol.includes('JPY') ? 4 : 2;
 
-    if (usePresets && slPips > 0) {
-      const slDistance = slPips * pipSize;
-      const tpDistance = slDistance * tpRatio;
+    let stopLoss: number;
+    let takeProfit: number;
 
-      if (side === 'BUY') {
-        stopLoss = parseFloat((currentPrice - slDistance).toFixed(symbol.includes('BTC') ? 2 : 3));
-        takeProfit = parseFloat((currentPrice + tpDistance).toFixed(symbol.includes('BTC') ? 2 : 3));
-      } else {
-        stopLoss = parseFloat((currentPrice + slDistance).toFixed(symbol.includes('BTC') ? 2 : 3));
-        takeProfit = parseFloat((currentPrice - tpDistance).toFixed(symbol.includes('BTC') ? 2 : 3));
-      }
+    if (side === 'BUY') {
+      stopLoss = parseFloat((currentPrice - slDistance).toFixed(decimals));
+      takeProfit = parseFloat((currentPrice + tpDistance).toFixed(decimals));
+    } else {
+      stopLoss = parseFloat((currentPrice + slDistance).toFixed(decimals));
+      takeProfit = parseFloat((currentPrice - tpDistance).toFixed(decimals));
     }
 
     onExecuteMarketOrder({

@@ -519,7 +519,7 @@ export const BacktestStudio: React.FC = () => {
 
   // On-Chart Trade Modification Handlers (Item 7)
   const handleModifyPosition = (params: { stopLoss?: number; takeProfit?: number }) => {
-    engineRef.current.updatePositionSlTp(params.stopLoss, params.takeProfit);
+    engineRef.current.updatePositionSlTp(params);
     syncEngineState();
   };
 
@@ -678,13 +678,7 @@ export const BacktestStudio: React.FC = () => {
             </div>
           )}
 
-          {/* Data Source Badge */}
-          {dataSource && (
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px]">
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{dataSource}</span>
-            </div>
-          )}
+
         </div>
 
         {/* Right Action Icons */}

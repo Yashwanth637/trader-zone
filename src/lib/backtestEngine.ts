@@ -40,6 +40,36 @@ export class BacktestEngine {
     return asset ? asset.lotMultiplier : 1;
   }
 
+  private getDecimals(): number {
+    const asset = SUPPORTED_ASSETS.find(a => a.id === this.symbol);
+    if (!asset) return 2;
+    if (asset.pipSize < 0.001) return 4;
+    if (asset.pipSize < 0.1) return 2;
+    if (asset.pipSize < 1) return 1;
+    return 2;
+  }
+
+  public getDefaultSlTp(side: TradeSide, entryPrice: number): { stopLoss: number; takeProfit: number } {
+    const asset = SUPPORTED_ASSETS.find(a => a.id === this.symbol);
+    const pipSize = asset?.pipSize || (this.symbol.includes('BTC') ? 1 : this.symbol.includes('XAU') ? 0.1 : 0.0001);
+    const decimals = this.getDecimals();
+
+    const slDist = Math.max(pipSize * 30, entryPrice * 0.005);
+    const tpDist = slDist * 2;
+
+    if (side === 'BUY') {
+      return {
+        stopLoss: parseFloat((entryPrice - slDist).toFixed(decimals)),
+        takeProfit: parseFloat((entryPrice + tpDist).toFixed(decimals))
+      };
+    } else {
+      return {
+        stopLoss: parseFloat((entryPrice + slDist).toFixed(decimals)),
+        takeProfit: parseFloat((entryPrice - tpDist).toFixed(decimals))
+      };
+    }
+  }
+
   /**
    * Process a newly stepped or revealed candle against open positions and pending orders
    */
@@ -174,13 +204,22 @@ export class BacktestEngine {
     }
 
     const entryPrice = this.currentCandle.close;
+    let finalSl = stopLoss;
+    let finalTp = takeProfit;
+
+    if (finalSl === undefined || finalTp === undefined) {
+      const defaults = this.getDefaultSlTp(side, entryPrice);
+      if (finalSl === undefined) finalSl = defaults.stopLoss;
+      if (finalTp === undefined) finalTp = defaults.takeProfit;
+    }
+
     this.openPosition = {
       id: 'pos_' + Date.now(),
       side,
       entryPrice,
       entryTime: this.currentCandle.time,
-      stopLoss,
-      takeProfit,
+      stopLoss: finalSl,
+      takeProfit: finalTp,
       quantity,
       riskAmount,
       currentPnl: 0,
@@ -202,13 +241,22 @@ export class BacktestEngine {
     takeProfit?: number,
     riskAmount: number = 100
   ): BacktestOrder {
+    let finalSl = stopLoss;
+    let finalTp = takeProfit;
+
+    if (finalSl === undefined || finalTp === undefined) {
+      const defaults = this.getDefaultSlTp(side, price);
+      if (finalSl === undefined) finalSl = defaults.stopLoss;
+      if (finalTp === undefined) finalTp = defaults.takeProfit;
+    }
+
     const order: BacktestOrder = {
       id: 'ord_' + Date.now(),
       type: 'LIMIT',
       side,
       price,
-      stopLoss,
-      takeProfit,
+      stopLoss: finalSl,
+      takeProfit: finalTp,
       quantity,
       riskAmount,
       status: 'PENDING',
@@ -289,13 +337,25 @@ export class BacktestEngine {
   /**
    * Update Stop Loss and/or Take Profit on active position (e.g. via on-chart drag)
    */
-  public updatePositionSlTp(stopLoss?: number, takeProfit?: number): void {
+  public updatePositionSlTp(
+    paramsOrSl?: { stopLoss?: number; takeProfit?: number } | number,
+    takeProfit?: number
+  ): void {
     if (!this.openPosition) return;
-    if (stopLoss !== undefined) {
-      this.openPosition.stopLoss = parseFloat(stopLoss.toFixed(4));
-    }
-    if (takeProfit !== undefined) {
-      this.openPosition.takeProfit = parseFloat(takeProfit.toFixed(4));
+    if (typeof paramsOrSl === 'object' && paramsOrSl !== null) {
+      if ('stopLoss' in paramsOrSl) {
+        this.openPosition.stopLoss = paramsOrSl.stopLoss !== undefined ? parseFloat(paramsOrSl.stopLoss.toFixed(4)) : undefined;
+      }
+      if ('takeProfit' in paramsOrSl) {
+        this.openPosition.takeProfit = paramsOrSl.takeProfit !== undefined ? parseFloat(paramsOrSl.takeProfit.toFixed(4)) : undefined;
+      }
+    } else {
+      if (typeof paramsOrSl === 'number') {
+        this.openPosition.stopLoss = parseFloat(paramsOrSl.toFixed(4));
+      }
+      if (takeProfit !== undefined) {
+        this.openPosition.takeProfit = parseFloat(takeProfit.toFixed(4));
+      }
     }
   }
 

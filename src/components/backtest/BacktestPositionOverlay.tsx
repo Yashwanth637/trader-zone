@@ -82,8 +82,8 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
     const onPointerMove = (e: PointerEvent) => {
       if (!overlayRef.current || !series || !openPosition) return;
       const rect = overlayRef.current.getBoundingClientRect();
-      const y = Math.max(10, Math.min(height - 10, e.clientY - rect.top));
-      const price = series.coordinateToPrice(y);
+      const rawY = Math.max(10, Math.min(height - 10, e.clientY - rect.top));
+      const price = series.coordinateToPrice(rawY);
       if (price === null || isNaN(price)) return;
 
       const roundedPrice = parseFloat(price.toFixed(priceDecimals));
@@ -100,10 +100,58 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
         }
       }
 
+      // Boundary Clamping Rule:
+      // - BUY:
+      //   * TP cannot go below entry (tp >= entry + minStep)
+      //   * SL can go below entry; SL can only go above entry if price has moved above entry (cur > entry), up to cur - minStep
+      // - SELL:
+      //   * TP cannot go above entry (tp <= entry - minStep)
+      //   * SL can go above entry; SL can only go below entry if price has moved below entry (cur < entry), down to cur + minStep
+      const entry = openPosition.entryPrice;
+      const cur = currentCandle ? currentCandle.close : entry;
+      const minStep = Math.pow(10, -priceDecimals);
+
+      let clampedPrice = roundedPrice;
+
+      if (targetType === 'TP') {
+        if (openPosition.side === 'BUY') {
+          // BUY TP cannot go below entry
+          clampedPrice = Math.max(entry + minStep, roundedPrice);
+        } else {
+          // SELL TP cannot go above entry
+          clampedPrice = Math.min(entry - minStep, roundedPrice);
+          clampedPrice = Math.max(minStep, clampedPrice);
+        }
+      } else if (targetType === 'SL') {
+        if (openPosition.side === 'BUY') {
+          if (cur > entry) {
+            // Price moved above entry: can trail SL into profit up to cur - minStep
+            const maxSl = cur - minStep;
+            clampedPrice = Math.min(maxSl, roundedPrice);
+          } else {
+            // Price has not moved above entry: SL cannot go above entry
+            clampedPrice = Math.min(entry - minStep, roundedPrice);
+          }
+          clampedPrice = Math.max(minStep, clampedPrice);
+        } else {
+          if (cur < entry) {
+            // Price moved below entry: can trail SL into profit down to cur + minStep
+            const minSl = cur + minStep;
+            clampedPrice = Math.max(minSl, roundedPrice);
+          } else {
+            // Price has not moved below entry: SL cannot go below entry
+            clampedPrice = Math.max(entry + minStep, roundedPrice);
+          }
+        }
+      }
+
+      clampedPrice = parseFloat(clampedPrice.toFixed(priceDecimals));
+      const clampedY = series.priceToCoordinate(clampedPrice) ?? rawY;
+
       setActiveDrag(prev => prev ? {
         ...prev,
-        currentPrice: roundedPrice,
-        currentY: y,
+        currentPrice: clampedPrice,
+        currentY: clampedY,
         targetType
       } : null);
     };
@@ -124,7 +172,7 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
-  }, [activeDrag, series, height, priceDecimals, openPosition, onModifyPosition]);
+  }, [activeDrag, series, height, priceDecimals, openPosition, currentCandle, onModifyPosition]);
 
   if (!openPosition || !series || width <= 0 || height <= 0) {
     return null;
@@ -145,10 +193,18 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   const tpY = takeProfit !== undefined ? series.priceToCoordinate(takeProfit) : null;
 
   // Stop Loss & Take Profit Projected Amounts
-  const slLossAmount = stopLoss !== undefined
-    ? Math.abs(entryPrice - stopLoss) * quantity * multiplier
-    : 0;
-  const slLossFormatted = `- ${slLossAmount.toFixed(2)} USD`;
+  const slIsProfit = side === 'BUY'
+    ? (stopLoss !== undefined && stopLoss > entryPrice)
+    : (stopLoss !== undefined && stopLoss < entryPrice);
+  const slIsBe = stopLoss !== undefined && stopLoss === entryPrice;
+
+  const slDiff = stopLoss !== undefined ? Math.abs(entryPrice - stopLoss) : 0;
+  const slAmount = slDiff * quantity * multiplier;
+  const slLossFormatted = slIsBe
+    ? '0.00 USD (BE)'
+    : slIsProfit
+    ? `+ ${slAmount.toFixed(2)} USD`
+    : `- ${slAmount.toFixed(2)} USD`;
 
   const tpProfitAmount = takeProfit !== undefined
     ? Math.abs(takeProfit - entryPrice) * quantity * multiplier
@@ -162,7 +218,11 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   const getDragPnlFormatted = (dragPrice: number, isTp: boolean) => {
     const diff = Math.abs(dragPrice - entryPrice);
     const amount = (diff * quantity * multiplier).toFixed(2);
-    return isTp ? `+ ${amount} USD` : `- ${amount} USD`;
+    if (isTp) return `+ ${amount} USD`;
+    const isProfit = side === 'BUY' ? dragPrice > entryPrice : dragPrice < entryPrice;
+    const isBe = dragPrice === entryPrice;
+    if (isBe) return `0.00 USD (BE)`;
+    return isProfit ? `+ ${amount} USD` : `- ${amount} USD`;
   };
 
   return (
@@ -265,11 +325,11 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {quantity}
             </text>
 
-            {/* Segment 2: Projected Loss Amount (- 27.79 USD) */}
+            {/* Segment 2: Projected Loss or Locked Profit Amount */}
             <text
               x={95}
               y={16}
-              fill="#f87171"
+              fill={slIsProfit ? '#34d399' : slIsBe ? '#60a5fa' : '#f87171'}
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -715,7 +775,14 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
             <text
               x={95}
               y={16}
-              fill={activeDrag.targetType === 'TP' ? '#34d399' : '#f87171'}
+              fill={
+                activeDrag.targetType === 'TP' ||
+                (side === 'BUY' ? activeDrag.currentPrice > entryPrice : activeDrag.currentPrice < entryPrice)
+                  ? '#34d399'
+                  : activeDrag.currentPrice === entryPrice
+                  ? '#60a5fa'
+                  : '#f87171'
+              }
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
