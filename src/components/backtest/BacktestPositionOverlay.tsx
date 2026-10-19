@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { BacktestPosition, BacktestCandle } from '../../types/backtest';
 import { SUPPORTED_ASSETS } from '../../lib/backtestDataService';
@@ -14,8 +14,13 @@ interface BacktestPositionOverlayProps {
   symbol: string;
   onClosePosition: () => void;
   onModifyPosition: (params: { stopLoss?: number; takeProfit?: number }) => void;
-  onQuickAddTp?: () => void;
-  onQuickAddSl?: () => void;
+}
+
+interface ActiveDragState {
+  mode: 'MOVE_TP' | 'MOVE_SL' | 'CREATE_FROM_ENTRY';
+  currentPrice: number;
+  currentY: number;
+  targetType: 'TP' | 'SL';
 }
 
 export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = ({
@@ -27,18 +32,16 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   height,
   symbol,
   onClosePosition,
-  onModifyPosition,
-  onQuickAddTp,
-  onQuickAddSl
+  onModifyPosition
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // Drag state for SL and TP lines
-  const [activeDrag, setActiveDrag] = useState<{
-    type: 'SL' | 'TP';
-    startPrice: number;
-  } | null>(null);
+  const overlayRef = useRef<SVGSVGElement>(null);
+  const [, setTick] = useState(0);
+
+  // Active drag state for creating or moving SL / TP
+  const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
 
   // Asset multiplier (e.g. 100 for Gold XAUUSD, 100,000 for FX EURUSD, 1 for Crypto)
   const multiplier = React.useMemo(() => {
@@ -53,33 +56,65 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   const priceDecimals = React.useMemo(() => {
     if (openPosition) {
       const parts = openPosition.entryPrice.toString().split('.');
-      return parts[1] ? parts[1].length : 2;
+      return parts[1] ? Math.min(parts[1].length, 3) : 2;
     }
     return 2;
   }, [openPosition]);
 
-  // Global mouse pointer movement for smooth dragging
+  // Zero-lag synchronization with chart timeScale and visible range
+  useEffect(() => {
+    if (!chart) return;
+    const handleRangeChange = () => {
+      setTick(t => (t + 1) % 1000000);
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
+    chart.timeScale().subscribeVisibleTimeRangeChange(handleRangeChange);
+    return () => {
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleRangeChange);
+    };
+  }, [chart]);
+
+  // Global pointer tracking during active drag
   useEffect(() => {
     if (!activeDrag || !series) return;
 
     const onPointerMove = (e: PointerEvent) => {
-      const chartContainer = document.querySelector('.tradingview-position-overlay');
-      if (!chartContainer || !series) return;
-      const rect = chartContainer.getBoundingClientRect();
-      const y = e.clientY - rect.top;
+      if (!overlayRef.current || !series || !openPosition) return;
+      const rect = overlayRef.current.getBoundingClientRect();
+      const y = Math.max(10, Math.min(height - 10, e.clientY - rect.top));
       const price = series.coordinateToPrice(y);
       if (price === null || isNaN(price)) return;
 
-      const rounded = parseFloat(price.toFixed(priceDecimals));
+      const roundedPrice = parseFloat(price.toFixed(priceDecimals));
 
-      if (activeDrag.type === 'SL') {
-        onModifyPosition({ stopLoss: rounded });
-      } else if (activeDrag.type === 'TP') {
-        onModifyPosition({ takeProfit: rounded });
+      // Determine if dragging above or below entry
+      const isAboveEntry = roundedPrice > openPosition.entryPrice;
+      let targetType: 'TP' | 'SL' = activeDrag.targetType;
+
+      if (activeDrag.mode === 'CREATE_FROM_ENTRY') {
+        if (openPosition.side === 'BUY') {
+          targetType = isAboveEntry ? 'TP' : 'SL';
+        } else {
+          targetType = isAboveEntry ? 'SL' : 'TP';
+        }
       }
+
+      setActiveDrag(prev => prev ? {
+        ...prev,
+        currentPrice: roundedPrice,
+        currentY: y,
+        targetType
+      } : null);
     };
 
     const onPointerUp = () => {
+      if (!activeDrag) return;
+      if (activeDrag.targetType === 'TP') {
+        onModifyPosition({ takeProfit: activeDrag.currentPrice });
+      } else if (activeDrag.targetType === 'SL') {
+        onModifyPosition({ stopLoss: activeDrag.currentPrice });
+      }
       setActiveDrag(null);
     };
 
@@ -89,7 +124,7 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
-  }, [activeDrag, series, priceDecimals, onModifyPosition]);
+  }, [activeDrag, series, height, priceDecimals, openPosition, onModifyPosition]);
 
   if (!openPosition || !series || width <= 0 || height <= 0) {
     return null;
@@ -98,13 +133,10 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   const { entryPrice, stopLoss, takeProfit, quantity, side } = openPosition;
   const currentPrice = currentCandle ? currentCandle.close : entryPrice;
 
-  // Live Unrealized P&L
+  // Calculate live floating P&L (Unrealized)
   const priceDiff = side === 'BUY' ? currentPrice - entryPrice : entryPrice - currentPrice;
   const livePnl = priceDiff * quantity * multiplier;
-  const livePnlFormatted = `${livePnl >= 0 ? '+' : '-'}$${Math.abs(livePnl).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+  const livePnlFormatted = `${livePnl >= 0 ? '+' : ''}${livePnl.toFixed(2)}`;
   const isPnlPositive = livePnl >= 0;
 
   // Screen Y Coordinates
@@ -116,29 +148,31 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
   const slLossAmount = stopLoss !== undefined
     ? Math.abs(entryPrice - stopLoss) * quantity * multiplier
     : 0;
-  const slLossFormatted = `-${slLossAmount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })} USD`;
+  const slLossFormatted = `- ${slLossAmount.toFixed(2)} USD`;
 
   const tpProfitAmount = takeProfit !== undefined
     ? Math.abs(takeProfit - entryPrice) * quantity * multiplier
     : 0;
-  const tpProfitFormatted = `+${tpProfitAmount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })} USD`;
+  const tpProfitFormatted = `+ ${tpProfitAmount.toFixed(2)} USD`;
 
   const priceAxisWidth = 65;
   const lineEndX = width - priceAxisWidth;
 
+  // Helper for real-time drag PnL readout
+  const getDragPnlFormatted = (dragPrice: number, isTp: boolean) => {
+    const diff = Math.abs(dragPrice - entryPrice);
+    const amount = (diff * quantity * multiplier).toFixed(2);
+    return isTp ? `+ ${amount} USD` : `- ${amount} USD`;
+  };
+
   return (
     <svg
+      ref={overlayRef}
       className="tradingview-position-overlay absolute inset-0 pointer-events-none z-20 select-none overflow-visible"
       style={{ width, height }}
     >
       {/* =========================================================================
-          1. STOP LOSS (SL) LINE & TAG (Dashed Amber/Orange, FX Replay Style)
+          1. STOP LOSS (SL) LINE & PILL (Exact Image 1 Style: Coral/Red Line & Tag)
          ========================================================================= */}
       {slY !== null && stopLoss !== undefined && (
         <g className="sl-group">
@@ -154,51 +188,75 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              setActiveDrag({ type: 'SL', startPrice: stopLoss });
+              setActiveDrag({
+                mode: 'MOVE_SL',
+                currentPrice: stopLoss,
+                currentY: slY,
+                targetType: 'SL'
+              });
             }}
           />
 
-          {/* Dashed Amber Line */}
+          {/* Solid Red Horizontal Line (Exact Image 1) */}
           <line
             x1={0}
             y1={slY}
             x2={lineEndX}
             y2={slY}
-            stroke="#f59e0b"
+            stroke="#f23645"
             strokeWidth={1.5}
-            strokeDasharray="5 4"
             className="pointer-events-none"
           />
 
-          {/* SL 3-Segment Interactive Pill: [ Quantity | -Amount USD | X ] */}
+          {/* SL 3-Segment Interactive Pill: [ 0.04 (Red) | - 27.79 USD | ✕ ] */}
           <g
-            transform={`translate(${lineEndX - 195}, ${slY - 12})`}
+            transform={`translate(${lineEndX - 180}, ${slY - 12})`}
             className="pointer-events-auto cursor-ns-resize"
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              setActiveDrag({ type: 'SL', startPrice: stopLoss });
+              setActiveDrag({
+                mode: 'MOVE_SL',
+                currentPrice: stopLoss,
+                currentY: slY,
+                targetType: 'SL'
+              });
             }}
           >
-            {/* Pill Container */}
+            {/* Pill Outer Container */}
             <rect
               x={0}
               y={0}
-              width={185}
+              width={170}
               height={24}
-              rx={6}
-              fill={isDark ? '#14110a' : '#fffbeb'}
-              stroke="#f59e0b"
-              strokeWidth={1.2}
-              strokeDasharray="4 2"
-              className="drop-shadow-sm hover:stroke-width-[1.8] transition-all"
+              rx={5}
+              fill="#0b111e"
+              stroke="#f23645"
+              strokeWidth={1}
+              className="drop-shadow-md"
             />
 
-            {/* Segment 1: Lot Size */}
+            {/* Segment 1: Lot Size Badge (Solid Red) */}
+            <rect
+              x={0}
+              y={0}
+              width={40}
+              height={24}
+              rx={5}
+              fill="#f23645"
+            />
+            {/* Right edge square fix for segment 1 */}
+            <rect
+              x={35}
+              y={0}
+              width={5}
+              height={24}
+              fill="#f23645"
+            />
             <text
-              x={14}
+              x={20}
               y={16}
-              fill="#f59e0b"
+              fill="#ffffff"
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -207,14 +265,11 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {quantity}
             </text>
 
-            {/* Divider 1 */}
-            <line x1={27} y1={4} x2={27} y2={20} stroke="#f59e0b" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 2: Projected Loss Amount */}
+            {/* Segment 2: Projected Loss Amount (- 27.79 USD) */}
             <text
-              x={100}
+              x={95}
               y={16}
-              fill="#f59e0b"
+              fill="#f87171"
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -223,43 +278,41 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {slLossFormatted}
             </text>
 
-            {/* Divider 2 */}
-            <line x1={160} y1={4} x2={160} y2={20} stroke="#f59e0b" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 3: Cancel SL Button (X) */}
+            {/* Segment 3: Cancel SL Button (✕) */}
             <g
-              transform="translate(172, 12)"
+              transform="translate(155, 12)"
               className="cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onModifyPosition({ stopLoss: undefined });
               }}
             >
-              <circle cx={0} cy={0} r={7} fill="transparent" className="hover:fill-amber-500/20" />
+              <circle cx={0} cy={0} r={8} fill="transparent" className="hover:fill-red-500/25 transition-colors" />
               <path
                 d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"
-                stroke="#f59e0b"
-                strokeWidth={1.6}
+                stroke="#f23645"
+                strokeWidth={1.8}
                 strokeLinecap="round"
+                className="group-hover:stroke-white transition-colors"
               />
             </g>
           </g>
 
-          {/* SL Price Scale Badge on Right Axis */}
-          <g transform={`translate(${lineEndX}, ${slY - 10})`} className="pointer-events-none">
+          {/* SL Price Scale Tag on Right Axis (Solid Red Rect, Exact Image 1) */}
+          <g transform={`translate(${lineEndX}, ${slY - 11})`} className="pointer-events-none">
             <rect
               x={0}
               y={0}
               width={priceAxisWidth}
-              height={20}
-              fill="#d97706"
+              height={22}
+              fill="#f23645"
               className="drop-shadow-sm"
             />
             <text
               x={priceAxisWidth / 2}
-              y={14}
+              y={15}
               fill="#ffffff"
-              fontSize={10.5}
+              fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
               textAnchor="middle"
@@ -271,7 +324,7 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
       )}
 
       {/* =========================================================================
-          2. TAKE PROFIT (TP) LINE & TAG (Dashed Green/Emerald, FX Replay Style)
+          2. TAKE PROFIT (TP) LINE & PILL (Exact Image 1 Style: Teal Line & Tag)
          ========================================================================= */}
       {tpY !== null && takeProfit !== undefined && (
         <g className="tp-group">
@@ -287,51 +340,75 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              setActiveDrag({ type: 'TP', startPrice: takeProfit });
+              setActiveDrag({
+                mode: 'MOVE_TP',
+                currentPrice: takeProfit,
+                currentY: tpY,
+                targetType: 'TP'
+              });
             }}
           />
 
-          {/* Dashed Green Line */}
+          {/* Solid Teal Horizontal Line (Exact Image 1) */}
           <line
             x1={0}
             y1={tpY}
             x2={lineEndX}
             y2={tpY}
-            stroke="#10b981"
+            stroke="#089981"
             strokeWidth={1.5}
-            strokeDasharray="5 4"
             className="pointer-events-none"
           />
 
-          {/* TP 3-Segment Interactive Pill: [ Quantity | +Amount USD | X ] */}
+          {/* TP 3-Segment Interactive Pill: [ 0.04 (Teal) | + 67.05 USD | ✕ ] */}
           <g
-            transform={`translate(${lineEndX - 195}, ${tpY - 12})`}
+            transform={`translate(${lineEndX - 180}, ${tpY - 12})`}
             className="pointer-events-auto cursor-ns-resize"
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              setActiveDrag({ type: 'TP', startPrice: takeProfit });
+              setActiveDrag({
+                mode: 'MOVE_TP',
+                currentPrice: takeProfit,
+                currentY: tpY,
+                targetType: 'TP'
+              });
             }}
           >
-            {/* Pill Container */}
+            {/* Pill Outer Container */}
             <rect
               x={0}
               y={0}
-              width={185}
+              width={170}
               height={24}
-              rx={6}
-              fill={isDark ? '#091510' : '#f0fdf4'}
-              stroke="#10b981"
-              strokeWidth={1.2}
-              strokeDasharray="4 2"
-              className="drop-shadow-sm hover:stroke-width-[1.8] transition-all"
+              rx={5}
+              fill="#0b111e"
+              stroke="#089981"
+              strokeWidth={1}
+              className="drop-shadow-md"
             />
 
-            {/* Segment 1: Lot Size */}
+            {/* Segment 1: Lot Size Badge (Solid Teal) */}
+            <rect
+              x={0}
+              y={0}
+              width={40}
+              height={24}
+              rx={5}
+              fill="#089981"
+            />
+            {/* Right edge square fix for segment 1 */}
+            <rect
+              x={35}
+              y={0}
+              width={5}
+              height={24}
+              fill="#089981"
+            />
             <text
-              x={14}
+              x={20}
               y={16}
-              fill="#10b981"
+              fill="#ffffff"
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -340,14 +417,11 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {quantity}
             </text>
 
-            {/* Divider 1 */}
-            <line x1={27} y1={4} x2={27} y2={20} stroke="#10b981" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 2: Projected Profit Amount */}
+            {/* Segment 2: Projected Profit Amount (+ 67.05 USD) */}
             <text
-              x={100}
+              x={95}
               y={16}
-              fill="#10b981"
+              fill="#34d399"
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -356,43 +430,41 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {tpProfitFormatted}
             </text>
 
-            {/* Divider 2 */}
-            <line x1={160} y1={4} x2={160} y2={20} stroke="#10b981" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 3: Cancel TP Button (X) */}
+            {/* Segment 3: Cancel TP Button (✕) */}
             <g
-              transform="translate(172, 12)"
+              transform="translate(155, 12)"
               className="cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onModifyPosition({ takeProfit: undefined });
               }}
             >
-              <circle cx={0} cy={0} r={7} fill="transparent" className="hover:fill-emerald-500/20" />
+              <circle cx={0} cy={0} r={8} fill="transparent" className="hover:fill-emerald-500/25 transition-colors" />
               <path
                 d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"
-                stroke="#10b981"
-                strokeWidth={1.6}
+                stroke="#089981"
+                strokeWidth={1.8}
                 strokeLinecap="round"
+                className="group-hover:stroke-white transition-colors"
               />
             </g>
           </g>
 
-          {/* TP Price Scale Badge on Right Axis */}
-          <g transform={`translate(${lineEndX}, ${tpY - 10})`} className="pointer-events-none">
+          {/* TP Price Scale Tag on Right Axis (Solid Teal Rect, Exact Image 1) */}
+          <g transform={`translate(${lineEndX}, ${tpY - 11})`} className="pointer-events-none">
             <rect
               x={0}
               y={0}
               width={priceAxisWidth}
-              height={20}
-              fill="#059669"
+              height={22}
+              fill="#089981"
               className="drop-shadow-sm"
             />
             <text
               x={priceAxisWidth / 2}
-              y={14}
+              y={15}
               fill="#ffffff"
-              fontSize={10.5}
+              fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
               textAnchor="middle"
@@ -404,7 +476,7 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
       )}
 
       {/* =========================================================================
-          3. SOLID BLUE ENTRY LINE & 3-SEGMENT P&L PILL (Exact FX Replay Style)
+          3. BLUE ENTRY LINE & PILL (Exact Image 1 Style: Solid Blue Line & Tag)
          ========================================================================= */}
       {entryY !== null && (
         <g className="entry-group">
@@ -419,102 +491,218 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
             className="pointer-events-none"
           />
 
-          {/* Quick Add +TP Pill if Take Profit is not set */}
-          {takeProfit === undefined && (
-            <g
-              transform={`translate(${lineEndX - 210}, ${entryY - 10})`}
-              className="pointer-events-auto cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                const defaultOffset = (entryPrice * 0.006); // 0.6% target
-                const newTp = side === 'BUY' ? entryPrice + defaultOffset : entryPrice - defaultOffset;
-                onModifyPosition({ takeProfit: parseFloat(newTp.toFixed(priceDecimals)) });
-              }}
-            >
-              <rect
-                x={0}
-                y={0}
-                width={40}
-                height={20}
-                rx={5}
-                fill={isDark ? '#0f172a' : '#f8fafc'}
-                stroke="#2563eb"
-                strokeWidth={1}
-                strokeOpacity={0.8}
-                className="hover:fill-blue-500/20 transition-colors"
-              />
-              <text
-                x={20}
-                y={14}
-                fill="#3b82f6"
-                fontSize={10}
-                fontWeight="bold"
-                fontFamily="Arial, sans-serif"
-                textAnchor="middle"
-              >
-                +TP
-              </text>
-            </g>
-          )}
+          {/* Interactive Drag Handle to pull TP / SL directly from Entry Line (Requirement #2) */}
+          <line
+            x1={0}
+            y1={entryY}
+            x2={lineEndX - 165}
+            y2={entryY}
+            stroke="transparent"
+            strokeWidth={24}
+            className="pointer-events-auto cursor-ns-resize"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const rect = overlayRef.current?.getBoundingClientRect();
+              const y = rect ? e.clientY - rect.top : entryY;
+              setActiveDrag({
+                mode: 'CREATE_FROM_ENTRY',
+                currentPrice: entryPrice,
+                currentY: y,
+                targetType: 'TP'
+              });
+            }}
+          >
+            <title>Click and drag UP or DOWN to set Take Profit or Stop Loss</title>
+          </line>
 
-          {/* Quick Add +SL Pill if Stop Loss is not set */}
-          {stopLoss === undefined && (
-            <g
-              transform={`translate(${lineEndX - (takeProfit === undefined ? 260 : 210)}, ${entryY - 10})`}
-              className="pointer-events-auto cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                const defaultOffset = (entryPrice * 0.003); // 0.3% risk
-                const newSl = side === 'BUY' ? entryPrice - defaultOffset : entryPrice + defaultOffset;
-                onModifyPosition({ stopLoss: parseFloat(newSl.toFixed(priceDecimals)) });
-              }}
-            >
-              <rect
-                x={0}
-                y={0}
-                width={40}
-                height={20}
-                rx={5}
-                fill={isDark ? '#0f172a' : '#f8fafc'}
-                stroke="#f59e0b"
-                strokeWidth={1}
-                strokeOpacity={0.8}
-                className="hover:fill-amber-500/20 transition-colors"
-              />
-              <text
-                x={20}
-                y={14}
-                fill="#f59e0b"
-                fontSize={10}
-                fontWeight="bold"
-                fontFamily="Arial, sans-serif"
-                textAnchor="middle"
-              >
-                +SL
-              </text>
-            </g>
-          )}
-
-          {/* Entry 3-Segment Pill: [ Quantity | Floating P&L | Close X ] */}
-          <g transform={`translate(${lineEndX - 150}, ${entryY - 12})`} className="pointer-events-auto">
+          {/* Entry 3-Segment Pill: [ 0.04 (Solid Blue) | Live PnL | ✕ (Close) ] */}
+          <g
+            transform={`translate(${lineEndX - 150}, ${entryY - 12})`}
+            className="pointer-events-auto"
+          >
             {/* Pill Container */}
             <rect
               x={0}
               y={0}
               width={140}
               height={24}
-              rx={6}
-              fill={isDark ? '#0a0f1d' : '#eff6ff'}
+              rx={5}
+              fill="#0b111e"
               stroke="#2563eb"
-              strokeWidth={1.5}
-              className="drop-shadow-md"
+              strokeWidth={1}
+              className="drop-shadow-md cursor-ns-resize"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setActiveDrag({
+                  mode: 'CREATE_FROM_ENTRY',
+                  currentPrice: entryPrice,
+                  currentY: entryY,
+                  targetType: 'TP'
+                });
+              }}
             />
 
-            {/* Segment 1: Lot Size */}
-            <text
-              x={14}
-              y={16}
+            {/* Segment 1: Lot Size Badge (Solid Blue, Exact Image 1) */}
+            <rect
+              x={0}
+              y={0}
+              width={40}
+              height={24}
+              rx={5}
               fill="#2563eb"
+              className="cursor-ns-resize"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setActiveDrag({
+                  mode: 'CREATE_FROM_ENTRY',
+                  currentPrice: entryPrice,
+                  currentY: entryY,
+                  targetType: 'TP'
+                });
+              }}
+            />
+            <rect
+              x={35}
+              y={0}
+              width={5}
+              height={24}
+              fill="#2563eb"
+            />
+            <text
+              x={20}
+              y={16}
+              fill="#ffffff"
+              fontSize={11}
+              fontWeight="bold"
+              fontFamily="Arial, sans-serif"
+              textAnchor="middle"
+              className="cursor-ns-resize"
+            >
+              {quantity}
+            </text>
+
+            {/* Segment 2: Live Floating P&L (-6.36) */}
+            <text
+              x={80}
+              y={16}
+              fill={isPnlPositive ? '#34d399' : '#f87171'}
+              fontSize={11}
+              fontWeight="bold"
+              fontFamily="Arial, sans-serif"
+              textAnchor="middle"
+              className="cursor-ns-resize"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setActiveDrag({
+                  mode: 'CREATE_FROM_ENTRY',
+                  currentPrice: entryPrice,
+                  currentY: entryY,
+                  targetType: 'TP'
+                });
+              }}
+            >
+              {livePnlFormatted}
+            </text>
+
+            {/* Segment 3: Instant Close Button (✕, Exact Image 1) */}
+            <g
+              transform="translate(126, 12)"
+              className="cursor-pointer group"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClosePosition();
+              }}
+            >
+              <title>Close Position at Market Price</title>
+              <circle cx={0} cy={0} r={8} fill="transparent" className="hover:fill-blue-500/25 transition-colors" />
+              <path
+                d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"
+                stroke="#60a5fa"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                className="group-hover:stroke-white transition-colors"
+              />
+            </g>
+          </g>
+
+          {/* Entry Price Scale Tag on Right Axis (Solid Blue Rect, Exact Image 1) */}
+          <g transform={`translate(${lineEndX}, ${entryY - 11})`} className="pointer-events-none">
+            <rect
+              x={0}
+              y={0}
+              width={priceAxisWidth}
+              height={22}
+              fill="#2563eb"
+              className="drop-shadow-sm"
+            />
+            <text
+              x={priceAxisWidth / 2}
+              y={15}
+              fill="#ffffff"
+              fontSize={11}
+              fontWeight="bold"
+              fontFamily="Arial, sans-serif"
+              textAnchor="middle"
+            >
+              {entryPrice.toFixed(priceDecimals)}
+            </text>
+          </g>
+        </g>
+      )}
+
+      {/* =========================================================================
+          4. DYNAMIC CLICK & DRAG PREVIEW (Live PnL Readout while Dragging, Requirement #2)
+         ========================================================================= */}
+      {activeDrag !== null && (
+        <g className="active-drag-preview pointer-events-none">
+          {/* Dynamic Drag Horizontal Line */}
+          <line
+            x1={0}
+            y1={activeDrag.currentY}
+            x2={lineEndX}
+            y2={activeDrag.currentY}
+            stroke={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+            strokeWidth={1.75}
+            strokeDasharray="4 2"
+          />
+
+          {/* Dynamic Drag Pill with Real-Time PnL Readout */}
+          <g transform={`translate(${lineEndX - 180}, ${activeDrag.currentY - 12})`}>
+            <rect
+              x={0}
+              y={0}
+              width={170}
+              height={24}
+              rx={5}
+              fill="#0b111e"
+              stroke={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+              strokeWidth={1.5}
+              className="drop-shadow-xl"
+            />
+            {/* Color Badge */}
+            <rect
+              x={0}
+              y={0}
+              width={40}
+              height={24}
+              rx={5}
+              fill={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+            />
+            <rect
+              x={35}
+              y={0}
+              width={5}
+              height={24}
+              fill={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+            />
+            <text
+              x={20}
+              y={16}
+              fill="#ffffff"
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
@@ -523,75 +711,53 @@ export const BacktestPositionOverlay: React.FC<BacktestPositionOverlayProps> = (
               {quantity}
             </text>
 
-            {/* Divider 1 */}
-            <line x1={26} y1={4} x2={26} y2={20} stroke="#2563eb" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 2: Dynamic Live Floating P&L */}
+            {/* Real-time Dynamic PnL Reading */}
             <text
-              x={78}
+              x={95}
               y={16}
-              fill={isPnlPositive ? '#2563eb' : '#f43f5e'}
+              fill={activeDrag.targetType === 'TP' ? '#34d399' : '#f87171'}
               fontSize={11}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
               textAnchor="middle"
             >
-              {livePnlFormatted}
+              {getDragPnlFormatted(activeDrag.currentPrice, activeDrag.targetType === 'TP')}
             </text>
 
-            {/* Divider 2 */}
-            <line x1={118} y1={4} x2={118} y2={20} stroke="#2563eb" strokeOpacity={0.4} strokeWidth={1} />
-
-            {/* Segment 3: Instant Close Button (X) */}
-            <g
-              transform="translate(129, 12)"
-              className="cursor-pointer group"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClosePosition();
-              }}
-            >
-              <title>Close Position at Market Price</title>
-              <circle cx={0} cy={0} r={8} fill="transparent" className="hover:fill-red-500/20" />
-              <path
-                d="M-3.5 -3.5 L3.5 3.5 M3.5 -3.5 L-3.5 3.5"
-                stroke={isDark ? '#93c5fd' : '#2563eb'}
-                strokeWidth={1.75}
-                strokeLinecap="round"
-                className="group-hover:stroke-red-500 transition-colors"
-              />
-            </g>
-          </g>
-
-          {/* Blue Circular Dot Connection */}
-          <circle
-            cx={lineEndX}
-            cy={entryY}
-            r={3.5}
-            fill="#2563eb"
-            className="pointer-events-none"
-          />
-
-          {/* Entry Price Scale Badge on Right Axis */}
-          <g transform={`translate(${lineEndX}, ${entryY - 10})`} className="pointer-events-none">
-            <rect
-              x={0}
-              y={0}
-              width={priceAxisWidth}
-              height={20}
-              fill="#2563eb"
-              className="drop-shadow-sm"
-            />
+            {/* Mode Indicator Tag */}
             <text
-              x={priceAxisWidth / 2}
-              y={14}
-              fill="#ffffff"
-              fontSize={10.5}
+              x={152}
+              y={15}
+              fill={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+              fontSize={9}
               fontWeight="bold"
               fontFamily="Arial, sans-serif"
               textAnchor="middle"
             >
-              {entryPrice.toFixed(priceDecimals)}
+              {activeDrag.targetType}
+            </text>
+          </g>
+
+          {/* Dynamic Price Scale Tag on Right Axis */}
+          <g transform={`translate(${lineEndX}, ${activeDrag.currentY - 11})`}>
+            <rect
+              x={0}
+              y={0}
+              width={priceAxisWidth}
+              height={22}
+              fill={activeDrag.targetType === 'TP' ? '#089981' : '#f23645'}
+              className="drop-shadow-lg"
+            />
+            <text
+              x={priceAxisWidth / 2}
+              y={15}
+              fill="#ffffff"
+              fontSize={11}
+              fontWeight="bold"
+              fontFamily="Arial, sans-serif"
+              textAnchor="middle"
+            >
+              {activeDrag.currentPrice.toFixed(priceDecimals)}
             </text>
           </g>
         </g>

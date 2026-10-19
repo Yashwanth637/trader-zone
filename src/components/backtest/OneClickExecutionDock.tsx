@@ -71,8 +71,8 @@ export const OneClickExecutionDock: React.FC<OneClickExecutionDockProps> = ({
   const [lotSize, setLotSize] = useState<number>(1);
   const [isPresetsOpen, setIsPresetsOpen] = useState<boolean>(false);
 
-  // Preset rules for SL & TP
-  const [usePresets, setUsePresets] = useState<boolean>(true);
+  // Preset rules for SL & TP (disabled by default as requested: user manually sets TP & SL)
+  const [usePresets, setUsePresets] = useState<boolean>(false);
   const [slPips, setSlPips] = useState<number>(30); // 30 pips
   const [tpRatio, setTpRatio] = useState<number>(2.0); // 1:2 RR
 

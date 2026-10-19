@@ -173,6 +173,49 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
     chart.timeScale().subscribeVisibleTimeRangeChange(handleRangeChange);
 
+    // Continuous 60/120fps sync loop during active chart dragging (eliminates delayed movement - Requirement #4)
+    let isDragging = false;
+    let animId: number | null = null;
+
+    const continuousSync = () => {
+      setRangeTick(t => (t + 1) % 1000000);
+      if (isDragging) {
+        animId = requestAnimationFrame(continuousSync);
+      }
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.tradingview-position-overlay, .tradingview-drawing-overlay')) {
+        return;
+      }
+      isDragging = true;
+      if (animId !== null) cancelAnimationFrame(animId);
+      animId = requestAnimationFrame(continuousSync);
+    };
+
+    const handlePointerUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        if (animId !== null) {
+          cancelAnimationFrame(animId);
+          animId = null;
+        }
+        setRangeTick(t => (t + 1) % 1000000);
+      }
+    };
+
+    const handleWheelPan = () => {
+      setRangeTick(t => (t + 1) % 1000000);
+    };
+
+    const chartEl = containerRef.current;
+    if (chartEl) {
+      chartEl.addEventListener('pointerdown', handlePointerDown);
+      window.addEventListener('pointerup', handlePointerUp);
+      chartEl.addEventListener('wheel', handleWheelPan, { passive: true });
+    }
+
     const updateSize = () => {
       if (containerRef.current) {
         const w = containerRef.current.clientWidth;
@@ -190,6 +233,12 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleRangeChange);
       if (rafId !== null) cancelAnimationFrame(rafId);
+      if (chartEl) {
+        chartEl.removeEventListener('pointerdown', handlePointerDown);
+        chartEl.removeEventListener('wheel', handleWheelPan);
+      }
+      window.removeEventListener('pointerup', handlePointerUp);
+      if (animId !== null) cancelAnimationFrame(animId);
       observer.disconnect();
       chart.remove();
     };
@@ -324,7 +373,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
     }
   }, [candles, currentIndex]);
 
-  // Update Static Entry Price Line on Chart Axis
+  // Clean up any old static Price Lines on Chart Axis to avoid clashing with Image 1 position overlay
   useEffect(() => {
     if (!seriesRef.current) return;
 
@@ -334,21 +383,6 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
       } catch (e) {}
     });
     priceLinesRef.current = [];
-
-    const series = seriesRef.current;
-
-    // Draw Entry reference line
-    if (openPosition) {
-      const entryLine = series.createPriceLine({
-        price: openPosition.entryPrice,
-        color: '#38bdf8',
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `ENTRY: ${openPosition.entryPrice}`
-      });
-      priceLinesRef.current.push(entryLine);
-    }
   }, [openPosition]);
 
   // Set default initial cut line position when isCutMode is activated
@@ -512,25 +546,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
 
   const currentCandle = candles[currentIndex] || candles[candles.length - 1] || null;
 
-  const handleQuickAddTp = useCallback(() => {
-    if (!openPosition || !onModifyPosition) return;
-    const curP = currentCandle?.close || openPosition.entryPrice;
-    const delta = Math.abs(openPosition.entryPrice * 0.005);
-    const newTp = openPosition.side === 'BUY'
-      ? +(curP + delta).toFixed(2)
-      : +(curP - delta).toFixed(2);
-    onModifyPosition({ takeProfit: newTp });
-  }, [openPosition, currentCandle, onModifyPosition]);
 
-  const handleQuickAddSl = useCallback(() => {
-    if (!openPosition || !onModifyPosition) return;
-    const curP = currentCandle?.close || openPosition.entryPrice;
-    const delta = Math.abs(openPosition.entryPrice * 0.003);
-    const newSl = openPosition.side === 'BUY'
-      ? +(curP - delta).toFixed(2)
-      : +(curP + delta).toFixed(2);
-    onModifyPosition({ stopLoss: newSl });
-  }, [openPosition, currentCandle, onModifyPosition]);
 
   return (
     <div
@@ -682,7 +698,7 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         </svg>
       )}
 
-      {/* Item 1: FX Replay-style Solid Blue Entry, Dashed Amber SL, Dashed Green TP with Draggable Interactive Pills */}
+      {/* Exact Image 1 Style: Solid Blue Entry, Solid Teal TP, Solid Red SL with Draggable Interactive Pills */}
       <BacktestPositionOverlay
         openPosition={openPosition}
         currentCandle={currentCandle}
@@ -693,8 +709,6 @@ export const BacktestChart: React.FC<BacktestChartProps> = ({
         symbol={symbol}
         onClosePosition={onClosePosition || (() => {})}
         onModifyPosition={onModifyPosition || (() => {})}
-        onQuickAddTp={handleQuickAddTp}
-        onQuickAddSl={handleQuickAddSl}
       />
 
       {/* Moveable Pending Limit Orders */}

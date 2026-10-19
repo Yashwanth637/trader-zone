@@ -26,10 +26,16 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle2,
-  PenTool
+  PenTool,
+  SlidersHorizontal
 } from 'lucide-react';
 
 export const BacktestStudio: React.FC = () => {
+  // Order Panel Collapsible State (Organized without cart methodology)
+  const [isOrderPanelOpen, setIsOrderPanelOpen] = useState<boolean>(() => {
+    return localStorage.getItem('tz_backtest_order_panel') === 'true';
+  });
+
   // Strategy & Asset State (Persisted across tab/page switches)
   const [strategyName, setStrategyName] = useState<string>(() => {
     return localStorage.getItem('tz_backtest_strategy') || 'ICT Silver Bullet';
@@ -683,11 +689,32 @@ export const BacktestStudio: React.FC = () => {
 
         {/* Right Action Icons */}
         <div className="flex items-center gap-2 self-end lg:self-auto">
+          {/* Order Panel Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOrderPanelOpen(prev => {
+                const next = !prev;
+                localStorage.setItem('tz_backtest_order_panel', String(next));
+                return next;
+              });
+            }}
+            title={isOrderPanelOpen ? 'Hide Order Panel' : 'Show Order Panel'}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              isOrderPanelOpen
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-surface hover:bg-surface-elevated text-muted hover:text-foreground border-border/40 dark:border-white/[0.08]'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Order Panel</span>
+          </button>
+
           <button
             type="button"
             onClick={() => loadMarketData()}
             title="Reload Real Market Historical Data"
-            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors"
+            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-primary' : ''}`} />
           </button>
@@ -696,21 +723,21 @@ export const BacktestStudio: React.FC = () => {
             type="button"
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors"
+            className="p-2 rounded-xl text-muted hover:text-foreground bg-surface hover:bg-surface-elevated border border-border/40 dark:border-white/[0.08] transition-colors cursor-pointer"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Main Workspace (Chart + Drawing Toolbar + Order Panel) */}
-      <div className={`grid gap-4 items-start ${
+      {/* Main Workspace (Chart + Drawing Toolbar + Optional Docked Order Panel) */}
+      <div className={`flex w-full gap-4 items-stretch ${
         isFullscreen
-          ? 'grid-cols-1 flex-1 h-[calc(100vh-120px)] min-h-0'
-          : 'grid-cols-1 lg:grid-cols-4'
+          ? 'flex-1 h-[calc(100vh-120px)] min-h-0'
+          : 'min-h-[660px]'
       }`}>
-        {/* Chart Column (Takes full width in fullscreen, 3 cols otherwise) */}
-        <div className={`${isFullscreen ? 'col-span-1 h-full' : 'lg:col-span-3'} flex flex-col space-y-3`}>
+        {/* Chart Column (Takes 100% full width when panel is closed, flex-1 when open) */}
+        <div className="flex-1 flex flex-col space-y-3 min-w-0 h-full">
           {loading ? (
             <div className={`w-full rounded-2xl border border-border/40 dark:border-white/[0.08] bg-surface flex flex-col items-center justify-center space-y-3 ${
               isFullscreen ? 'flex-1 h-full' : 'h-[540px]'
@@ -837,9 +864,9 @@ export const BacktestStudio: React.FC = () => {
           )}
         </div>
 
-        {/* Order Execution & Sizing Panel Column (1 col) - Hidden in Fullscreen (Item 3 & Image 2) */}
-        {!isFullscreen && (
-          <div className="lg:col-span-1 h-full">
+        {/* Docked Order Execution Panel (Collapsible, Flush Terminal Layout without Cart Methodology) */}
+        {isOrderPanelOpen && !isFullscreen && (
+          <div className="w-80 shrink-0 h-full animate-in fade-in slide-in-from-right-4 duration-200">
             <BacktestOrderPanel
               currentCandle={currentCandle}
               virtualBalance={engineState.virtualBalance}
@@ -853,6 +880,10 @@ export const BacktestStudio: React.FC = () => {
               onResetCapital={handleResetCapital}
               symbol={selectedAssetId}
               presetOrderParams={presetOrderParams}
+              onClosePanel={() => {
+                setIsOrderPanelOpen(false);
+                localStorage.setItem('tz_backtest_order_panel', 'false');
+              }}
             />
           </div>
         )}
