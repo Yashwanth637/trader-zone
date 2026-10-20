@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
+import { PropFirmCsvImportModal } from '../components/trades/PropFirmCsvImportModal';
 import { DeltaStorage } from '../lib/deltaIndiaApi';
 import { TradingAccount } from '../types/trade';
 import { PROP_FIRMS, LIVE_BROKERS, PROP_FIRM_VALUATION_TIERS } from '../lib/propFirmRules';
@@ -28,7 +29,11 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
   const [modalOpen, setModalOpen] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [mt5ModalOpen, setMt5ModalOpen] = useState(false);
+  const [propFirmModalOpen, setPropFirmModalOpen] = useState(false);
   const [editBalanceModalOpen, setEditBalanceModalOpen] = useState(false);
+
+  const activeAccount = accounts.find(a => a.id === activeAccountId);
+  const isPropFirm = Boolean(activeAccount && (activeAccount.type === 'Prop Firm' || activeAccount.propFirmData));
   const [editingAccount, setEditingAccount] = useState<TradingAccount | null>(null);
   const [newStartingBalance, setNewStartingBalance] = useState('');
   const [cleanNotification, setCleanNotification] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
@@ -132,17 +137,30 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
           >
             Deduplicate
           </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            icon={<Zap className="w-4 h-4 text-amber-300" />}
-            onClick={() => setMt5ModalOpen(true)}
-          >
-            Import MT5 CSV
-          </Button>
-          <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
-            Import Delta CSV
-          </Button>
+          {isPropFirm ? (
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Upload className="w-4 h-4 text-purple-300" />}
+              onClick={() => setPropFirmModalOpen(true)}
+            >
+              Import {activeAccount?.propFirmData?.firmName || activeAccount?.broker || 'Prop Firm'} CSV
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<Zap className="w-4 h-4 text-amber-300" />}
+                onClick={() => setMt5ModalOpen(true)}
+              >
+                Import MT5 CSV
+              </Button>
+              <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
+                Import Delta CSV
+              </Button>
+            </>
+          )}
           <Button size="sm" variant="outline" icon={<Plus className="w-4 h-4" />} onClick={() => setModalOpen(true)}>
             Add Account
           </Button>
@@ -417,6 +435,16 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
         <DeltaSyncModal
           isOpen={deltaModalOpen}
           onClose={() => setDeltaModalOpen(false)}
+        />
+      )}
+
+      {/* Prop Firm CSV Import Modal */}
+      {propFirmModalOpen && (
+        <PropFirmCsvImportModal
+          isOpen={propFirmModalOpen}
+          onClose={() => setPropFirmModalOpen(false)}
+          defaultAccountId={activeAccount?.id}
+          defaultStage={activeAccount?.propFirmData?.currentStage}
         />
       )}
 

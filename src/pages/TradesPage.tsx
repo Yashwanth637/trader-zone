@@ -35,13 +35,6 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const [mt5ModalOpen, setMt5ModalOpen] = useState(false);
   const [propFirmModalOpen, setPropFirmModalOpen] = useState(false);
 
-  // Detect active or created prop firm account
-  const activeAccount = accounts.find(a => a.id === activeAccountId);
-  const isCurrentActiveProp = activeAccount?.type === 'Prop Firm' || Boolean(activeAccount?.propFirmData);
-  const propFirmAccount = isCurrentActiveProp 
-    ? activeAccount 
-    : accounts.find(a => a.type === 'Prop Firm' || Boolean(a.propFirmData));
-
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
@@ -50,6 +43,11 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const [accountFilter, setAccountFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
+
+  // Dynamically determine whether the active account is a Prop Firm or Live Personal account
+  const activeAccount = accounts.find(a => a.id === activeAccountId);
+  const currentAccount = activeAccount || (accountFilter !== 'ALL' ? accounts.find(a => a.id === accountFilter) : undefined);
+  const isPropFirm = Boolean(currentAccount && (currentAccount.type === 'Prop Firm' || currentAccount.propFirmData));
 
   // Close Trade Modal state
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
@@ -124,14 +122,14 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         </div>
 
         <div className="flex items-center gap-3">
-          {propFirmAccount ? (
+          {isPropFirm && currentAccount ? (
             <Button
               size="sm"
               variant="outline"
               icon={<Upload className="w-4 h-4 text-purple-400" />}
               onClick={() => setPropFirmModalOpen(true)}
             >
-              Import {propFirmAccount.propFirmData?.firmName || propFirmAccount.broker || 'Prop Firm'} CSV
+              Import {currentAccount.propFirmData?.firmName || currentAccount.broker || 'Prop Firm'} CSV
             </Button>
           ) : (
             <>
@@ -518,8 +516,8 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         <PropFirmCsvImportModal
           isOpen={propFirmModalOpen}
           onClose={() => setPropFirmModalOpen(false)}
-          defaultAccountId={propFirmAccount?.id}
-          defaultStage={propFirmAccount?.propFirmData?.currentStage}
+          defaultAccountId={currentAccount?.id}
+          defaultStage={currentAccount?.propFirmData?.currentStage}
         />
       )}
 
