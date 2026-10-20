@@ -21,6 +21,7 @@ import {
   PlusCircle,
   MinusCircle
 } from 'lucide-react';
+import { PropFirmAccountPortal } from '../components/broker/PropFirmAccountPortal';
 
 export const AccountDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +33,8 @@ export const AccountDetailPage: React.FC = () => {
     addTransaction,
     deleteTransaction,
     activeAccountId,
-    setActiveAccountId
+    setActiveAccountId,
+    advancePropStage
   } = useTrading();
 
   // Find target account
@@ -70,6 +72,20 @@ export const AccountDetailPage: React.FC = () => {
   }
 
   const isActive = activeAccountId === account.id;
+
+  // Render Prop Firm Multi-Stage Portal if account is a Prop Firm
+  if (account.type === 'Prop Firm' || account.propFirmData) {
+    return (
+      <PropFirmAccountPortal
+        account={account}
+        trades={trades}
+        onAdvanceStage={advancePropStage}
+        onBack={() => navigate('/broker-hub')}
+        isActive={isActive}
+        onSetActive={() => setActiveAccountId(account.id)}
+      />
+    );
+  }
 
   // Filter transactions for this account
   const accountTransactions = transactions.filter(tx => tx.accountId === account.id);

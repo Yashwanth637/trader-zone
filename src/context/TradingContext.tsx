@@ -14,6 +14,7 @@ import {
   getCurrencySymbol,
   DEFAULT_EXCHANGE_RATES
 } from '../lib/currencyService';
+import { initializePropFirmData } from '../lib/propFirmRules';
 
 interface TradingContextType {
   trades: Trade[];
@@ -56,6 +57,7 @@ interface TradingContextType {
   addAccount: (account: Omit<TradingAccount, 'id' | 'createdAt'>) => TradingAccount;
   updateAccount: (id: string, updates: Partial<TradingAccount>) => void;
   deleteAccount: (id: string) => void;
+  advancePropStage: (accountId: string) => void;
 
   // Transactions (Deposits & Withdrawals)
   transactions: AccountTransaction[];
@@ -347,8 +349,12 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Actions
   const addTrade = (tradeData: Omit<Trade, 'id'>): Trade => {
     const targetAccountId = tradeData.accountId || (activeAccountId !== 'all' ? activeAccountId : (accounts[0]?.id || 'acc-1'));
+    const targetAcc = accounts.find(a => a.id === targetAccountId);
+    const propStage = tradeData.propStage || (targetAcc?.propFirmData?.currentStage);
+
     const newTrade: Trade = {
       ...tradeData,
+      propStage,
       id: `trade-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       accountId: targetAccountId
     };
@@ -412,13 +418,69 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addAccount = (accData: Omit<TradingAccount, 'id' | 'createdAt'>): TradingAccount => {
+    const initialBal = accData.initialBalance || 10000;
+    const propFirmData = accData.type === 'Prop Firm'
+      ? (accData.propFirmData || initializePropFirmData((accData.broker as any) || 'Funded Room', initialBal))
+      : undefined;
+
     const newAcc: TradingAccount = {
       ...accData,
+      propFirmData,
       id: `acc-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
     setAccounts(prev => [...prev, newAcc]);
     return newAcc;
+  };
+
+  const advancePropStage = (accountId: string) => {
+    setAccounts(prev => prev.map(acc => {
+      if (acc.id !== accountId || !acc.propFirmData) return acc;
+      const current = acc.propFirmData.currentStage;
+      const nowStr = new Date().toISOString();
+      const updatedStages = { ...acc.propFirmData.stages };
+
+      if (current === 'stage1') {
+        updatedStages.stage1 = {
+          ...updatedStages.stage1,
+          status: 'PASSED',
+          completedAt: nowStr
+        };
+        updatedStages.stage2 = {
+          ...updatedStages.stage2,
+          status: 'IN_PROGRESS',
+          startedAt: nowStr
+        };
+        return {
+          ...acc,
+          propFirmData: {
+            ...acc.propFirmData,
+            currentStage: 'stage2' as const,
+            stages: updatedStages
+          }
+        };
+      } else if (current === 'stage2') {
+        updatedStages.stage2 = {
+          ...updatedStages.stage2,
+          status: 'PASSED',
+          completedAt: nowStr
+        };
+        updatedStages.funded = {
+          ...updatedStages.funded,
+          status: 'IN_PROGRESS',
+          startedAt: nowStr
+        };
+        return {
+          ...acc,
+          propFirmData: {
+            ...acc.propFirmData,
+            currentStage: 'funded' as const,
+            stages: updatedStages
+          }
+        };
+      }
+      return acc;
+    }));
   };
 
   const updateAccount = (id: string, updates: Partial<TradingAccount>) => {
@@ -599,6 +661,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addAccount,
         updateAccount,
         deleteAccount,
+        advancePropStage,
         transactions,
         addTransaction,
         deleteTransaction,

@@ -15,6 +15,7 @@ import { TradingActivityCard } from '../components/dashboard/TradingActivityCard
 import { AnalyticsOverviewGrid } from '../components/dashboard/AnalyticsOverviewGrid';
 import { CoreMetricsRow } from '../components/dashboard/CoreMetricsRow';
 import { TraderszoneAICard } from '../components/dashboard/TraderszoneAICard';
+import { PropFirmObjectivesTracker } from '../components/dashboard/PropFirmObjectivesTracker';
 import {
   DollarSign,
   Percent,
@@ -111,6 +112,14 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
           ))}
         </div>
       </div>
+
+      {/* Prop Firm Image 3 Confluences / Objectives Tracker (Only when active account is Prop Firm) */}
+      {activeAccount && activeAccount.type === 'Prop Firm' && (
+        <PropFirmObjectivesTracker
+          account={activeAccount}
+          trades={accountTrades}
+        />
+      )}
 
       {/* Hero Metrics Banner (Image 1 Design with Swapped Total P&L / Today's P&L and Vending Counter) */}
       <HeroMetricsBanner

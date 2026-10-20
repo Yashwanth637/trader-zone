@@ -20,6 +20,7 @@ import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
 import { DeltaStorage } from '../lib/deltaIndiaApi';
 import { TradingAccount } from '../types/trade';
+import { PROP_FIRMS, LIVE_BROKERS, PROP_FIRM_VALUATION_TIERS } from '../lib/propFirmRules';
 
 export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpenCsvImport }) => {
   const navigate = useNavigate();
@@ -33,10 +34,23 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
   const [cleanNotification, setCleanNotification] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
 
   const [accName, setAccName] = useState('');
-  const [broker, setBroker] = useState('Delta Exchange India');
-  const [accType, setAccType] = useState<'Prop Firm' | 'Live' | 'Demo' | 'Challenge'>('Live');
-  const [balance, setBalance] = useState('100000');
+  const [broker, setBroker] = useState('Funded Room');
+  const [accType, setAccType] = useState<'Prop Firm' | 'Live' | 'Demo' | 'Challenge'>('Prop Firm');
+  const [balance, setBalance] = useState('5000');
   const [currency, setCurrency] = useState('USD');
+
+  const handleTypeChange = (newType: 'Prop Firm' | 'Live' | 'Demo' | 'Challenge') => {
+    setAccType(newType);
+    if (newType === 'Prop Firm') {
+      setBroker('Funded Room');
+      setBalance('5000');
+      setAccName('Funded Room $5,000');
+    } else {
+      setBroker('Delta Exchange India');
+      setBalance('100000');
+      setAccName('Live Personal Account');
+    }
+  };
 
   const handleCleanDuplicates = () => {
     const removed = cleanDuplicateTrades();
@@ -59,18 +73,19 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!accName.trim()) return;
+    const initialBal = parseFloat(balance) || (accType === 'Prop Firm' ? 5000 : 10000);
     const newAcc = addAccount({
       name: accName,
       broker,
       type: accType,
       currency,
-      initialBalance: parseFloat(balance) || 10000,
-      currentBalance: parseFloat(balance) || 10000,
+      initialBalance: initialBal,
+      currentBalance: initialBal,
       isDefault: accounts.length === 0
     });
     setActiveAccountId(newAcc.id);
-    setAccName('');
-    setBalance('100000');
+    setAccName(accType === 'Prop Firm' ? 'Funded Room $5,000' : '');
+    setBalance(accType === 'Prop Firm' ? '5000' : '100000');
     setModalOpen(false);
   };
 
@@ -167,7 +182,7 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                     <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                       {acc.name}
                       <span className="text-[10px] text-primary/70 font-normal hidden sm:inline-block group-hover:translate-x-0.5 transition-transform">
-                        (Deposit / Withdraw →)
+                        {acc.type === 'Prop Firm' ? '(Evaluation Portal →)' : '(Deposit / Withdraw →)'}
                       </span>
                     </h3>
                     {isActive && (
@@ -176,8 +191,19 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-muted mt-0.5">
-                    {acc.broker} · <span className="font-semibold text-foreground">{acc.type}</span>
+                  <div className="text-xs text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>{acc.broker}</span>
+                    <span>·</span>
+                    <span className="font-semibold text-foreground">{acc.type}</span>
+                    {acc.type === 'Prop Firm' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                        {acc.propFirmData?.currentStage === 'stage2'
+                          ? 'STAGE 2 (PHASE 2)'
+                          : acc.propFirmData?.currentStage === 'funded'
+                          ? 'FUNDED STAGE'
+                          : 'STAGE 1 (PHASE 1)'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -212,14 +238,18 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
 
               <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-surface border border-border">
                 <div>
-                  <span className="text-[10px] text-muted uppercase font-bold">Current Balance</span>
+                  <span className="text-[10px] text-muted uppercase font-bold">
+                    {acc.type === 'Prop Firm' ? 'Virtual Equity' : 'Current Balance'}
+                  </span>
                   <div className="text-xl font-black text-foreground font-mono mt-0.5">
                     {formatCurrency(acc.currentBalance)}
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted uppercase font-bold">Initial Balance</span>
+                    <span className="text-[10px] text-muted uppercase font-bold">
+                      {acc.type === 'Prop Firm' ? 'Base Valuation' : 'Initial Balance'}
+                    </span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -268,36 +298,76 @@ export const BrokerHubPage: React.FC<{ onOpenCsvImport: () => void }> = ({ onOpe
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Broker Platform</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Account Type</label>
                 <select
-                  value={broker}
-                  onChange={e => setBroker(e.target.value)}
+                  value={accType}
+                  onChange={e => handleTypeChange(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="Delta Exchange India">Delta Exchange India</option>
-                  <option value="MetaTrader 5">MetaTrader 5</option>
-                  <option value="MetaTrader 4">MetaTrader 4</option>
-                  <option value="Exness">Exness</option>
-                  <option value="Vantage">Vantage</option>
-                  <option value="XM Global">XM Global</option>
-                  <option value="Binance">Binance</option>
+                  <option value="Live">Live Personal</option>
+                  <option value="Prop Firm">Prop Firm</option>
+                  <option value="Challenge">Evaluation Challenge</option>
+                  <option value="Demo">Demo</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Account Type</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  {accType === 'Prop Firm' ? 'Prop Firm Platform' : 'Broker Platform'}
+                </label>
                 <select
-                  value={accType}
-                  onChange={e => setAccType(e.target.value as any)}
+                  value={broker}
+                  onChange={e => {
+                    const newBroker = e.target.value;
+                    setBroker(newBroker);
+                    if (accType === 'Prop Firm') {
+                      const tier = PROP_FIRM_VALUATION_TIERS.find(t => t.value.toString() === balance);
+                      setAccName(`${newBroker} ${tier ? tier.label : '$' + balance}`);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-foreground text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="Prop Firm">Prop Firm</option>
-                  <option value="Challenge">Evaluation Challenge</option>
-                  <option value="Live">Live Personal</option>
-                  <option value="Demo">Demo</option>
+                  {accType === 'Prop Firm' ? (
+                    PROP_FIRMS.map(firm => (
+                      <option key={firm} value={firm}>{firm}</option>
+                    ))
+                  ) : (
+                    LIVE_BROKERS.map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
+
+            {/* Account Valuation Tiers for Prop Firm */}
+            {accType === 'Prop Firm' && (
+              <div className="p-3 rounded-xl bg-surface-card border border-border/80 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground">Select Account Valuation Tier</span>
+                  <span className="text-[10px] text-muted">2-Step Evaluation</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-1">
+                  {PROP_FIRM_VALUATION_TIERS.map(tier => (
+                    <button
+                      key={tier.value}
+                      type="button"
+                      onClick={() => {
+                        setBalance(tier.value.toString());
+                        setAccName(`${broker} ${tier.label}`);
+                      }}
+                      className={`py-1.5 px-2 text-xs font-mono font-bold rounded-xl border transition-all cursor-pointer ${
+                        balance === tier.value.toString()
+                          ? 'bg-primary text-white border-primary shadow-sm shadow-primary/25'
+                          : 'bg-surface border-border text-muted hover:text-foreground hover:border-primary/50'
+                      }`}
+                    >
+                      {tier.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

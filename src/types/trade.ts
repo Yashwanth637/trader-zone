@@ -53,6 +53,9 @@ export interface Trade {
   pips?: number;
   returnPercentage?: number;
   
+  // Prop firm evaluation stage
+  propStage?: PropStage;
+  
   // Risk & Setup
   plannedRiskUsd?: number;
   plannedRR?: number;
@@ -74,6 +77,27 @@ export interface Trade {
   chartAfterUrl?: string;
 }
 
+export type PropFirmName = 'Funded Room' | 'Funded Firm' | 'Funding Pips';
+export type PropStage = 'stage1' | 'stage2' | 'funded';
+
+export interface PropStageState {
+  status: 'LOCKED' | 'IN_PROGRESS' | 'PASSED' | 'FAILED';
+  startedAt?: string;
+  completedAt?: string;
+  startingBalance: number;
+}
+
+export interface PropFirmAccountData {
+  firmName: PropFirmName;
+  currentStage: PropStage;
+  accountTier: number; // 2500, 5000, 10000, 25000, 50000, 100000
+  stages: {
+    stage1: PropStageState;
+    stage2: PropStageState;
+    funded: PropStageState;
+  };
+}
+
 export interface TradingAccount {
   id: string;
   name: string;
@@ -87,6 +111,7 @@ export interface TradingAccount {
   mt5Login?: string;
   mt5Server?: string;
   lastSynced?: string;
+  propFirmData?: PropFirmAccountData;
 }
 
 export interface TradingStrategy {
