@@ -3,6 +3,7 @@ import { TradingAccount, Trade, PropStage } from '../../types/trade';
 import { calculatePropStageMetrics, PropStageMetrics, FUNDED_ROOM_RULES } from '../../lib/propFirmRules';
 import { formatCurrency, sortTradesDescending } from '../../lib/calculations';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import {
   ArrowLeft,
   Award,
@@ -41,6 +42,7 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
 }) => {
   const activeStage: PropStage = account.propFirmData?.currentStage || 'stage1';
   const [selectedStage, setSelectedStage] = useState<PropStage>(activeStage);
+  const [manualCompleteModalOpen, setManualCompleteModalOpen] = useState(false);
 
   // Synchronize with active stage if changed
   React.useEffect(() => {
@@ -171,25 +173,37 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
           </div>
         </div>
 
-        {/* Current Active Stage Badge */}
-        <div className="flex items-center gap-2">
-          <div className="p-3 rounded-2xl bg-surface border border-border/80 flex items-center gap-3 shadow-sm">
+        {/* Current Active Stage Badge & Mark Complete Action (Requirement 5) */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {activeStage !== 'funded' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-bold"
+              icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              onClick={() => setManualCompleteModalOpen(true)}
+            >
+              Mark {activeStage === 'stage1' ? 'Phase 1' : 'Phase 2'} as Completed
+            </Button>
+          )}
+
+          <div className="p-2.5 sm:p-3 rounded-2xl bg-surface border border-border/80 flex items-center gap-3 shadow-sm">
             <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
               <Layers className="w-4 h-4" />
             </div>
             <div>
               <div className="text-[10px] font-bold uppercase text-muted">Current Active Phase</div>
               <div className="text-xs font-black text-foreground uppercase tracking-wide">
-                {activeStage === 'stage1' ? 'Stage 1 (Phase 1)' : activeStage === 'stage2' ? 'Stage 2 (Phase 2)' : 'Funded Stage'}
+                {activeStage === 'stage1' ? 'Phase 1' : activeStage === 'stage2' ? 'Phase 2' : 'Funded Stage'}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3-Stage Tab Navigation Bar (Requirement 2 & 4) */}
+      {/* 3-Stage Tab Navigation Bar (Requirement 4: Phase 1, Phase 2, Funded Stage) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-1.5 rounded-2xl bg-surface border border-border/80 shadow-sm">
-        {/* Tab 1: Stage 1 */}
+        {/* Tab 1: Phase 1 */}
         <button
           type="button"
           onClick={() => setSelectedStage('stage1')}
@@ -199,23 +213,18 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
               : 'border-transparent text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider">Stage 1: Phase 1</span>
-              {getTabStatus('stage1') === 'PASSED' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  PASSED
-                </span>
-              )}
-              {getTabStatus('stage1') === 'ACTIVE' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] text-muted">
-              8% Profit Target · Min 5 Days
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider">Phase 1</span>
+            {getTabStatus('stage1') === 'PASSED' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                PASSED
+              </span>
+            )}
+            {getTabStatus('stage1') === 'ACTIVE' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                ACTIVE
+              </span>
+            )}
           </div>
           {getTabStatus('stage1') === 'PASSED' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -224,7 +233,7 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
           )}
         </button>
 
-        {/* Tab 2: Stage 2 */}
+        {/* Tab 2: Phase 2 */}
         <button
           type="button"
           onClick={() => setSelectedStage('stage2')}
@@ -234,28 +243,23 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
               : 'border-transparent text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider">Stage 2: Phase 2</span>
-              {getTabStatus('stage2') === 'PASSED' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  PASSED
-                </span>
-              )}
-              {getTabStatus('stage2') === 'ACTIVE' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                  ACTIVE
-                </span>
-              )}
-              {getTabStatus('stage2') === 'LOCKED' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-muted/15 text-muted border border-border">
-                  LOCKED
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] text-muted">
-              5% Profit Target · Min 5 Days
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider">Phase 2</span>
+            {getTabStatus('stage2') === 'PASSED' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                PASSED
+              </span>
+            )}
+            {getTabStatus('stage2') === 'ACTIVE' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                ACTIVE
+              </span>
+            )}
+            {getTabStatus('stage2') === 'LOCKED' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted/15 text-muted border border-border">
+                LOCKED
+              </span>
+            )}
           </div>
           {getTabStatus('stage2') === 'PASSED' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -276,23 +280,18 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
               : 'border-transparent text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider">Funded Stage</span>
-              {getTabStatus('funded') === 'ACTIVE' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  FUNDED
-                </span>
-              )}
-              {getTabStatus('funded') === 'LOCKED' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-muted/15 text-muted border border-border">
-                  LOCKED
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] text-muted">
-              Profit Split & Payouts · 6% Max DD
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider">Funded Stage</span>
+            {getTabStatus('funded') === 'ACTIVE' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                FUNDED
+              </span>
+            )}
+            {getTabStatus('funded') === 'LOCKED' && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted/15 text-muted border border-border">
+                LOCKED
+              </span>
+            )}
           </div>
           {getTabStatus('funded') === 'ACTIVE' ? (
             <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -394,13 +393,21 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button
-              variant="primary"
+              variant="outline"
               onClick={() => setSelectedStage(activeStage)}
               className="font-bold"
             >
-              Return to Current {activeStage === 'stage1' ? 'Stage 1' : 'Stage 2'}
+              Return to Current {activeStage === 'stage1' ? 'Phase 1' : 'Phase 2'}
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              onClick={() => setManualCompleteModalOpen(true)}
+            >
+              Mark {activeStage === 'stage1' ? 'Phase 1' : 'Phase 2'} as Completed
             </Button>
           </div>
         </div>
@@ -454,162 +461,168 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
             </div>
           )}
 
-          {/* 5 Circular Objectives Tracker Cards (Exact Image 3 Layout) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-            {/* Card 1: Profit Target */}
-            <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
-              {renderCircleProgress(
-                selectedStage === 'funded' ? 100 : selectedStageMetrics.targetDonePercent,
-                selectedStage === 'funded' ? '—' : `${Math.round(selectedStageMetrics.targetDonePercent)}%`,
-                selectedStage === 'funded' ? 'payout' : 'done',
-                selectedStageMetrics.isTargetAchieved ? '#10b981' : '#6366f1'
-              )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-muted">Profit target</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedStage === 'funded' || selectedStageMetrics.isTargetAchieved
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-muted/15 text-muted border border-border'
-                    }`}
-                  >
-                    {selectedStage === 'funded' ? 'Active' : selectedStageMetrics.isTargetAchieved ? 'Complete' : 'In progress'}
-                  </span>
+          {/* 5 Circular Objectives Tracker Cards (2 Rows: 3 in Row 1, 2 in Row 2) */}
+          <div className="space-y-3.5">
+            {/* Row 1: 3 Cards (Profit target, Trading days, Max loss) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Card 1: Profit Target */}
+              <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
+                {renderCircleProgress(
+                  selectedStage === 'funded' ? 100 : selectedStageMetrics.targetDonePercent,
+                  selectedStage === 'funded' ? '—' : `${Math.round(selectedStageMetrics.targetDonePercent)}%`,
+                  selectedStage === 'funded' ? 'payout' : 'done',
+                  selectedStageMetrics.isTargetAchieved ? '#10b981' : '#6366f1'
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-muted">Profit target</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selectedStage === 'funded' || selectedStageMetrics.isTargetAchieved
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-muted/15 text-muted border border-border'
+                      }`}
+                    >
+                      {selectedStage === 'funded' ? 'Active' : selectedStageMetrics.isTargetAchieved ? 'Complete' : 'In progress'}
+                    </span>
+                  </div>
+                  <div className="text-sm font-black text-foreground truncate font-mono">
+                    {selectedStage === 'funded'
+                      ? `${formatCurrency(selectedStageMetrics.realizedPnl)} net`
+                      : selectedStageMetrics.targetRemaining <= 0
+                      ? 'Goal Reached!'
+                      : `${formatCurrency(selectedStageMetrics.targetRemaining)} to go`}
+                  </div>
+                  <div className="text-[11px] text-muted truncate">
+                    {selectedStage === 'funded'
+                      ? 'Profit split / payouts'
+                      : `${formatCurrency(selectedStageMetrics.realizedPnl)} of ${formatCurrency(selectedStageMetrics.targetAmount || 0)} (${selectedStageMetrics.rule.profitTargetPercent}%)`}
+                  </div>
                 </div>
-                <div className="text-sm font-black text-foreground truncate font-mono">
-                  {selectedStage === 'funded'
-                    ? `${formatCurrency(selectedStageMetrics.realizedPnl)} net`
-                    : selectedStageMetrics.targetRemaining <= 0
-                    ? 'Goal Reached!'
-                    : `${formatCurrency(selectedStageMetrics.targetRemaining)} to go`}
+              </div>
+
+              {/* Card 2: Trading Days */}
+              <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
+                {renderCircleProgress(
+                  (selectedStageMetrics.qualifyingDaysCount / selectedStageMetrics.minTradingDays) * 100,
+                  `${selectedStageMetrics.qualifyingDaysCount}/${selectedStageMetrics.minTradingDays}`,
+                  'days',
+                  '#10b981'
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-muted">Trading days</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selectedStageMetrics.isTradingDaysAchieved
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-muted/15 text-muted border border-border'
+                      }`}
+                    >
+                      {selectedStageMetrics.isTradingDaysAchieved ? 'Complete' : 'In progress'}
+                    </span>
+                  </div>
+                  <div className="text-sm font-black text-foreground truncate font-mono">
+                    {selectedStageMetrics.isTradingDaysAchieved
+                      ? 'Complete'
+                      : `${selectedStageMetrics.minTradingDays - selectedStageMetrics.qualifyingDaysCount} Days Left`}
+                  </div>
+                  <div className="text-[11px] text-muted truncate">
+                    Minimum {selectedStageMetrics.minTradingDays} trading days
+                  </div>
                 </div>
-                <div className="text-[11px] text-muted truncate">
-                  {selectedStage === 'funded'
-                    ? 'Profit split / payouts'
-                    : `${formatCurrency(selectedStageMetrics.realizedPnl)} of ${formatCurrency(selectedStageMetrics.targetAmount || 0)} (${selectedStageMetrics.rule.profitTargetPercent}%)`}
+              </div>
+
+              {/* Card 3: Max Loss */}
+              <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
+                {renderCircleProgress(
+                  selectedStageMetrics.maxLossUsedPercent,
+                  `${Math.round(selectedStageMetrics.maxLossUsedPercent)}%`,
+                  'used',
+                  selectedStageMetrics.isMaxLossBreached ? '#f43f5e' : selectedStageMetrics.maxLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-muted">Max loss</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selectedStageMetrics.isMaxLossBreached
+                          ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          : 'bg-muted/15 text-muted border border-border'
+                      }`}
+                    >
+                      {selectedStageMetrics.isMaxLossBreached ? 'Breached' : 'On track'}
+                    </span>
+                  </div>
+                  <div className="text-sm font-black text-foreground truncate font-mono">
+                    {formatCurrency(selectedStageMetrics.maxLossRemaining)} left
+                  </div>
+                  <div className="text-[11px] text-muted truncate">
+                    of {formatCurrency(selectedStageMetrics.maxTotalLossAmount)} ({selectedStageMetrics.rule.maxTotalLossPercent}%) on equity
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Trading Days */}
-            <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
-              {renderCircleProgress(
-                (selectedStageMetrics.qualifyingDaysCount / selectedStageMetrics.minTradingDays) * 100,
-                `${selectedStageMetrics.qualifyingDaysCount}/${selectedStageMetrics.minTradingDays}`,
-                'days',
-                '#10b981'
-              )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-muted">Trading days</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedStageMetrics.isTradingDaysAchieved
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-muted/15 text-muted border border-border'
-                    }`}
-                  >
-                    {selectedStageMetrics.isTradingDaysAchieved ? 'Complete' : 'In progress'}
-                  </span>
-                </div>
-                <div className="text-sm font-black text-foreground truncate font-mono">
-                  {selectedStageMetrics.isTradingDaysAchieved
-                    ? 'Complete'
-                    : `${selectedStageMetrics.minTradingDays - selectedStageMetrics.qualifyingDaysCount} Days Left`}
-                </div>
-                <div className="text-[11px] text-muted truncate">
-                  Minimum {selectedStageMetrics.minTradingDays} trading days
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Max Loss */}
-            <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
-              {renderCircleProgress(
-                selectedStageMetrics.maxLossUsedPercent,
-                `${Math.round(selectedStageMetrics.maxLossUsedPercent)}%`,
-                'used',
-                selectedStageMetrics.isMaxLossBreached ? '#f43f5e' : selectedStageMetrics.maxLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
-              )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-muted">Max loss</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedStageMetrics.isMaxLossBreached
-                        ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                        : 'bg-muted/15 text-muted border border-border'
-                    }`}
-                  >
-                    {selectedStageMetrics.isMaxLossBreached ? 'Breached' : 'On track'}
-                  </span>
-                </div>
-                <div className="text-sm font-black text-foreground truncate font-mono">
-                  {formatCurrency(selectedStageMetrics.maxLossRemaining)} left
-                </div>
-                <div className="text-[11px] text-muted truncate">
-                  of {formatCurrency(selectedStageMetrics.maxTotalLossAmount)} ({selectedStageMetrics.rule.maxTotalLossPercent}%) on equity
+            {/* Row 2: 2 Cards (Daily loss, Sub-1-min trades) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Card 4: Daily Loss */}
+              <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
+                {renderCircleProgress(
+                  selectedStageMetrics.dailyLossUsedPercent,
+                  `${Math.round(selectedStageMetrics.dailyLossUsedPercent)}%`,
+                  'used',
+                  selectedStageMetrics.isDailyLossBreached ? '#f43f5e' : selectedStageMetrics.dailyLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-muted">Daily loss</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selectedStageMetrics.isDailyLossBreached
+                          ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          : 'bg-muted/15 text-muted border border-border'
+                      }`}
+                    >
+                      {selectedStageMetrics.isDailyLossBreached ? 'Breached' : 'On track'}
+                    </span>
+                  </div>
+                  <div className="text-sm font-black text-foreground truncate font-mono">
+                    {formatCurrency(selectedStageMetrics.dailyLossRemaining)} left today
+                  </div>
+                  <div className="text-[11px] text-muted truncate">
+                    of {formatCurrency(selectedStageMetrics.maxDailyLossAmount)} ({selectedStageMetrics.rule.maxDailyLossPercent}%) from start equity
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Card 4: Daily Loss */}
-            <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
-              {renderCircleProgress(
-                selectedStageMetrics.dailyLossUsedPercent,
-                `${Math.round(selectedStageMetrics.dailyLossUsedPercent)}%`,
-                'used',
-                selectedStageMetrics.isDailyLossBreached ? '#f43f5e' : selectedStageMetrics.dailyLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
-              )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-muted">Daily loss</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedStageMetrics.isDailyLossBreached
-                        ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                        : 'bg-muted/15 text-muted border border-border'
-                    }`}
-                  >
-                    {selectedStageMetrics.isDailyLossBreached ? 'Breached' : 'On track'}
-                  </span>
-                </div>
-                <div className="text-sm font-black text-foreground truncate font-mono">
-                  {formatCurrency(selectedStageMetrics.dailyLossRemaining)} left today
-                </div>
-                <div className="text-[11px] text-muted truncate">
-                  of {formatCurrency(selectedStageMetrics.maxDailyLossAmount)} ({selectedStageMetrics.rule.maxDailyLossPercent}%) from start equity
-                </div>
-              </div>
-            </div>
-
-            {/* Card 5: Sub-1-min Trades */}
-            <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
-              {renderCircleProgress(
-                (selectedStageMetrics.sub1MinTradesPercent / 10) * 100,
-                `${selectedStageMetrics.sub1MinTradesPercent}%`,
-                'of 10%',
-                selectedStageMetrics.isSub1MinCompliant ? '#94a3b8' : '#f43f5e'
-              )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-muted">Sub-1-min trades</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedStageMetrics.isSub1MinCompliant
-                        ? 'bg-muted/15 text-muted border border-border'
-                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                    }`}
-                  >
-                    {selectedStageMetrics.isSub1MinCompliant ? 'On track' : 'Breached'}
-                  </span>
-                </div>
-                <div className="text-sm font-black text-foreground truncate font-mono">
-                  {selectedStageMetrics.isSub1MinCompliant ? 'Within cap' : 'Over limit'}
-                </div>
-                <div className="text-[11px] text-muted truncate">
-                  {selectedStageMetrics.sub1MinTradesPercent}% of trades · max 10%
+              {/* Card 5: Sub-1-min Trades */}
+              <div className="p-4 rounded-2xl bg-surface border border-border/80 flex items-center gap-3.5 shadow-sm">
+                {renderCircleProgress(
+                  (selectedStageMetrics.sub1MinTradesPercent / 10) * 100,
+                  `${selectedStageMetrics.sub1MinTradesPercent}%`,
+                  'of 10%',
+                  selectedStageMetrics.isSub1MinCompliant ? '#94a3b8' : '#f43f5e'
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold text-muted">Sub-1-min trades</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selectedStageMetrics.isSub1MinCompliant
+                          ? 'bg-muted/15 text-muted border border-border'
+                          : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {selectedStageMetrics.isSub1MinCompliant ? 'On track' : 'Breached'}
+                    </span>
+                  </div>
+                  <div className="text-sm font-black text-foreground truncate font-mono">
+                    {selectedStageMetrics.isSub1MinCompliant ? 'Within cap' : 'Over limit'}
+                  </div>
+                  <div className="text-[11px] text-muted truncate">
+                    {selectedStageMetrics.sub1MinTradesPercent}% of trades · max 10%
+                  </div>
                 </div>
               </div>
             </div>
@@ -803,6 +816,44 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Manual Stage Completion Confirmation Modal (Requirement 5) */}
+      {manualCompleteModalOpen && (
+        <Modal
+          isOpen={manualCompleteModalOpen}
+          onClose={() => setManualCompleteModalOpen(false)}
+          title={`Mark ${activeStage === 'stage1' ? 'Phase 1' : 'Phase 2'} as Completed`}
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                This option allows traders who passed their evaluation externally without logging trades to immediately unlock <strong>{activeStage === 'stage1' ? 'Phase 2' : 'Funded Stage'}</strong>.
+              </p>
+            </div>
+
+            <p className="text-xs text-muted leading-relaxed">
+              Are you sure you want to mark <strong>{activeStage === 'stage1' ? 'Phase 1' : 'Phase 2'}</strong> as completed? Your account will advance to the next evaluation stage.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <Button variant="outline" onClick={() => setManualCompleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                onClick={() => {
+                  onAdvanceStage(account.id);
+                  setManualCompleteModalOpen(false);
+                }}
+              >
+                Confirm & Advance
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

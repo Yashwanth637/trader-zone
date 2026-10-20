@@ -105,162 +105,168 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
         </Link>
       </div>
 
-      {/* 5 Circular Objectives Tracker Cards (Exact Image 3 Layout) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {/* Card 1: Profit Target */}
-        <div className="p-4 rounded-2xl bg-surface border border-border/60 hover:border-primary/40 transition-all flex items-center gap-3.5 shadow-sm">
-          {renderCircleProgress(
-            isFunded ? 100 : metrics.targetDonePercent,
-            isFunded ? '—' : `${Math.round(metrics.targetDonePercent)}%`,
-            isFunded ? 'payout' : 'done',
-            metrics.isTargetAchieved ? '#10b981' : '#6366f1'
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-xs font-bold text-muted">Profit target</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isFunded || metrics.isTargetAchieved
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-muted/15 text-muted border border-border'
-                }`}
-              >
-                {isFunded ? 'Active' : metrics.isTargetAchieved ? 'Complete' : 'In progress'}
-              </span>
+      {/* 5 Circular Objectives Tracker Cards (2 Rows: 3 in Row 1, 2 in Row 2) */}
+      <div className="space-y-3.5">
+        {/* Row 1: 3 Cards (Profit target, Trading days, Max loss) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          {/* Card 1: Profit Target */}
+          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-primary/40 transition-all flex items-center gap-3.5 shadow-sm">
+            {renderCircleProgress(
+              isFunded ? 100 : metrics.targetDonePercent,
+              isFunded ? '—' : `${Math.round(metrics.targetDonePercent)}%`,
+              isFunded ? 'payout' : 'done',
+              metrics.isTargetAchieved ? '#10b981' : '#6366f1'
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold text-muted">Profit target</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isFunded || metrics.isTargetAchieved
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-muted/15 text-muted border border-border'
+                  }`}
+                >
+                  {isFunded ? 'Active' : metrics.isTargetAchieved ? 'Complete' : 'In progress'}
+                </span>
+              </div>
+              <div className="text-sm font-black text-foreground truncate font-mono">
+                {isFunded
+                  ? `${formatCurrency(metrics.realizedPnl)} net`
+                  : metrics.targetRemaining <= 0
+                  ? 'Goal Reached!'
+                  : `${formatCurrency(metrics.targetRemaining)} to go`}
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                {isFunded
+                  ? 'Profit split / payouts'
+                  : `${formatCurrency(metrics.realizedPnl)} of ${formatCurrency(metrics.targetAmount || 0)} (${metrics.rule.profitTargetPercent}%)`}
+              </div>
             </div>
-            <div className="text-sm font-black text-foreground truncate font-mono">
-              {isFunded
-                ? `${formatCurrency(metrics.realizedPnl)} net`
-                : metrics.targetRemaining <= 0
-                ? 'Goal Reached!'
-                : `${formatCurrency(metrics.targetRemaining)} to go`}
+          </div>
+
+          {/* Card 2: Trading Days */}
+          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 shadow-sm">
+            {renderCircleProgress(
+              (metrics.qualifyingDaysCount / metrics.minTradingDays) * 100,
+              `${metrics.qualifyingDaysCount}/${metrics.minTradingDays}`,
+              'days',
+              '#10b981'
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold text-muted">Trading days</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    metrics.isTradingDaysAchieved
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-muted/15 text-muted border border-border'
+                  }`}
+                >
+                  {metrics.isTradingDaysAchieved ? 'Complete' : 'In progress'}
+                </span>
+              </div>
+              <div className="text-sm font-black text-foreground truncate font-mono">
+                {metrics.isTradingDaysAchieved
+                  ? 'Complete'
+                  : `${metrics.minTradingDays - metrics.qualifyingDaysCount} Days Left`}
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                Minimum {metrics.minTradingDays} trading days
+              </div>
             </div>
-            <div className="text-[11px] text-muted truncate">
-              {isFunded
-                ? 'Profit split / payouts'
-                : `${formatCurrency(metrics.realizedPnl)} of ${formatCurrency(metrics.targetAmount || 0)} (${metrics.rule.profitTargetPercent}%)`}
+          </div>
+
+          {/* Card 3: Max Loss */}
+          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+            {renderCircleProgress(
+              metrics.maxLossUsedPercent,
+              `${Math.round(metrics.maxLossUsedPercent)}%`,
+              'used',
+              metrics.isMaxLossBreached ? '#f43f5e' : metrics.maxLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold text-muted">Max loss</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    metrics.isMaxLossBreached
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      : 'bg-muted/15 text-muted border border-border'
+                  }`}
+                >
+                  {metrics.isMaxLossBreached ? 'Breached' : 'On track'}
+                </span>
+              </div>
+              <div className="text-sm font-black text-foreground truncate font-mono">
+                {formatCurrency(metrics.maxLossRemaining)} left
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                of {formatCurrency(metrics.maxTotalLossAmount)} ({metrics.rule.maxTotalLossPercent}%) on equity
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Card 2: Trading Days */}
-        <div className="p-4 rounded-2xl bg-surface border border-border/60 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 shadow-sm">
-          {renderCircleProgress(
-            (metrics.qualifyingDaysCount / metrics.minTradingDays) * 100,
-            `${metrics.qualifyingDaysCount}/${metrics.minTradingDays}`,
-            'days',
-            '#10b981'
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-xs font-bold text-muted">Trading days</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  metrics.isTradingDaysAchieved
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-muted/15 text-muted border border-border'
-                }`}
-              >
-                {metrics.isTradingDaysAchieved ? 'Complete' : 'In progress'}
-              </span>
-            </div>
-            <div className="text-sm font-black text-foreground truncate font-mono">
-              {metrics.isTradingDaysAchieved
-                ? 'Complete'
-                : `${metrics.minTradingDays - metrics.qualifyingDaysCount} Days Left`}
-            </div>
-            <div className="text-[11px] text-muted truncate">
-              Minimum {metrics.minTradingDays} trading days
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Max Loss */}
-        <div className="p-4 rounded-2xl bg-surface border border-border/60 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
-          {renderCircleProgress(
-            metrics.maxLossUsedPercent,
-            `${Math.round(metrics.maxLossUsedPercent)}%`,
-            'used',
-            metrics.isMaxLossBreached ? '#f43f5e' : metrics.maxLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-xs font-bold text-muted">Max loss</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  metrics.isMaxLossBreached
-                    ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                    : 'bg-muted/15 text-muted border border-border'
-                }`}
-              >
-                {metrics.isMaxLossBreached ? 'Breached' : 'On track'}
-              </span>
-            </div>
-            <div className="text-sm font-black text-foreground truncate font-mono">
-              {formatCurrency(metrics.maxLossRemaining)} left
-            </div>
-            <div className="text-[11px] text-muted truncate">
-              of {formatCurrency(metrics.maxTotalLossAmount)} ({metrics.rule.maxTotalLossPercent}%) on equity
+        {/* Row 2: 2 Cards (Daily loss, Sub-1-min trades) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {/* Card 4: Daily Loss */}
+          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+            {renderCircleProgress(
+              metrics.dailyLossUsedPercent,
+              `${Math.round(metrics.dailyLossUsedPercent)}%`,
+              'used',
+              metrics.isDailyLossBreached ? '#f43f5e' : metrics.dailyLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold text-muted">Daily loss</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    metrics.isDailyLossBreached
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      : 'bg-muted/15 text-muted border border-border'
+                  }`}
+                >
+                  {metrics.isDailyLossBreached ? 'Breached' : 'On track'}
+                </span>
+              </div>
+              <div className="text-sm font-black text-foreground truncate font-mono">
+                {formatCurrency(metrics.dailyLossRemaining)} left today
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                of {formatCurrency(metrics.maxDailyLossAmount)} ({metrics.rule.maxDailyLossPercent}%) from start equity
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Card 4: Daily Loss */}
-        <div className="p-4 rounded-2xl bg-surface border border-border/60 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
-          {renderCircleProgress(
-            metrics.dailyLossUsedPercent,
-            `${Math.round(metrics.dailyLossUsedPercent)}%`,
-            'used',
-            metrics.isDailyLossBreached ? '#f43f5e' : metrics.dailyLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-xs font-bold text-muted">Daily loss</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  metrics.isDailyLossBreached
-                    ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                    : 'bg-muted/15 text-muted border border-border'
-                }`}
-              >
-                {metrics.isDailyLossBreached ? 'Breached' : 'On track'}
-              </span>
-            </div>
-            <div className="text-sm font-black text-foreground truncate font-mono">
-              {formatCurrency(metrics.dailyLossRemaining)} left today
-            </div>
-            <div className="text-[11px] text-muted truncate">
-              of {formatCurrency(metrics.maxDailyLossAmount)} ({metrics.rule.maxDailyLossPercent}%) from start equity
-            </div>
-          </div>
-        </div>
-
-        {/* Card 5: Sub-1-min Trades / Consistency Cap */}
-        <div className="p-4 rounded-2xl bg-surface border border-border/60 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
-          {renderCircleProgress(
-            (metrics.sub1MinTradesPercent / 10) * 100,
-            `${metrics.sub1MinTradesPercent}%`,
-            'of 10%',
-            metrics.isSub1MinCompliant ? '#94a3b8' : '#f43f5e'
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-xs font-bold text-muted">Sub-1-min trades</span>
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  metrics.isSub1MinCompliant
-                    ? 'bg-muted/15 text-muted border border-border'
-                    : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                }`}
-              >
-                {metrics.isSub1MinCompliant ? 'On track' : 'Breached'}
-              </span>
-            </div>
-            <div className="text-sm font-black text-foreground truncate font-mono">
-              {metrics.isSub1MinCompliant ? 'Within cap' : 'Over limit'}
-            </div>
-            <div className="text-[11px] text-muted truncate">
-              {metrics.sub1MinTradesPercent}% of trades · max 10%
+          {/* Card 5: Sub-1-min Trades / Consistency Cap */}
+          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+            {renderCircleProgress(
+              (metrics.sub1MinTradesPercent / 10) * 100,
+              `${metrics.sub1MinTradesPercent}%`,
+              'of 10%',
+              metrics.isSub1MinCompliant ? '#94a3b8' : '#f43f5e'
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-bold text-muted">Sub-1-min trades</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    metrics.isSub1MinCompliant
+                      ? 'bg-muted/15 text-muted border border-border'
+                      : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {metrics.isSub1MinCompliant ? 'On track' : 'Breached'}
+                </span>
+              </div>
+              <div className="text-sm font-black text-foreground truncate font-mono">
+                {metrics.isSub1MinCompliant ? 'Within cap' : 'Over limit'}
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                {metrics.sub1MinTradesPercent}% of trades · max 10%
+              </div>
             </div>
           </div>
         </div>

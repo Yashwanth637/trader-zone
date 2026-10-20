@@ -1,9 +1,22 @@
-import { Trade, Direction, AssetClass } from '../types/trade';
+import { Trade, Direction, AssetClass, PropStage } from '../types/trade';
 import { detectTradingSession, calculatePips, sortTradesDescending } from './calculations';
 import { isDeltaIndiaCsv, parseDeltaIndiaCsv, parseUniversalDate, cleanNumber } from './deltaIndiaParser';
+import { isFundedRoomCsv, parseFundedRoomCsv } from './fundedRoomParser';
 
-export function parseBrokerCsv(csvText: string, accountId: string): Trade[] {
-  // 1. Check if this is a Delta Exchange India CSV export
+export function parseBrokerCsv(csvText: string, accountId: string, stage?: PropStage): Trade[] {
+  // 1. Check if this is a Funded Room Prop Firm CSV export
+  if (isFundedRoomCsv(csvText)) {
+    try {
+      const frTrades = parseFundedRoomCsv(csvText, accountId, stage);
+      if (frTrades.length > 0) {
+        return frTrades;
+      }
+    } catch (err) {
+      console.warn('Funded Room parser threw an error, falling back:', err);
+    }
+  }
+
+  // 2. Check if this is a Delta Exchange India CSV export
   if (isDeltaIndiaCsv(csvText)) {
     try {
       const deltaTrades = parseDeltaIndiaCsv(csvText, accountId);

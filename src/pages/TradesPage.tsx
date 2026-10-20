@@ -21,6 +21,7 @@ import {
 import { Trade } from '../types/trade';
 import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
+import { PropFirmCsvImportModal } from '../components/trades/PropFirmCsvImportModal';
 import { ChartLightboxModal } from '../components/trades/ChartLightboxModal';
 
 interface TradesPageProps {
@@ -32,6 +33,14 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
   const { accountTrades, deleteTrade, closeTrade, strategies, accounts, activeAccountId } = useTrading();
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [mt5ModalOpen, setMt5ModalOpen] = useState(false);
+  const [propFirmModalOpen, setPropFirmModalOpen] = useState(false);
+
+  // Detect active or created prop firm account
+  const activeAccount = accounts.find(a => a.id === activeAccountId);
+  const isCurrentActiveProp = activeAccount?.type === 'Prop Firm' || Boolean(activeAccount?.propFirmData);
+  const propFirmAccount = isCurrentActiveProp 
+    ? activeAccount 
+    : accounts.find(a => a.type === 'Prop Firm' || Boolean(a.propFirmData));
 
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
@@ -115,12 +124,25 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         </div>
 
         <div className="flex items-center gap-3">
-          <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-purple-400" />} onClick={() => setMt5ModalOpen(true)}>
-            Import MT5 CSV
-          </Button>
-          <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
-            Import Delta CSV
-          </Button>
+          {propFirmAccount ? (
+            <Button
+              size="sm"
+              variant="outline"
+              icon={<Upload className="w-4 h-4 text-purple-400" />}
+              onClick={() => setPropFirmModalOpen(true)}
+            >
+              Import {propFirmAccount.propFirmData?.firmName || propFirmAccount.broker || 'Prop Firm'} CSV
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" icon={<Zap className="w-4 h-4 text-purple-400" />} onClick={() => setMt5ModalOpen(true)}>
+                Import MT5 CSV
+              </Button>
+              <Button size="sm" variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={onOpenCsvImport}>
+                Import Delta CSV
+              </Button>
+            </>
+          )}
           <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={onOpenAddTrade}>
             Log Trade
           </Button>
@@ -488,6 +510,16 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
         <DeltaSyncModal
           isOpen={deltaModalOpen}
           onClose={() => setDeltaModalOpen(false)}
+        />
+      )}
+
+      {/* Prop Firm CSV Import Modal */}
+      {propFirmModalOpen && (
+        <PropFirmCsvImportModal
+          isOpen={propFirmModalOpen}
+          onClose={() => setPropFirmModalOpen(false)}
+          defaultAccountId={propFirmAccount?.id}
+          defaultStage={propFirmAccount?.propFirmData?.currentStage}
         />
       )}
 
