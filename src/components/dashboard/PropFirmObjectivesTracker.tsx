@@ -25,7 +25,7 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
     centerTextLine1: string,
     centerTextLine2?: string,
     color: string = '#10b981',
-    bgColor: string = 'rgba(255,255,255,0.08)'
+    centerTextColor?: string
   ) => {
     const radius = 26;
     const strokeWidth = 3.5;
@@ -42,7 +42,7 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
             stroke="currentColor"
             strokeWidth={strokeWidth}
             fill="transparent"
-            className="text-border/60 dark:text-white/[0.08]"
+            className="text-border dark:text-white/[0.08]"
           />
           <circle
             cx="32"
@@ -58,7 +58,11 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] font-black leading-tight text-foreground font-mono">
+          <span
+            className={`text-[11px] font-black leading-tight font-mono ${
+              centerTextColor || 'text-foreground'
+            }`}
+          >
             {centerTextLine1}
           </span>
           {centerTextLine2 && (
@@ -72,9 +76,11 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
   };
 
   const isFunded = currentStage === 'funded';
+  const isPnlPositive = metrics.realizedPnl >= 0;
+  const isPnlNegative = metrics.realizedPnl < 0;
 
   return (
-    <div className="premium-card p-5 space-y-4 border border-border/80 shadow-md">
+    <div className="premium-card p-5 space-y-4 shadow-md">
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div className="flex items-center gap-3">
@@ -110,12 +116,27 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
         {/* Row 1: 3 Cards (Profit target, Trading days, Max loss) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           {/* Card 1: Profit Target */}
-          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-primary/40 transition-all flex items-center gap-3.5 shadow-sm">
+          <div className="p-4 rounded-2xl bg-surface-card border border-border dark:border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center gap-3.5 shadow-sm">
             {renderCircleProgress(
-              isFunded ? 100 : metrics.targetDonePercent,
-              isFunded ? '—' : `${Math.round(metrics.targetDonePercent)}%`,
-              isFunded ? 'payout' : 'done',
-              metrics.isTargetAchieved ? '#10b981' : '#6366f1'
+              isFunded
+                ? 100
+                : isPnlNegative
+                ? Math.min(100, Math.round((Math.abs(metrics.realizedPnl) / (metrics.targetAmount || 1)) * 100))
+                : metrics.targetDonePercent,
+              isFunded
+                ? isPnlPositive ? `+${formatCurrency(metrics.realizedPnl)}` : `-${formatCurrency(Math.abs(metrics.realizedPnl))}`
+                : isPnlNegative
+                ? `-${Math.round((Math.abs(metrics.realizedPnl) / (metrics.targetAmount || 1)) * 100)}%`
+                : `${Math.round(metrics.targetDonePercent)}%`,
+              isFunded ? 'net pnl' : isPnlNegative ? 'drawdown' : 'done',
+              isFunded
+                ? isPnlPositive ? '#10b981' : '#f43f5e'
+                : isPnlNegative
+                ? '#f43f5e'
+                : metrics.isTargetAchieved
+                ? '#10b981'
+                : '#10b981',
+              isPnlNegative ? 'text-rose-400' : isPnlPositive && (metrics.realizedPnl > 0 || isFunded) ? 'text-emerald-400' : 'text-foreground'
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center justify-between gap-1">
@@ -124,34 +145,52 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     isFunded || metrics.isTargetAchieved
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : isPnlNegative
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                       : 'bg-muted/15 text-muted border border-border'
                   }`}
                 >
-                  {isFunded ? 'Active' : metrics.isTargetAchieved ? 'Complete' : 'In progress'}
+                  {isFunded ? 'Active' : metrics.isTargetAchieved ? 'Complete' : isPnlNegative ? 'Drawdown' : 'In progress'}
                 </span>
               </div>
               <div className="text-sm font-black text-foreground truncate font-mono">
-                {isFunded
-                  ? `${formatCurrency(metrics.realizedPnl)} net`
-                  : metrics.targetRemaining <= 0
-                  ? 'Goal Reached!'
-                  : `${formatCurrency(metrics.targetRemaining)} to go`}
+                {isFunded ? (
+                  isPnlPositive ? (
+                    <span className="text-emerald-400">+{formatCurrency(metrics.realizedPnl)} net</span>
+                  ) : (
+                    <span className="text-rose-400">-{formatCurrency(Math.abs(metrics.realizedPnl))} net</span>
+                  )
+                ) : metrics.targetRemaining <= 0 ? (
+                  <span className="text-emerald-400">Goal Reached!</span>
+                ) : (
+                  <span>{formatCurrency(metrics.targetRemaining)} to go</span>
+                )}
               </div>
               <div className="text-[11px] text-muted truncate">
-                {isFunded
-                  ? 'Profit split / payouts'
-                  : `${formatCurrency(metrics.realizedPnl)} of ${formatCurrency(metrics.targetAmount || 0)} (${metrics.rule.profitTargetPercent}%)`}
+                {isFunded ? (
+                  'Profit split / payouts'
+                ) : (
+                  <>
+                    {isPnlPositive ? (
+                      <span className="text-emerald-400 font-bold font-mono">+{formatCurrency(metrics.realizedPnl)}</span>
+                    ) : (
+                      <span className="text-rose-400 font-bold font-mono">-{formatCurrency(Math.abs(metrics.realizedPnl))}</span>
+                    )}{' '}
+                    of {formatCurrency(metrics.targetAmount || 0)} ({metrics.rule.profitTargetPercent}%)
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {/* Card 2: Trading Days */}
-          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 shadow-sm">
+          <div className="p-4 rounded-2xl bg-surface-card border border-border dark:border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center gap-3.5 shadow-sm">
             {renderCircleProgress(
               (metrics.qualifyingDaysCount / metrics.minTradingDays) * 100,
               `${metrics.qualifyingDaysCount}/${metrics.minTradingDays}`,
               'days',
-              '#10b981'
+              '#10b981',
+              metrics.isTradingDaysAchieved ? 'text-emerald-400' : 'text-foreground'
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center justify-between gap-1">
@@ -167,9 +206,11 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
                 </span>
               </div>
               <div className="text-sm font-black text-foreground truncate font-mono">
-                {metrics.isTradingDaysAchieved
-                  ? 'Complete'
-                  : `${metrics.minTradingDays - metrics.qualifyingDaysCount} Days Left`}
+                {metrics.isTradingDaysAchieved ? (
+                  <span className="text-emerald-400">Complete</span>
+                ) : (
+                  <span>{metrics.minTradingDays - metrics.qualifyingDaysCount} Days Left</span>
+                )}
               </div>
               <div className="text-[11px] text-muted truncate">
                 Minimum {metrics.minTradingDays} trading days
@@ -178,12 +219,13 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
           </div>
 
           {/* Card 3: Max Loss */}
-          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+          <div className="p-4 rounded-2xl bg-surface-card border border-border dark:border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center gap-3.5 shadow-sm">
             {renderCircleProgress(
               metrics.maxLossUsedPercent,
               `${Math.round(metrics.maxLossUsedPercent)}%`,
               'used',
-              metrics.isMaxLossBreached ? '#f43f5e' : metrics.maxLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+              metrics.maxLossUsedPercent > 0 ? '#f43f5e' : '#10b981',
+              metrics.maxLossUsedPercent > 0 ? 'text-rose-400' : 'text-foreground'
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center justify-between gap-1">
@@ -192,17 +234,38 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     metrics.isMaxLossBreached
                       ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                      : 'bg-muted/15 text-muted border border-border'
+                      : metrics.maxLossUsedPercent > 0
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                   }`}
                 >
-                  {metrics.isMaxLossBreached ? 'Breached' : 'On track'}
+                  {metrics.isMaxLossBreached
+                    ? 'Breached'
+                    : metrics.maxLossUsedPercent > 0
+                    ? `-${formatCurrency(metrics.totalDrawdown)}`
+                    : '0% Loss'}
                 </span>
               </div>
               <div className="text-sm font-black text-foreground truncate font-mono">
                 {formatCurrency(metrics.maxLossRemaining)} left
               </div>
               <div className="text-[11px] text-muted truncate">
-                of {formatCurrency(metrics.maxTotalLossAmount)} ({metrics.rule.maxTotalLossPercent}%) on equity
+                of {formatCurrency(metrics.maxTotalLossAmount)} max
+                {metrics.totalDrawdown > 0 ? (
+                  <>
+                    {' · '}
+                    <span className="text-rose-400 font-bold font-mono">
+                      -{formatCurrency(metrics.totalDrawdown)} loss
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {' · '}
+                    <span className="text-emerald-400 font-bold font-mono">
+                      0 loss
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -211,12 +274,13 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
         {/* Row 2: 2 Cards (Daily loss, Sub-1-min trades) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {/* Card 4: Daily Loss */}
-          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+          <div className="p-4 rounded-2xl bg-surface-card border border-border dark:border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center gap-3.5 shadow-sm">
             {renderCircleProgress(
               metrics.dailyLossUsedPercent,
               `${Math.round(metrics.dailyLossUsedPercent)}%`,
               'used',
-              metrics.isDailyLossBreached ? '#f43f5e' : metrics.dailyLossUsedPercent > 60 ? '#f59e0b' : '#94a3b8'
+              metrics.dailyLossUsedPercent > 0 ? '#f43f5e' : '#10b981',
+              metrics.dailyLossUsedPercent > 0 ? 'text-rose-400' : 'text-foreground'
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center justify-between gap-1">
@@ -225,28 +289,50 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     metrics.isDailyLossBreached
                       ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                      : 'bg-muted/15 text-muted border border-border'
+                      : metrics.dailyLossUsedPercent > 0
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                   }`}
                 >
-                  {metrics.isDailyLossBreached ? 'Breached' : 'On track'}
+                  {metrics.isDailyLossBreached
+                    ? 'Breached'
+                    : metrics.dailyLossUsedPercent > 0
+                    ? `-${formatCurrency(metrics.todayLoss)}`
+                    : '0% Loss'}
                 </span>
               </div>
               <div className="text-sm font-black text-foreground truncate font-mono">
                 {formatCurrency(metrics.dailyLossRemaining)} left today
               </div>
               <div className="text-[11px] text-muted truncate">
-                of {formatCurrency(metrics.maxDailyLossAmount)} ({metrics.rule.maxDailyLossPercent}%) from start equity
+                of {formatCurrency(metrics.maxDailyLossAmount)} max
+                {metrics.todayLoss > 0 ? (
+                  <>
+                    {' · '}
+                    <span className="text-rose-400 font-bold font-mono">
+                      -{formatCurrency(metrics.todayLoss)} loss
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {' · '}
+                    <span className="text-emerald-400 font-bold font-mono">
+                      0 loss today
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {/* Card 5: Sub-1-min Trades / Consistency Cap */}
-          <div className="p-4 rounded-2xl bg-surface border border-border/80 hover:border-border transition-all flex items-center gap-3.5 shadow-sm">
+          <div className="p-4 rounded-2xl bg-surface-card border border-border dark:border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center gap-3.5 shadow-sm">
             {renderCircleProgress(
               (metrics.sub1MinTradesPercent / 10) * 100,
               `${metrics.sub1MinTradesPercent}%`,
               'of 10%',
-              metrics.isSub1MinCompliant ? '#94a3b8' : '#f43f5e'
+              metrics.isSub1MinCompliant ? '#10b981' : '#f43f5e',
+              metrics.isSub1MinCompliant ? 'text-emerald-400' : 'text-rose-400'
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center justify-between gap-1">
@@ -254,11 +340,11 @@ export const PropFirmObjectivesTracker: React.FC<PropFirmObjectivesTrackerProps>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     metrics.isSub1MinCompliant
-                      ? 'bg-muted/15 text-muted border border-border'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                   }`}
                 >
-                  {metrics.isSub1MinCompliant ? 'On track' : 'Breached'}
+                  {metrics.isSub1MinCompliant ? 'Compliant' : 'Over limit'}
                 </span>
               </div>
               <div className="text-sm font-black text-foreground truncate font-mono">

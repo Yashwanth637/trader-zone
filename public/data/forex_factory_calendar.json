@@ -70,7 +70,7 @@
     "impact": "Low",
     "forecast": "5.4%",
     "previous": "5.2%",
-    "actual": "4.5%"
+    "actual": "5.5%"
   },
   {
     "title": "NBS Press Conference",
@@ -123,7 +123,7 @@
     "impact": "High",
     "forecast": "2.0%",
     "previous": "2.0%",
-    "actual": "3.1%"
+    "actual": "2.4%"
   },
   {
     "title": "Trimmed CPI y/y",
@@ -132,7 +132,7 @@
     "impact": "High",
     "forecast": "1.9%",
     "previous": "1.9%",
-    "actual": "3.1%"
+    "actual": "2.4%"
   },
   {
     "title": "Common CPI y/y",
@@ -141,7 +141,7 @@
     "impact": "Medium",
     "forecast": "2.6%",
     "previous": "2.6%",
-    "actual": "3.1%"
+    "actual": "2.4%"
   },
   {
     "title": "Core CPI m/m",
@@ -244,20 +244,13 @@
     "previous": "25.8"
   },
   {
-    "title": "Foreign Direct Investment ytd/y",
-    "country": "CNY",
-    "date": "2026-10-20T05:10:00-04:00",
-    "impact": "Low",
-    "forecast": "",
-    "previous": "-5.3%"
-  },
-  {
     "title": "10-y Bond Auction",
     "country": "GBP",
-    "date": "2026-10-20T05:33:00-04:00",
+    "date": "2026-10-20T05:03:00-04:00",
     "impact": "Low",
     "forecast": "",
-    "previous": "5.38|3.3"
+    "previous": "5.38|3.3",
+    "actual": "5.418"
   },
   {
     "title": "ADP Weekly Employment Change",
@@ -402,6 +395,14 @@
     "impact": "Low",
     "forecast": "1.2%",
     "previous": "1.4%"
+  },
+  {
+    "title": "Foreign Direct Investment ytd/y",
+    "country": "CNY",
+    "date": "2026-10-21T05:10:00-04:00",
+    "impact": "Low",
+    "forecast": "",
+    "previous": "-5.3%"
   },
   {
     "title": "German Buba Monthly Report",
