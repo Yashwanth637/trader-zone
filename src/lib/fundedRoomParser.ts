@@ -59,6 +59,15 @@ function detectAssetClass(pair: string): AssetClass {
   return 'Forex';
 }
 
+function getContractMultiplier(pair: string): number {
+  const sym = pair.toUpperCase().replace('/', '');
+  if (sym.includes('XAU') || sym.includes('GOLD')) return 100;
+  if (sym.includes('XAG') || sym.includes('SILVER')) return 5000;
+  if (sym.includes('BTC') || sym.includes('ETH')) return 1;
+  if (sym.includes('US30') || sym.includes('NAS100') || sym.includes('SPX500') || sym.includes('USTEC')) return 1;
+  return 100000;
+}
+
 /**
  * Parse Funded Room CSV export by pairing entry and exit execution orders
  */
@@ -126,6 +135,12 @@ export function parseFundedRoomCsv(
   pairGroups.forEach((orders, pair) => {
     // Collect unfilled entries
     const openPool: RawOrderRow[] = [];
+    const cycleClosedTrades: Array<{
+      trade: Trade;
+      rawPnl: number;
+      hasReportedPnl: boolean;
+      reportedPnl: number;
+    }> = [];
 
     // Map of cancelled orders by close timestamp to extract planned SL / TP
     const cancelledOrders = orders.filter(o => o.status === 'cancelled');
@@ -141,7 +156,7 @@ export function parseFundedRoomCsv(
       const exitSide = order.side; // e.g. 'sell' means entry was 'buy'
       const expectedEntrySide = exitSide === 'sell' ? 'buy' : 'sell';
 
-      // Find matching open order in openPool (FIFO: oldest first)
+      // Find matching open order in openPool (FIFO: exact lot match first, then oldest opposite side)
       let openMatchIndex = -1;
       for (let j = 0; j < openPool.length; j++) {
         const candidate = openPool[j];
@@ -162,14 +177,9 @@ export function parseFundedRoomCsv(
         }
       }
 
-      if (hasPnl) {
-        // This is a CLOSING (Exit) order with explicit Net P&L
-        let entryOrder: RawOrderRow | null = null;
-        if (openMatchIndex !== -1) {
-          entryOrder = openPool.splice(openMatchIndex, 1)[0];
-        }
-
-        const netPnl = parseFloat(order.netPnlStr);
+      if (openMatchIndex !== -1) {
+        // MATCH: This order closes an open position
+        const entryOrder = openPool.splice(openMatchIndex, 1)[0];
         const openTime = entryOrder ? entryOrder.date : order.date;
         const closeTime = order.date;
         const entryPrice = entryOrder ? entryOrder.price : order.price;
@@ -198,6 +208,11 @@ export function parseFundedRoomCsv(
         const assetClass = detectAssetClass(pair);
         const cleanSymbol = pair.replace('/', '').toUpperCase();
 
+        const priceDiff = direction === 'BUY' ? (exitPrice - entryPrice) : (entryPrice - exitPrice);
+        const rawPnl = priceDiff * order.lotSize * getContractMultiplier(pair);
+        const hasReportedPnl = hasPnl;
+        const reportedPnl = hasPnl ? parseFloat(order.netPnlStr) : 0;
+
         const trade: Trade = {
           id: `trade-fr-${order.orderId}`,
           ticket: order.orderId,
@@ -218,26 +233,70 @@ export function parseFundedRoomCsv(
           durationMinutes,
           commission: 0,
           swap: 0,
-          netPnl,
-          grossPnl: netPnl,
+          netPnl: reportedPnl,
+          grossPnl: reportedPnl,
           session: detectTradingSession(openTime),
           setupTags: ['Funded Room'],
           mistakeTags: []
         };
 
-        trades.push(trade);
+        cycleClosedTrades.push({
+          trade,
+          rawPnl,
+          hasReportedPnl,
+          reportedPnl
+        });
+
+        // When all concurrent positions in this pair are flat:
+        if (openPool.length === 0) {
+          const reportedPnls = cycleClosedTrades.filter(c => c.hasReportedPnl).map(c => c.reportedPnl);
+          const hasAnyReported = reportedPnls.length > 0;
+          const totalReportedPnl = reportedPnls.reduce((a, b) => a + b, 0);
+          const totalRawPnl = cycleClosedTrades.reduce((a, b) => a + b.rawPnl, 0);
+
+          if (cycleClosedTrades.length === 1) {
+            const single = cycleClosedTrades[0];
+            single.trade.netPnl = single.hasReportedPnl ? single.reportedPnl : parseFloat(single.rawPnl.toFixed(2));
+            single.trade.grossPnl = single.trade.netPnl;
+            trades.push(single.trade);
+          } else {
+            // Multiple concurrent trades closed in this cycle (e.g. 0.04 & 0.30 lots)
+            // Distribute total reported PnL proportionally based on calculated raw PnL
+            let allocatedSum = 0;
+            cycleClosedTrades.forEach((item, idx) => {
+              if (hasAnyReported) {
+                if (idx === cycleClosedTrades.length - 1) {
+                  item.trade.netPnl = parseFloat((totalReportedPnl - allocatedSum).toFixed(2));
+                } else {
+                  const ratio = totalRawPnl !== 0 ? (item.rawPnl / totalRawPnl) : (1 / cycleClosedTrades.length);
+                  const alloc = parseFloat((totalReportedPnl * ratio).toFixed(2));
+                  item.trade.netPnl = alloc;
+                  allocatedSum += alloc;
+                }
+              } else {
+                item.trade.netPnl = parseFloat(item.rawPnl.toFixed(2));
+              }
+              item.trade.grossPnl = item.trade.netPnl;
+              trades.push(item.trade);
+            });
+          }
+          cycleClosedTrades.length = 0;
+        }
       } else {
-        // Order without explicit Net P&L
-        if (openMatchIndex !== -1) {
-          // Offsets / consumes an existing opposing open position (e.g. market SELL offsetting earlier market BUY)
-          // Both orders are removed from openPool so they do not linger as phantom open positions.
-          openPool.splice(openMatchIndex, 1);
-        } else {
-          // Genuine entry order (opening order)
+        // Genuine entry order (opening order)
+        if (!hasPnl) {
           openPool.push(order);
         }
       }
     }
+
+    // Flush any pending cycle closed trades if position was not fully flattened
+    cycleClosedTrades.forEach(item => {
+      item.trade.netPnl = item.hasReportedPnl ? item.reportedPnl : parseFloat(item.rawPnl.toFixed(2));
+      item.trade.grossPnl = item.trade.netPnl;
+      trades.push(item.trade);
+    });
+    cycleClosedTrades.length = 0;
 
     // Remaining orders in openPool are open positions
     openPool.forEach(openOrder => {
