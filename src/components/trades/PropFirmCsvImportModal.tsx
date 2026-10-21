@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
-import { useTrading } from '../../context/TradingContext';
+import React, { useState, useMemo } from 'react';
+import { useTrading, isTradeDuplicate } from '../../context/TradingContext';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { PropStage, Trade } from '../../types/trade';
 import { parseFundedRoomCsv, isFundedRoomCsv } from '../../lib/fundedRoomParser';
 import { parseBrokerCsv } from '../../lib/brokerParser';
 import { formatCurrency } from '../../lib/calculations';
-import { Upload, FileSpreadsheet, CheckCircle2, Award, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
+import {
+  Upload,
+  CheckCircle2,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+  Info,
+  Layers,
+  Clock,
+  Filter
+} from 'lucide-react';
 
 interface PropFirmCsvImportModalProps {
   isOpen: boolean;
@@ -21,7 +31,7 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
   defaultAccountId,
   defaultStage
 }) => {
-  const { importTrades, activeAccountId, accounts } = useTrading();
+  const { trades, importTrades, activeAccountId, accounts } = useTrading();
 
   // Find all prop firm accounts
   const propAccounts = accounts.filter(a => a.type === 'Prop Firm' || a.propFirmData);
@@ -32,6 +42,7 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
   const [csvText, setCsvText] = useState<string>('');
   const [parsedTrades, setParsedTrades] = useState<Trade[]>([]);
   const [fileName, setFileName] = useState<string>('');
+  const [filterTab, setFilterTab] = useState<'new' | 'all' | 'skipped'>('new');
   const [success, setSuccess] = useState<boolean>(false);
 
   React.useEffect(() => {
@@ -46,6 +57,36 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
       }
     }
   }, [isOpen, defaultAccountId, defaultStage, activeAccountId, accounts]);
+
+  // Existing trades for this target account
+  const existingAccTrades = useMemo(() => {
+    return trades.filter(t => t.accountId === targetAccount);
+  }, [trades, targetAccount]);
+
+  // Split parsed trades into new vs duplicate
+  const { newTrades, duplicateTrades } = useMemo(() => {
+    const fresh: Trade[] = [];
+    const dupes: Trade[] = [];
+    parsedTrades.forEach(t => {
+      if (isTradeDuplicate(t, existingAccTrades).isDuplicate) {
+        dupes.push(t);
+      } else {
+        fresh.push(t);
+      }
+    });
+    return { newTrades: fresh, duplicateTrades: dupes };
+  }, [parsedTrades, existingAccTrades]);
+
+  // Auto-switch filter tab when new file is parsed
+  React.useEffect(() => {
+    if (parsedTrades.length > 0) {
+      if (newTrades.length > 0) {
+        setFilterTab('new');
+      } else {
+        setFilterTab('all');
+      }
+    }
+  }, [parsedTrades.length, newTrades.length]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,9 +121,10 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
   };
 
   const handleImport = () => {
-    if (parsedTrades.length === 0) return;
+    if (newTrades.length === 0) return;
 
-    importTrades(parsedTrades);
+    // Only import the truly new trades, ignoring already existing trades
+    importTrades(newTrades);
     setSuccess(true);
     setTimeout(() => {
       setSuccess(false);
@@ -90,11 +132,18 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
       setParsedTrades([]);
       setFileName('');
       onClose();
-    }, 1200);
+    }, 1400);
   };
 
-  const totalNetPnl = parsedTrades.reduce((sum, t) => sum + (t.netPnl || 0), 0);
-  const winCount = parsedTrades.filter(t => t.netPnl > 0).length;
+  // Display trades based on active tab
+  const displayedTrades = filterTab === 'new'
+    ? newTrades
+    : filterTab === 'skipped'
+    ? duplicateTrades
+    : parsedTrades;
+
+  const displayedNetPnl = displayedTrades.reduce((sum, t) => sum + (t.netPnl || 0), 0);
+  const displayedWinCount = displayedTrades.filter(t => (t.netPnl || 0) > 0).length;
   const targetAccObj = accounts.find(a => a.id === targetAccount);
 
   return (
@@ -189,7 +238,7 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
                 {fileName ? fileName : 'Click to upload or drag & drop Funded Room CSV'}
               </p>
               <p className="text-[11px] text-muted mt-0.5">
-                Supports official Funded Room, MT4/MT5, and broker trade statement exports (.csv)
+                Full statement supported · Duplicate historical trades are automatically ignored
               </p>
             </div>
           </label>
@@ -198,22 +247,107 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
         {/* Parsed Trades Preview */}
         {parsedTrades.length > 0 && (
           <div className="space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-foreground">
-                  Detected {parsedTrades.length} Trade{parsedTrades.length === 1 ? '' : 's'}
-                </span>
-                <span className="text-muted">
-                  ({winCount} wins, {parsedTrades.length - winCount} losses)
-                </span>
+            {/* Detection & Duplicate Summary Bar */}
+            <div className="p-3.5 rounded-2xl bg-surface border border-border space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs font-bold text-foreground">
+                    Detected {parsedTrades.length} Total Trade{parsedTrades.length === 1 ? '' : 's'} in File
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{newTrades.length} New to Import</span>
+                  </span>
+
+                  {duplicateTrades.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-500/15 border border-slate-500/25 text-slate-500 dark:text-slate-400">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{duplicateTrades.length} Existing (Ignored)</span>
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="font-mono font-bold">
-                Net P&L:{' '}
-                <span className={totalNetPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                  {totalNetPnl >= 0 ? '+' : ''}{formatCurrency(totalNetPnl)}
+
+              {/* Net PnL of new trades */}
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-border">
+                <span className="text-muted font-medium">
+                  {filterTab === 'new' ? 'New Trades Volume' : filterTab === 'skipped' ? 'Ignored Duplicates Volume' : 'Total File Volume'}:{' '}
+                  <strong className="text-foreground">{displayedTrades.length} trades ({displayedWinCount}W / {displayedTrades.length - displayedWinCount}L)</strong>
                 </span>
+                <div className="font-mono font-bold">
+                  Net P&L:{' '}
+                  <span className={displayedNetPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                    {displayedNetPnl >= 0 ? '+' : ''}{formatCurrency(displayedNetPnl)}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            {/* Zero New Trades Alert */}
+            {newTrades.length === 0 && (
+              <div className="p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/25 text-xs flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-foreground">All trades in this file already exist in your journal</div>
+                  <div className="text-muted mt-0.5 leading-relaxed">
+                    All {parsedTrades.length} trades are already recorded under this account. No duplicate trades will be created.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filter Tabs */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface border border-border text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFilterTab('new')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    filterTab === 'new'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>New Trades ({newTrades.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilterTab('all')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    filterTab === 'all'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>All Detected ({parsedTrades.length})</span>
+                </button>
+
+                {duplicateTrades.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('skipped')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      filterTab === 'skipped'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Ignored ({duplicateTrades.length})</span>
+                  </button>
+                )}
+              </div>
+
+              <span className="text-[11px] text-muted font-medium hidden sm:inline">
+                Showing {displayedTrades.length} {filterTab === 'new' ? 'new' : filterTab === 'skipped' ? 'ignored' : ''} trade{displayedTrades.length === 1 ? '' : 's'}
+              </span>
             </div>
 
             {/* Compact Table Preview */}
@@ -228,11 +362,15 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
                     <th className="py-2 px-3">Entry</th>
                     <th className="py-2 px-3">Exit</th>
                     <th className="py-2 px-3 text-right">Net P&L</th>
+                    {filterTab === 'all' && (
+                      <th className="py-2 px-3 text-right">Status</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {parsedTrades.map((t, idx) => {
+                  {displayedTrades.map((t, idx) => {
                     const isWin = (t.netPnl || 0) > 0;
+                    const isDup = isTradeDuplicate(t, existingAccTrades).isDuplicate;
                     return (
                       <tr key={idx} className="hover:bg-black/5 dark:hover:bg-white/5">
                         <td className="py-2 px-3 text-muted font-mono whitespace-nowrap">
@@ -241,7 +379,7 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
                         <td className="py-2 px-3 font-bold text-foreground">{t.symbol}</td>
                         <td className="py-2 px-3">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            t.direction === 'BUY' ? 'bg-blue-500/15 text-blue-400' : 'bg-rose-500/15 text-rose-400'
+                            t.direction === 'BUY' ? 'bg-blue-500/15 text-blue-500' : 'bg-rose-500/15 text-rose-500'
                           }`}>
                             {t.direction}
                           </span>
@@ -249,9 +387,24 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
                         <td className="py-2 px-3 font-mono">{t.lotSize}</td>
                         <td className="py-2 px-3 font-mono">{t.entryPrice}</td>
                         <td className="py-2 px-3 font-mono">{t.exitPrice || '—'}</td>
-                        <td className={`py-2 px-3 font-mono font-bold text-right ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <td className={`py-2 px-3 font-mono font-bold text-right ${isWin ? 'text-emerald-500' : 'text-rose-500'}`}>
                           {isWin ? '+' : ''}{formatCurrency(t.netPnl || 0)}
                         </td>
+                        {filterTab === 'all' && (
+                          <td className="py-2 px-3 text-right whitespace-nowrap">
+                            {isDup ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-500/15 text-slate-500 dark:text-slate-400 border border-slate-500/25">
+                                <ShieldCheck className="w-2.5 h-2.5" />
+                                <span>IGNORED</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>NEW</span>
+                              </span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -270,18 +423,23 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
           <Button
             variant="primary"
             size="sm"
-            disabled={parsedTrades.length === 0 || success}
+            disabled={parsedTrades.length === 0 || newTrades.length === 0 || success}
             className="font-bold flex items-center gap-2"
             onClick={handleImport}
           >
             {success ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Imported Successfully!</span>
+                <span>Imported {newTrades.length} New Trade{newTrades.length === 1 ? '' : 's'}!</span>
               </>
+            ) : newTrades.length === 0 && parsedTrades.length > 0 ? (
+              <span>All Trades Already Imported</span>
             ) : (
               <>
-                <span>Import {parsedTrades.length > 0 ? `${parsedTrades.length} Trades` : 'Trades'}</span>
+                <span>
+                  Import {newTrades.length > 0 ? `${newTrades.length} New Trade${newTrades.length === 1 ? '' : 's'}` : 'Trades'}
+                  {duplicateTrades.length > 0 ? ` (${duplicateTrades.length} Ignored)` : ''}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

@@ -94,6 +94,68 @@ export function normalizeTicket(ticket?: string): string {
 }
 
 /**
+ * Evaluates whether a candidate trade matches an existing trade record.
+ * Checks ticket/order ID match, direct ID match, and composite signature (symbol, direction, lots, entry, close/open time, PnL).
+ */
+export function isTradeDuplicate(
+  candidate: Trade,
+  existingTrades: Trade[]
+): { isDuplicate: boolean; matchedTrade?: Trade } {
+  const normCandidateTicket = normalizeTicket(candidate.ticket);
+  const candAccountId = candidate.accountId || '';
+  const candSym = (candidate.symbol || '').toUpperCase().trim();
+  const candDir = (candidate.direction || '').toUpperCase().trim();
+  const candLot = Number(candidate.lotSize) || 0;
+  const candEntry = Number(candidate.entryPrice) || 0;
+  const candNetPnl = Number(candidate.netPnl) || 0;
+  const candCloseMs = candidate.closeTime ? new Date(candidate.closeTime).getTime() : 0;
+  const candOpenMs = candidate.openTime ? new Date(candidate.openTime).getTime() : 0;
+
+  for (const existing of existingTrades) {
+    // Only compare within the same account if candidate has an accountId specified
+    if (candAccountId && existing.accountId && candAccountId !== existing.accountId) {
+      continue;
+    }
+
+    // 1. Direct ID match
+    if (candidate.id && existing.id && candidate.id === existing.id) {
+      return { isDuplicate: true, matchedTrade: existing };
+    }
+
+    // 2. Ticket / Order ID match
+    const normExistingTicket = normalizeTicket(existing.ticket);
+    if (normCandidateTicket && normExistingTicket && normCandidateTicket === normExistingTicket) {
+      return { isDuplicate: true, matchedTrade: existing };
+    }
+
+    // 3. Composite Signature Match
+    const exSym = (existing.symbol || '').toUpperCase().trim();
+    const exDir = (existing.direction || '').toUpperCase().trim();
+    if (candSym === exSym && candDir === exDir) {
+      const exLot = Number(existing.lotSize) || 0;
+      const exEntry = Number(existing.entryPrice) || 0;
+      const exNetPnl = Number(existing.netPnl) || 0;
+      const exCloseMs = existing.closeTime ? new Date(existing.closeTime).getTime() : 0;
+      const exOpenMs = existing.openTime ? new Date(existing.openTime).getTime() : 0;
+
+      const lotsMatch = Math.abs(candLot - exLot) < 0.0001;
+      const entryMatch = Math.abs(candEntry - exEntry) < 0.05;
+      const pnlMatch = Math.abs(candNetPnl - exNetPnl) < 0.05;
+
+      // Close time within 60 seconds (or open time within 60s)
+      const closeTimeMatch = candCloseMs && exCloseMs && Math.abs(candCloseMs - exCloseMs) < 60000;
+      const openTimeMatch = candOpenMs && exOpenMs && Math.abs(candOpenMs - exOpenMs) < 60000;
+
+      if (lotsMatch && entryMatch && (closeTimeMatch || (openTimeMatch && pnlMatch))) {
+        return { isDuplicate: true, matchedTrade: existing };
+      }
+    }
+  }
+
+  return { isDuplicate: false };
+}
+
+/**
  * Deduplicates and sanitizes trades:
  * 1. Guarantees every trade has a valid accountId belonging to an existing account.
  * 2. Merges duplicate trade entries matching normalized ticket or composite signature.
@@ -401,7 +463,10 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const importTrades = (newTrades: Trade[], targetAccounts?: TradingAccount[]) => {
     setTrades(prev => {
       const activeAccs = targetAccounts || accounts;
-      const combined = [...newTrades, ...prev];
+      // Filter out incoming trades that already match an existing trade in journal (prev)
+      const trulyNewTrades = newTrades.filter(nt => !isTradeDuplicate(nt, prev).isDuplicate);
+      // Existing journal trades (prev) take precedence over new trades so historical user notes/tags are preserved
+      const combined = [...prev, ...trulyNewTrades];
       const { sanitized } = deduplicateAndSanitizeTrades(combined, activeAccs);
       return sortTradesDescending(sanitized);
     });
