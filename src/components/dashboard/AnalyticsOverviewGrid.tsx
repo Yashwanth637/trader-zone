@@ -1,112 +1,236 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Trade } from '../../types/trade';
-import { formatAdaptivePnl, formatSignedPnl } from '../../lib/calculations';
+import { useTrading } from '../../context/TradingContext';
+import { formatCurrency, formatAdaptivePnl, formatSignedPnl } from '../../lib/calculations';
 import {
   calculateSymbolBreakdowns,
   calculateWeekdayStats,
   SymbolStat,
   WeekdayStat
 } from '../../lib/scoreCalculations';
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 
 interface AnalyticsOverviewGridProps {
   trades: Trade[];
+  initialBalance?: number;
 }
 
-export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ trades }) => {
-  const closed = [...trades]
-    .filter(t => t.status === 'CLOSED')
-    .sort((a, b) => new Date(a.closeTime || a.openTime).getTime() - new Date(b.closeTime || b.openTime).getTime());
+function formatCompactCurrency(val: number): string {
+  const isNeg = val < -0.001;
+  const abs = Math.abs(val);
+  const sym = '$';
+  if (abs >= 1_000_000) {
+    return `${isNeg ? '-' : ''}${sym}${(abs / 1_000_000).toFixed(1)}M`;
+  }
+  if (abs >= 1_000) {
+    return `${isNeg ? '-' : ''}${sym}${(abs / 1_000).toFixed(1)}K`;
+  }
+  return `${isNeg ? '-' : ''}${sym}${abs.toFixed(0)}`;
+}
 
-  const { pnlBySymbol, winRateBySymbol } = calculateSymbolBreakdowns(trades);
-  const weekdayStats = calculateWeekdayStats(trades);
+function formatAxisCurrency(val: number): string {
+  const isNeg = val < -0.001;
+  const abs = Math.abs(val);
+  const sym = '$';
+  if (abs >= 1_000) {
+    return `${isNeg ? '-' : ''}${sym}${(abs / 1_000).toFixed(1)}k`;
+  }
+  return `${isNeg ? '-' : ''}${sym}${Math.round(abs)}`;
+}
+
+export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ trades, initialBalance }) => {
+  let activeAccount: any = null;
+  try {
+    const trading = useTrading();
+    activeAccount = trading?.activeAccount;
+  } catch {
+    // safe fallback if rendered outside TradingProvider
+  }
+
+  const startingBalance = initialBalance !== undefined
+    ? initialBalance
+    : (activeAccount?.initialBalance || 10000);
+
+  const closed = useMemo(() => {
+    return [...trades]
+      .filter(t => t.status === 'CLOSED')
+      .sort((a, b) => new Date(a.closeTime || a.openTime).getTime() - new Date(b.closeTime || b.openTime).getTime());
+  }, [trades]);
+
+  const { pnlBySymbol, winRateBySymbol } = useMemo(() => {
+    return calculateSymbolBreakdowns(trades);
+  }, [trades]);
+
+  const weekdayStats = useMemo(() => {
+    return calculateWeekdayStats(trades);
+  }, [trades]);
 
   // ----------------------------------------------------
-  // Top-Left: Equity Curve Calculations & Interaction
+  // Top-Left: Equity Curve Calculations & Interaction (Image 1 Style)
   // ----------------------------------------------------
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
     y: number;
     date: string;
+    balance: number;
     pnl: number;
+    drawdownPercent: number;
   } | null>(null);
 
   const equitySvgRef = useRef<SVGSVGElement | null>(null);
 
-  let cumulative = 0;
-  const equityPoints: { date: string; shortDate: string; pnl: number }[] = [];
+  // Compute balance progression points
+  const { equityPoints, peakBalance, currentBalance, maxDdPercent, currentDdPercent } = useMemo(() => {
+    let runningBalance = startingBalance;
+    let runningPeak = startingBalance;
 
-  closed.forEach(t => {
-    cumulative += t.netPnl;
-    const d = new Date(t.closeTime || t.openTime);
-    const shortDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    equityPoints.push({
-      date: shortDate,
-      shortDate,
-      pnl: parseFloat(cumulative.toFixed(2))
+    const points: Array<{
+      date: string;
+      shortDate: string;
+      balance: number;
+      pnl: number;
+      drawdownPercent: number;
+    }> = [
+      {
+        date: 'Initial',
+        shortDate: 'Start',
+        balance: startingBalance,
+        pnl: 0,
+        drawdownPercent: 0
+      }
+    ];
+
+    closed.forEach(t => {
+      const pnl = Number(t.netPnl) || 0;
+      runningBalance = parseFloat((runningBalance + pnl).toFixed(2));
+      if (runningBalance > runningPeak) {
+        runningPeak = runningBalance;
+      }
+      const ddUsd = runningPeak - runningBalance;
+      const ddPct = runningPeak > 0 ? (ddUsd / runningPeak) * 100 : 0;
+
+      const rawTime = t.closeTime || t.openTime;
+      const safeTime = typeof rawTime === 'string'
+        ? rawTime.replace(/^(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3')
+        : rawTime;
+      const d = new Date(safeTime);
+      const shortDate = !isNaN(d.getTime())
+        ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : 'Trade';
+
+      points.push({
+        date: shortDate,
+        shortDate,
+        balance: runningBalance,
+        pnl,
+        drawdownPercent: parseFloat(ddPct.toFixed(2))
+      });
     });
-  });
+
+    const allBalances = points.map(p => p.balance);
+    const peak = Math.max(...allBalances);
+    const current = points[points.length - 1].balance;
+    const maxDd = Math.max(...points.map(p => p.drawdownPercent));
+    const curDdU = peak - current;
+    const curDdP = peak > 0 ? (curDdU / peak) * 100 : 0;
+
+    return {
+      equityPoints: points,
+      peakBalance: peak,
+      currentBalance: current,
+      maxDdPercent: maxDd,
+      currentDdPercent: curDdP
+    };
+  }, [closed, startingBalance]);
 
   // SVG dimensions for Equity Curve
-  const eqW = 500;
-  const eqH = 220;
+  const eqW = 560;
+  const eqH = 240;
   const padLeft = 65;
-  const padRight = 25;
+  const padRight = 20;
   const padTop = 20;
   const padBottom = 35;
 
-  // Prepend $0 baseline if points don't start at 0
-  const pointsWithStart = equityPoints.length > 0 && equityPoints[0].pnl !== 0
-    ? [{ date: 'Start', shortDate: 'Start', pnl: 0 }, ...equityPoints]
-    : equityPoints;
-
-  const pnls = pointsWithStart.map(p => p.pnl);
-  const rawMin = pnls.length > 0 ? Math.min(0, Math.min(...pnls)) : 0;
-  const rawMax = pnls.length > 0 ? Math.max(0, Math.max(...pnls)) : 0;
-  const rawRange = rawMax - rawMin;
+  const allBalances = equityPoints.map(p => p.balance);
+  const minVal = Math.min(...allBalances, startingBalance);
+  const maxVal = Math.max(...allBalances, startingBalance);
+  const valRange = maxVal - minVal;
 
   // Adaptive headroom/footroom
-  const margin = Math.max(0.1, rawRange * 0.25);
-  const minPnl = rawMin - margin;
-  const maxPnl = rawMax + margin;
-  const pnlRange = (maxPnl - minPnl) || 1;
+  const margin = Math.max(startingBalance * 0.05, valRange * 0.15, 10);
+  const minBalanceAxis = minVal - margin;
+  const maxBalanceAxis = maxVal + margin;
+  const balanceRange = (maxBalanceAxis - minBalanceAxis) || 1;
 
   const getEqX = (index: number) => {
-    if (pointsWithStart.length <= 1) return padLeft + (eqW - padLeft - padRight) / 2;
-    return padLeft + (index / (pointsWithStart.length - 1)) * (eqW - padLeft - padRight);
+    if (equityPoints.length <= 1) return padLeft + (eqW - padLeft - padRight) / 2;
+    return padLeft + (index / (equityPoints.length - 1)) * (eqW - padLeft - padRight);
   };
 
   const getEqY = (val: number) => {
-    return eqH - padBottom - ((val - minPnl) / pnlRange) * (eqH - padTop - padBottom);
+    return eqH - padBottom - ((val - minBalanceAxis) / balanceRange) * (eqH - padTop - padBottom);
   };
 
-  const zeroEqY = getEqY(0);
+  const initialY = getEqY(startingBalance);
 
-  const eqPathD = pointsWithStart.reduce((acc, p, i) => {
+  const eqPathD = equityPoints.reduce((acc, p, i) => {
     const x = getEqX(i);
-    const y = getEqY(p.pnl);
+    const y = getEqY(p.balance);
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
   }, '');
 
-  // Y-axis tick intervals
-  const yTicks = [
-    maxPnl,
-    maxPnl * 0.5,
-    0,
-    minPnl * 0.5,
-    minPnl
-  ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a);
+  const areaPathD = equityPoints.length > 0
+    ? `${eqPathD} L ${getEqX(equityPoints.length - 1)} ${eqH - padBottom} L ${getEqX(0)} ${eqH - padBottom} Z`
+    : '';
 
-  // X-axis sample dates (up to 8 points)
-  const sampledXIndices: number[] = [];
-  if (equityPoints.length > 0) {
-    const step = Math.max(1, Math.floor(equityPoints.length / 8));
-    for (let i = 0; i < equityPoints.length; i += step) {
-      sampledXIndices.push(i);
+  // 5 Evenly spaced Y ticks matching Image 1
+  const yTicks = [
+    maxBalanceAxis,
+    minBalanceAxis + balanceRange * 0.75,
+    minBalanceAxis + balanceRange * 0.5,
+    minBalanceAxis + balanceRange * 0.25,
+    minBalanceAxis
+  ];
+
+  // X-axis date labels: Smart collision detection guaranteeing min 58px gap so dates never overlap (Image 2)
+  const minSpacing = 58;
+  const xLabels = useMemo(() => {
+    const labels: Array<{ x: number; label: string }> = [];
+    if (equityPoints.length <= 1) return labels;
+
+    const tradePoints = equityPoints.slice(1);
+    let lastX = -Infinity;
+
+    for (let i = 0; i < tradePoints.length; i++) {
+      const pointIdx = i + 1;
+      const xPos = getEqX(pointIdx);
+      const isFirst = i === 0;
+      const isLast = i === tradePoints.length - 1;
+      const label = tradePoints[i].date;
+
+      if (isFirst) {
+        labels.push({ x: xPos, label });
+        lastX = xPos;
+        continue;
+      }
+
+      if (isLast) {
+        if (xPos - lastX >= minSpacing) {
+          labels.push({ x: xPos, label });
+        } else if (labels.length > 1) {
+          labels[labels.length - 1] = { x: xPos, label };
+        }
+        continue;
+      }
+
+      if (xPos - lastX >= minSpacing && (eqW - padRight - xPos) >= (minSpacing * 0.7)) {
+        labels.push({ x: xPos, label });
+        lastX = xPos;
+      }
     }
-    if (!sampledXIndices.includes(equityPoints.length - 1)) {
-      sampledXIndices.push(equityPoints.length - 1);
-    }
-  }
+
+    return labels;
+  }, [equityPoints]);
 
   const handleEquityMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!equitySvgRef.current || equityPoints.length === 0) return;
@@ -129,9 +253,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
     const p = equityPoints[nearestIdx];
     setHoveredPoint({
       x: getEqX(nearestIdx),
-      y: getEqY(p.pnl),
+      y: getEqY(p.balance),
       date: p.date,
-      pnl: p.pnl
+      balance: p.balance,
+      pnl: p.pnl,
+      drawdownPercent: p.drawdownPercent
     });
   };
 
@@ -158,26 +284,103 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* ====================================================
-            1. TOP-LEFT: Equity Curve
+            1. TOP-LEFT: Equity Curve (Exact Image 1 Visuals)
            ==================================================== */}
-        <div className="premium-card p-6 flex flex-col justify-between min-h-[300px]">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold text-foreground">Equity Curve</h3>
+        <div className="premium-card p-5 sm:p-6 flex flex-col justify-between min-h-[360px]">
+          {/* Header matching Image 1: NO icon/logo before 'Equity Curve' as explicitly requested */}
+          <div className="mb-2">
+            <h3 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
+              Equity Curve
+            </h3>
+            <p className="text-xs text-muted font-medium mt-0.5">
+              Account balance over time
+            </p>
           </div>
 
-          {equityPoints.length === 0 ? (
-            <div className="h-52 flex flex-col items-center justify-center text-muted text-xs border border-dashed border-border rounded-xl">
+          {/* Top 3 Metric Cards matching Image 1 */}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-3">
+            {/* 1. Peak */}
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Peak</span>
+              </div>
+              <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
+                {formatCompactCurrency(peakBalance)}
+              </div>
+            </div>
+
+            {/* 2. Max DD */}
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
+                <TrendingDown className="w-3.5 h-3.5 text-amber-500" />
+                <span>Max DD</span>
+              </div>
+              <div className="text-lg sm:text-2xl font-black font-mono text-amber-500 tracking-tight mt-1 truncate">
+                {maxDdPercent.toFixed(1)}%
+              </div>
+            </div>
+
+            {/* 3. Current */}
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
+                <Activity className="w-3.5 h-3.5 text-indigo-400 dark:text-violet-400" />
+                <span>Current</span>
+              </div>
+              <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
+                {formatCompactCurrency(currentBalance)}
+              </div>
+            </div>
+          </div>
+
+          {equityPoints.length <= 1 ? (
+            <div className="h-56 flex flex-col items-center justify-center text-muted text-xs border border-dashed border-border rounded-2xl my-2">
               No closed trades recorded yet to plot equity curve.
             </div>
           ) : (
-            <div className="relative w-full overflow-visible">
+            <div className="relative w-full overflow-visible my-1">
+              {/* Interactive Floating Card Tooltip matching Image 1 */}
+              {hoveredPoint && (
+                <div
+                  style={{
+                    left: `${(hoveredPoint.x / eqW) * 100}%`,
+                    top: `${Math.max(8, Math.min(62, (hoveredPoint.y / eqH) * 100 - 35))}%`,
+                    transform: hoveredPoint.x > eqW * 0.62 ? 'translate(-105%, 0)' : 'translate(12px, 0)'
+                  }}
+                  className="absolute z-20 pointer-events-none p-3 rounded-2xl bg-slate-900/95 dark:bg-[#0c0d12]/95 border border-slate-700/80 dark:border-white/10 shadow-2xl backdrop-blur-md min-w-[145px] space-y-1 transition-all duration-75"
+                >
+                  <div className="text-[10.5px] font-medium text-slate-400">
+                    {hoveredPoint.date}
+                  </div>
+                  <div className="text-base font-black font-mono text-white tracking-tight">
+                    {formatCurrency(hoveredPoint.balance)}
+                  </div>
+                  <div className="flex items-center gap-2 pt-0.5 text-xs font-mono">
+                    <span className={hoveredPoint.pnl >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                      {hoveredPoint.pnl >= 0 ? `+${formatCurrency(hoveredPoint.pnl)}` : `-${formatCurrency(Math.abs(hoveredPoint.pnl))}`}
+                    </span>
+                    <span className="text-amber-400 font-semibold text-[11px]">
+                      DD: {hoveredPoint.drawdownPercent.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <svg
                 ref={equitySvgRef}
                 viewBox={`0 0 ${eqW} ${eqH}`}
-                className="w-full h-56 cursor-crosshair overflow-visible"
+                className="w-full h-56 cursor-crosshair overflow-visible select-none"
                 onMouseMove={handleEquityMouseMove}
                 onMouseLeave={() => setHoveredPoint(null)}
               >
+                <defs>
+                  <linearGradient id="equityEmeraldGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
+                    <stop offset="65%" stopColor="#10b981" stopOpacity="0.06" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
                 {/* Horizontal Grid lines & Y Ticks */}
                 {yTicks.map((tickVal, idx) => {
                   const yPos = getEqY(tickVal);
@@ -189,8 +392,8 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         x2={eqW - padRight}
                         y2={yPos}
                         stroke="currentColor"
-                        strokeOpacity="0.08"
-                        strokeDasharray={tickVal === 0 ? undefined : '3 3'}
+                        strokeOpacity="0.06"
+                        strokeDasharray="3 3"
                         className="text-foreground"
                       />
                       <text
@@ -199,109 +402,141 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         textAnchor="end"
                         className="text-[10px] font-mono fill-muted"
                       >
-                        {formatAdaptivePnl(tickVal)}
+                        {formatAxisCurrency(tickVal)}
                       </text>
                     </g>
                   );
                 })}
 
-                {/* X Axis Bottom Line */}
+                {/* Initial Balance Dashed Line matching Image 1 */}
+                {initialY >= padTop && initialY <= eqH - padBottom && (
+                  <g>
+                    <line
+                      x1={padLeft}
+                      y1={initialY}
+                      x2={eqW - padRight}
+                      y2={initialY}
+                      stroke="currentColor"
+                      strokeOpacity="0.35"
+                      strokeDasharray="4 4"
+                      className="text-slate-400 dark:text-slate-500"
+                    />
+                    <text
+                      x={(padLeft + eqW - padRight) / 2}
+                      y={initialY - 4}
+                      textAnchor="middle"
+                      className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500 select-none tracking-wider"
+                    >
+                      Initial
+                    </text>
+                  </g>
+                )}
+
+                {/* Left Y-Axis Vertical Line matching Image 1 */}
+                <line
+                  x1={padLeft}
+                  y1={padTop}
+                  x2={padLeft}
+                  y2={eqH - padBottom}
+                  stroke="currentColor"
+                  strokeOpacity="0.25"
+                  className="text-slate-400 dark:text-slate-600"
+                />
+
+                {/* Bottom X-Axis Line */}
                 <line
                   x1={padLeft}
                   y1={eqH - padBottom}
                   x2={eqW - padRight}
                   y2={eqH - padBottom}
                   stroke="currentColor"
-                  strokeOpacity="0.12"
-                  className="text-foreground"
+                  strokeOpacity="0.2"
+                  className="text-slate-400 dark:text-slate-600"
                 />
 
-                {/* X Axis Date Labels */}
-                {sampledXIndices.map(i => {
-                  const xPos = getEqX(i);
-                  return (
-                    <text
-                      key={i}
-                      x={xPos}
-                      y={eqH - padBottom + 16}
-                      textAnchor="middle"
-                      className="text-[9.5px] font-mono fill-muted"
-                    >
-                      {equityPoints[i].shortDate}
-                    </text>
-                  );
-                })}
+                {/* X Axis Non-Overlapping Date Labels (Guaranteed 58px minimum separation per Requirement 2) */}
+                {xLabels.map((item, idx) => (
+                  <text
+                    key={idx}
+                    x={item.x}
+                    y={eqH - padBottom + 18}
+                    textAnchor="middle"
+                    className="text-[10px] font-mono fill-muted select-none"
+                  >
+                    {item.label}
+                  </text>
+                ))}
 
-                {/* Main Purple Line */}
+                {/* Emerald Gradient Filled Area */}
+                <path
+                  d={areaPathD}
+                  fill="url(#equityEmeraldGradient)"
+                />
+
+                {/* Vibrant Emerald Green Curve matching Image 1 */}
                 <path
                   d={eqPathD}
                   fill="none"
-                  stroke="#8b5cf6"
-                  strokeWidth="2.5"
+                  stroke="#22c55e"
+                  strokeWidth="2.75"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
 
-                {/* Interactive Tooltip & Crosshair */}
+                {/* Hover guideline and glowing dot */}
                 {hoveredPoint && (
-                  <g className="transition-all duration-75">
-                    {/* Vertical guideline */}
+                  <g>
+                    {/* Solid vertical guideline matching Image 1 */}
                     <line
                       x1={hoveredPoint.x}
                       y1={padTop}
                       x2={hoveredPoint.x}
                       y2={eqH - padBottom}
-                      stroke="rgba(255, 255, 255, 0.5)"
-                      strokeDasharray="2 2"
-                      strokeWidth="1"
+                      stroke="#ffffff"
+                      strokeOpacity="0.65"
+                      strokeWidth="1.2"
                     />
-
-                    {/* Outer Glow Ring */}
+                    {/* Glowing green outer ring */}
                     <circle
                       cx={hoveredPoint.x}
                       cy={hoveredPoint.y}
-                      r="6"
-                      fill="#8b5cf6"
+                      r="7"
+                      fill="#22c55e"
                       fillOpacity="0.4"
                     />
-                    {/* Point Circle */}
+                    {/* Green point with white border */}
                     <circle
                       cx={hoveredPoint.x}
                       cy={hoveredPoint.y}
                       r="4"
-                      fill="#8b5cf6"
+                      fill="#22c55e"
                       stroke="#ffffff"
                       strokeWidth="2"
                     />
-
-                    {/* Floating Tooltip Box */}
-                    <g
-                      transform={`translate(${
-                        hoveredPoint.x > eqW - 140
-                          ? hoveredPoint.x - 130
-                          : hoveredPoint.x + 12
-                      }, ${Math.max(padTop + 10, hoveredPoint.y - 25)})`}
-                    >
-                      <rect
-                        width="115"
-                        height="44"
-                        rx="8"
-                        className="fill-slate-900/95 stroke-slate-700/80"
-                        strokeWidth="1"
-                        filter="drop-shadow(0 4px 10px rgba(0,0,0,0.5))"
-                      />
-                      <text x="10" y="16" className="text-[10px] font-medium fill-slate-400">
-                        Trade: {hoveredPoint.date}
-                      </text>
-                      <text x="10" y="32" className="text-[11px] font-bold font-mono fill-white">
-                        P&L : {hoveredPoint.pnl >= 0 ? `+${formatAdaptivePnl(hoveredPoint.pnl)}` : formatAdaptivePnl(hoveredPoint.pnl)}
-                      </text>
-                    </g>
                   </g>
                 )}
               </svg>
             </div>
           )}
+
+          {/* Bottom Drawdown Alert Banner matching Image 1 */}
+          <div className={`mt-3 rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 text-xs font-bold transition-colors ${
+            currentDdPercent > 0.05
+              ? 'bg-amber-500/10 border border-amber-500/25 text-amber-500'
+              : 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-500'
+          }`}>
+            {currentDdPercent > 0.05 ? (
+              <>
+                <TrendingDown className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>In drawdown: {currentDdPercent.toFixed(2)}% from peak</span>
+              </>
+            ) : (
+              <>
+                <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>At peak: {formatCurrency(peakBalance)} (0.00% drawdown)</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ====================================================

@@ -241,7 +241,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
             </div>
 
             {/* 2. [IMAGE 2] Analytics Overview Grid */}
-            <AnalyticsOverviewGrid trades={filteredTrades} />
+            <AnalyticsOverviewGrid trades={filteredTrades} initialBalance={initialBalance} />
 
             {/* 3. [IMAGE 3] Core Metrics Row */}
             <CoreMetricsRow stats={periodStats} trades={filteredTrades} />
