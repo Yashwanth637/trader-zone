@@ -138,42 +138,38 @@ export function parseFundedRoomCsv(
       }
 
       const hasPnl = order.netPnlStr !== '' && !isNaN(parseFloat(order.netPnlStr));
+      const exitSide = order.side; // e.g. 'sell' means entry was 'buy'
+      const expectedEntrySide = exitSide === 'sell' ? 'buy' : 'sell';
 
-      if (!hasPnl) {
-        // This is an OPENING (Entry) order
-        openPool.push(order);
-      } else {
-        // This is a CLOSING (Exit) order
-        const netPnl = parseFloat(order.netPnlStr);
-        const exitSide = order.side; // e.g. 'sell' means entry was 'buy'
-        const expectedEntrySide = exitSide === 'sell' ? 'buy' : 'sell';
+      // Find matching open order in openPool (FIFO: oldest first)
+      let openMatchIndex = -1;
+      for (let j = 0; j < openPool.length; j++) {
+        const candidate = openPool[j];
+        if (candidate.side === expectedEntrySide && Math.abs(candidate.lotSize - order.lotSize) < 0.0001) {
+          openMatchIndex = j;
+          break;
+        }
+      }
 
-        // Find the matching open order (closest preceding order with opposite side)
-        let openMatchIndex = -1;
-        for (let j = openPool.length - 1; j >= 0; j--) {
+      // If exact lot size not found, take the oldest opposite side
+      if (openMatchIndex === -1) {
+        for (let j = 0; j < openPool.length; j++) {
           const candidate = openPool[j];
-          if (candidate.side === expectedEntrySide && Math.abs(candidate.lotSize - order.lotSize) < 0.0001) {
+          if (candidate.side === expectedEntrySide) {
             openMatchIndex = j;
             break;
           }
         }
+      }
 
-        // If exact lot size not found, take the most recent opposite side
-        if (openMatchIndex === -1) {
-          for (let j = openPool.length - 1; j >= 0; j--) {
-            const candidate = openPool[j];
-            if (candidate.side === expectedEntrySide) {
-              openMatchIndex = j;
-              break;
-            }
-          }
-        }
-
+      if (hasPnl) {
+        // This is a CLOSING (Exit) order with explicit Net P&L
         let entryOrder: RawOrderRow | null = null;
         if (openMatchIndex !== -1) {
           entryOrder = openPool.splice(openMatchIndex, 1)[0];
         }
 
+        const netPnl = parseFloat(order.netPnlStr);
         const openTime = entryOrder ? entryOrder.date : order.date;
         const closeTime = order.date;
         const entryPrice = entryOrder ? entryOrder.price : order.price;
@@ -230,6 +226,16 @@ export function parseFundedRoomCsv(
         };
 
         trades.push(trade);
+      } else {
+        // Order without explicit Net P&L
+        if (openMatchIndex !== -1) {
+          // Offsets / consumes an existing opposing open position (e.g. market SELL offsetting earlier market BUY)
+          // Both orders are removed from openPool so they do not linger as phantom open positions.
+          openPool.splice(openMatchIndex, 1);
+        } else {
+          // Genuine entry order (opening order)
+          openPool.push(order);
+        }
       }
     }
 

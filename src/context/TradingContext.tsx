@@ -175,6 +175,17 @@ export function deduplicateAndSanitizeTrades(
 
   for (const rawTrade of tradeList) {
     const t: Trade = { ...rawTrade };
+    // Skip phantom open trades from Funded Room if any were previously imported
+    if (
+      t.status === 'OPEN' &&
+      (t.ticket === '160114287' ||
+        t.ticket === '160248742' ||
+        t.id === 'trade-fr-160114287' ||
+        t.id === 'trade-fr-160248742')
+    ) {
+      removedCount++;
+      continue;
+    }
     // Ensure valid accountId: only fall back to defaultAccId if accountId is completely missing
     if (!t.accountId) {
       t.accountId = defaultAccId;
@@ -222,9 +233,18 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [trades, setTrades] = useState<Trade[]>(() => {
     const rawTrades = Storage.getTrades();
     const initialAccs = Storage.getAccounts();
-    // Clean out any rogue mock trades generated during MT5 connection test
+    // Clean out any rogue mock trades or phantom Funded Room open trades
     const filteredRaw = rawTrades.filter(t => {
       if (t.id?.startsWith('mt5-') && (t.ticket?.endsWith('01') || t.ticket?.endsWith('02')) && t.notes?.includes('Synced automatically from')) {
+        return false;
+      }
+      if (
+        t.status === 'OPEN' &&
+        (t.ticket === '160114287' ||
+          t.ticket === '160248742' ||
+          t.id === 'trade-fr-160114287' ||
+          t.id === 'trade-fr-160248742')
+      ) {
         return false;
       }
       return true;
