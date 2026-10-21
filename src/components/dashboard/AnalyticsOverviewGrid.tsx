@@ -87,7 +87,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
 
   const equitySvgRef = useRef<SVGSVGElement | null>(null);
 
-  // Compute cumulative P&L progression starting from 0 and peak profit drawdown
+  const accountCapital = (initialBalance !== undefined && initialBalance > 0)
+    ? initialBalance
+    : (activeAccount?.initialBalance || 5000);
+
+  // Compute cumulative P&L progression starting from 0 and peak profit drawdown with respect to account value
   const { equityPoints, peakProfit, currentPnl, maxDdPercent, currentDdPercent, isPositivePnl, curveColor } = useMemo(() => {
     let runningPnl = 0;
     let runningPeak = 0;
@@ -114,10 +118,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
       if (runningPnl > runningPeak) {
         runningPeak = runningPnl;
       }
+      const peakAccountValue = accountCapital + runningPeak;
       const ddAmount = runningPeak - runningPnl;
-      const ddPct = runningPeak > 0
-        ? (ddAmount / runningPeak) * 100
-        : (runningPnl < 0 ? 100 : 0);
+      const ddPct = peakAccountValue > 0
+        ? (ddAmount / peakAccountValue) * 100
+        : 0;
 
       const rawTime = t.closeTime || t.openTime;
       const safeTime = typeof rawTime === 'string'
@@ -141,8 +146,9 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
     const peak = Math.max(0, ...allPnls);
     const curPnl = points[points.length - 1].pnl;
     const maxDd = Math.max(0, ...points.map(p => p.drawdownPercent));
+    const peakAccountValue = accountCapital + peak;
     const curDdU = peak - curPnl;
-    const curDdP = peak > 0 ? (curDdU / peak) * 100 : (curPnl < 0 ? 100 : 0);
+    const curDdP = peakAccountValue > 0 ? (curDdU / peakAccountValue) * 100 : 0;
 
     const isPos = curPnl >= 0;
     const color = isPos ? '#A9E34B' : '#f43f5e';
@@ -156,7 +162,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
       isPositivePnl: isPos,
       curveColor: color
     };
-  }, [closed]);
+  }, [closed, accountCapital]);
 
   // SVG dimensions for Equity Curve
   const eqW = 560;
@@ -312,10 +318,10 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </p>
           </div>
 
-          {/* Top 3 Metric Cards matching Image 1: 85% transparent with subtle borders */}
+          {/* Top 3 Metric Cards matching Image 1 & 2: 96% transparent with subtle borders */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-3">
             {/* 1. Peak */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05] backdrop-blur-sm transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Peak</span>
@@ -326,18 +332,18 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </div>
 
             {/* 2. Max DD */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05] backdrop-blur-sm transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <TrendingDown className="w-3.5 h-3.5 text-amber-500" />
                 <span>Max DD</span>
               </div>
               <div className="text-lg sm:text-2xl font-black font-mono text-amber-500 tracking-tight mt-1 truncate">
-                {maxDdPercent.toFixed(1)}%
+                {maxDdPercent >= 10 ? maxDdPercent.toFixed(1) : maxDdPercent.toFixed(2)}%
               </div>
             </div>
 
             {/* 3. Current */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05] backdrop-blur-sm transition-colors">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <Activity className="w-3.5 h-3.5 text-indigo-500 dark:text-violet-400" />
                 <span>Current</span>
