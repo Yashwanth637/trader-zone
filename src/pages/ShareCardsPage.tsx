@@ -47,8 +47,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-[#faf9ff] border-[#d8d3f8] text-slate-900 shadow-xl shadow-purple-500/10',
         cardBg: '#faf9ff',
         badge: 'bg-purple-100 border-purple-200 text-purple-800',
-        statsBox: 'bg-white border-purple-100/90 text-slate-900 shadow-sm',
-        statsLabel: 'text-purple-600',
+        statsLabel: 'text-purple-700/80',
+        statsValue: 'text-slate-900',
         divider: 'bg-purple-200/70',
         watermark: 'text-purple-900/[0.04]',
         brandTag: 'text-purple-700',
@@ -58,8 +58,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-gradient-to-br from-[#160f30] via-[#0d091e] to-[#06040e] border-purple-500/35 text-white shadow-glow-primary',
         cardBg: '#0d091e',
         badge: 'bg-purple-500/20 border-purple-500/30 text-purple-300',
-        statsBox: 'bg-white/[0.04] border-white/10 text-white',
         statsLabel: 'text-purple-400',
+        statsValue: 'text-white',
         divider: 'bg-white/10',
         watermark: 'text-white/[0.04]',
         brandTag: 'text-purple-400',
@@ -71,8 +71,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-[#f4fbff] border-[#bfe4fc] text-slate-900 shadow-xl shadow-sky-500/10',
         cardBg: '#f4fbff',
         badge: 'bg-sky-100 border-sky-200 text-sky-800',
-        statsBox: 'bg-white border-sky-100 text-slate-900 shadow-sm',
-        statsLabel: 'text-sky-600',
+        statsLabel: 'text-sky-700/80',
+        statsValue: 'text-slate-900',
         divider: 'bg-sky-200/70',
         watermark: 'text-sky-900/[0.04]',
         brandTag: 'text-sky-700',
@@ -82,8 +82,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-gradient-to-br from-[#061828] via-[#030e17] to-[#01050a] border-cyan-500/40 text-white shadow-cyan-500/20',
         cardBg: '#030e17',
         badge: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
-        statsBox: 'bg-white/[0.04] border-white/10 text-white',
         statsLabel: 'text-cyan-400',
+        statsValue: 'text-white',
         divider: 'bg-white/10',
         watermark: 'text-white/[0.04]',
         brandTag: 'text-cyan-400',
@@ -95,8 +95,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-[#f4fbf7] border-[#bfead2] text-slate-900 shadow-xl shadow-emerald-500/10',
         cardBg: '#f4fbf7',
         badge: 'bg-emerald-100 border-emerald-200 text-emerald-800',
-        statsBox: 'bg-white border-emerald-100 text-slate-900 shadow-sm',
-        statsLabel: 'text-emerald-600',
+        statsLabel: 'text-emerald-700/80',
+        statsValue: 'text-slate-900',
         divider: 'bg-emerald-200/70',
         watermark: 'text-emerald-900/[0.04]',
         brandTag: 'text-emerald-700',
@@ -106,8 +106,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-gradient-to-br from-[#041a12] via-[#020e09] to-[#010604] border-emerald-500/40 text-white shadow-glow-success',
         cardBg: '#020e09',
         badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
-        statsBox: 'bg-white/[0.04] border-white/10 text-white',
         statsLabel: 'text-emerald-400',
+        statsValue: 'text-white',
         divider: 'bg-white/10',
         watermark: 'text-white/[0.04]',
         brandTag: 'text-emerald-400',
@@ -119,8 +119,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-[#ffffff] border-slate-300 text-slate-900 shadow-xl shadow-slate-900/5',
         cardBg: '#ffffff',
         badge: 'bg-slate-100 border-slate-200 text-slate-800',
-        statsBox: 'bg-slate-50 border-slate-200 text-slate-900 shadow-sm',
         statsLabel: 'text-slate-500',
+        statsValue: 'text-slate-900',
         divider: 'bg-slate-200',
         watermark: 'text-slate-900/[0.04]',
         brandTag: 'text-slate-700',
@@ -130,8 +130,8 @@ export const ShareCardsPage: React.FC = () => {
         container: 'bg-gradient-to-br from-[#18181b] via-[#0d0d0f] to-[#050507] border-white/20 text-white',
         cardBg: '#0d0d0f',
         badge: 'bg-white/10 border-white/15 text-slate-200',
-        statsBox: 'bg-white/[0.05] border-white/10 text-white',
         statsLabel: 'text-slate-400',
+        statsValue: 'text-white',
         divider: 'bg-white/10',
         watermark: 'text-white/[0.04]',
         brandTag: 'text-slate-300',
@@ -274,7 +274,7 @@ export const ShareCardsPage: React.FC = () => {
           clonedCard.style.maxHeight = `${height}px`;
 
           // Ensure no nested truncation or line-height clipping in html2canvas
-          const allTextNodes = clonedCard.querySelectorAll('.font-mono, [class*="statsBox"] > div');
+          const allTextNodes = clonedCard.querySelectorAll('.font-mono, [data-stat-text="true"], [data-stat-label="true"]');
           allTextNodes.forEach(node => {
             if (node instanceof HTMLElement) {
               node.style.overflow = 'visible';
@@ -526,20 +526,28 @@ export const ShareCardsPage: React.FC = () => {
             <div
               ref={cardRef}
               data-share-card="true"
-              className={`rounded-[28px] border transition-all flex flex-col justify-between relative overflow-hidden select-none ${currentTheme.container} ${
+              className={`rounded-[28px] border transition-all relative overflow-hidden select-none ${currentTheme.container} ${
                 aspect === 'square'
-                  ? 'w-[420px] h-[420px] p-6 sm:p-7'
+                  ? 'w-[440px] h-[440px]'
                   : aspect === 'story'
-                  ? 'w-[340px] h-[600px] p-6 sm:p-7'
-                  : 'w-[540px] h-[310px] p-5 sm:p-6'
+                  ? 'w-[360px] h-[640px]'
+                  : 'w-[560px] h-[315px]'
               }`}
               style={{
                 backgroundColor: currentTheme.cardBg
               }}
             >
               {/* Candlestick Watermark Background (Zero-empty-void assurance) */}
-              <div className={`absolute right-3 bottom-8 pointer-events-none select-none ${currentTheme.watermark}`}>
-                <svg width="200" height="140" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <div
+                className={`absolute pointer-events-none select-none ${currentTheme.watermark} ${
+                  aspect === 'banner'
+                    ? 'right-4 bottom-10'
+                    : aspect === 'square'
+                    ? 'right-4 bottom-12'
+                    : 'right-3 bottom-14'
+                }`}
+              >
+                <svg width="190" height="130" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="25" y="35" width="12" height="55" rx="2" fill="currentColor" />
                   <line x1="31" y1="18" x2="31" y2="105" stroke="currentColor" strokeWidth="2.5" />
                   <rect x="65" y="50" width="12" height="40" rx="2" fill="currentColor" />
@@ -553,12 +561,20 @@ export const ShareCardsPage: React.FC = () => {
                 </svg>
               </div>
 
-              {/* CARD HEADER */}
-              <div className="flex items-center justify-between z-10">
+              {/* CARD HEADER (Top Coordinates) */}
+              <div
+                className={`absolute left-6 right-6 flex items-center justify-between z-10 ${
+                  aspect === 'banner' ? 'top-5' : aspect === 'square' ? 'top-6' : 'top-7'
+                }`}
+              >
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${
-                    isCardLight ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-white/[0.12] border border-white/10 text-primary-light'
-                  }`}>
+                  <div
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${
+                      isCardLight
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'bg-white/[0.12] border border-white/10 text-primary-light'
+                    }`}
+                  >
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -578,207 +594,483 @@ export const ShareCardsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* SQUARE & STORY BODY */}
-              {aspect !== 'banner' ? (
-                <div className="my-auto z-10 space-y-3.5 pt-1">
-                  {/* Symbol & Direction Pill */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
-                        {trade.symbol}
-                      </span>
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                        isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
-                      }`}>
-                        {getAssetBadge(trade)}
-                      </span>
-                    </div>
+              {/* FORMAT 1: BANNER (16:9) COORDINATE LAYOUT */}
+              {aspect === 'banner' && (
+                <>
+                  {/* Left Column Hero (Coordinates: top 76px, left 24px, width 230px, bottom 56px) */}
+                  <div className="absolute top-[76px] left-6 w-[230px] bottom-[56px] flex flex-col justify-between z-10">
+                    <div>
+                      {/* Symbol Row */}
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                          {trade.symbol}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 leading-none h-5 px-2 rounded-md font-black text-[10px] select-none ${
+                            trade.direction === 'BUY'
+                              ? isCardLight
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/40'
+                              : isCardLight
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-rose-500/25 text-rose-400 border border-rose-500/40'
+                          }`}
+                        >
+                          {trade.direction === 'BUY' ? (
+                            <TrendingUp className="w-3 h-3 stroke-[2.5]" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 stroke-[2.5]" />
+                          )}
+                          <span>{trade.direction}</span>
+                        </span>
+                        <span className={`text-xs font-mono font-bold ${isCardLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {trade.lotSize}L
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 leading-none h-6 px-2.5 rounded-lg font-black text-[11px] shadow-sm select-none ${
-                        trade.direction === 'BUY'
-                          ? isCardLight
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
-                          : isCardLight
-                          ? 'bg-rose-500 text-white'
-                          : 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
-                      }`}>
-                        {trade.direction === 'BUY' ? (
-                          <TrendingUp className="w-3.5 h-3.5 stroke-[2.5]" />
-                        ) : (
-                          <TrendingDown className="w-3.5 h-3.5 stroke-[2.5]" />
-                        )}
-                        <span>{trade.direction}</span>
-                      </span>
-                      <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
-                        isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
-                      }`}>
-                        {trade.lotSize} Lots
-                      </span>
-                    </div>
-                  </div>
+                      {/* Net P&L Hero */}
+                      <div
+                        className={`text-[40px] font-black font-mono tracking-tight leading-none mt-2.5 ${
+                          isWin
+                            ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                            : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                        }`}
+                      >
+                        {formatCurrency(trade.netPnl)}
+                      </div>
 
-                  {/* Hero Net P&L + Return Badge */}
-                  <div className="flex items-baseline justify-between gap-2">
-                    <div className={`text-4xl sm:text-[44px] font-black font-mono tracking-tight leading-none ${
-                      isWin
-                        ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
-                        : isCardLight ? 'text-rose-600' : 'text-rose-400'
-                    }`}>
-                      {formatCurrency(trade.netPnl)}
-                    </div>
-                    <div className={`inline-flex items-center gap-1 text-xs font-mono font-black px-2.5 py-1 rounded-lg border ${
-                      isWin
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
-                    }`}>
-                      {getReturnBadge(trade)}
-                    </div>
-                  </div>
-
-                  {/* 2x2 High-Performance Stats Matrix */}
-                  <div className="grid grid-cols-2 gap-2 pt-0.5">
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
-                        Entry Price
-                      </div>
-                      <div className="text-sm font-mono font-bold leading-normal">
-                        ${formatPrice(trade.entryPrice, trade.symbol)}
-                      </div>
-                    </div>
-
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
-                        Exit Price
-                      </div>
-                      <div className="text-sm font-mono font-bold leading-normal">
-                        {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Closed @ Market'}
-                      </div>
-                    </div>
-
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
-                        Risk : Reward
-                      </div>
-                      <div className="text-sm font-mono font-bold leading-normal">
-                        {getRiskReward(trade)}
-                      </div>
-                    </div>
-
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[10px] uppercase font-bold tracking-normal mb-0.5 ${currentTheme.statsLabel}`}>
-                        Duration / Time
-                      </div>
-                      <div className="text-sm font-mono font-bold leading-normal">
-                        {formatDuration(trade)}
+                      {/* Return Badge (Clean typography, no mini-card) */}
+                      <div
+                        className={`text-xs font-mono font-bold mt-2 flex items-center gap-1 ${
+                          isWin
+                            ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                            : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                        }`}
+                      >
+                        <span>{getReturnBadge(trade)}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Story-Only Extra Details */}
-                  {aspect === 'story' && (
-                    <div className={`p-3 rounded-xl border text-xs space-y-1.5 ${currentTheme.statsBox}`}>
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className={currentTheme.statsLabel}>Net Pips</span>
-                        <strong className="font-mono font-bold">{trade.pips || 0} Pips</strong>
-                      </div>
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className={currentTheme.statsLabel}>Execution Score</span>
-                        <span className="font-bold text-emerald-500">★★★★★ Elite</span>
-                      </div>
-                      {trade.setupTags && trade.setupTags.length > 0 && (
-                        <div className="pt-1 flex flex-wrap gap-1">
-                          {trade.setupTags.slice(0, 3).map((tag, i) => (
-                            <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
-                              #{tag}
-                            </span>
-                          ))}
+                  {/* Vertical Coordinate Divider Line */}
+                  <div className={`absolute top-[76px] bottom-[56px] left-[265px] w-[1px] ${currentTheme.divider}`} />
+
+                  {/* Right Column Stats (Coordinates: top 76px, left 290px, right 24px, bottom 56px - NO MINI CARDS) */}
+                  <div className="absolute top-[76px] left-[290px] right-6 bottom-[56px] flex flex-col justify-center z-10">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      {/* Entry Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Entry Price
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* BANNER (16:9) BODY: TWO COLUMN LAYOUT */
-                <div className="grid grid-cols-2 gap-4 items-center my-auto z-10 py-1">
-                  {/* Left Column: Hero */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
-                        {trade.symbol}
-                      </span>
-                      <span className={`inline-flex items-center gap-1 leading-none h-5 px-2 rounded-md font-black text-[10px] select-none ${
-                        trade.direction === 'BUY'
-                          ? isCardLight ? 'bg-emerald-500 text-white' : 'bg-emerald-500/30 text-emerald-300'
-                          : isCardLight ? 'bg-rose-500 text-white' : 'bg-rose-500/30 text-rose-300'
-                      }`}>
-                        {trade.direction === 'BUY' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        <span>{trade.direction}</span>
-                      </span>
-                      <span className="text-[11px] font-mono text-muted font-bold">
-                        {trade.lotSize}L
-                      </span>
-                    </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          ${formatPrice(trade.entryPrice, trade.symbol)}
+                        </div>
+                      </div>
 
-                    <div className={`text-4xl font-black font-mono tracking-tight leading-tight py-0.5 ${
-                      isWin
-                        ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
-                        : isCardLight ? 'text-rose-600' : 'text-rose-400'
-                    }`}>
-                      {formatCurrency(trade.netPnl)}
-                    </div>
+                      {/* Exit Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Exit Price
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Market'}
+                        </div>
+                      </div>
 
-                    <div className={`inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2.5 py-1 rounded-md border leading-normal ${
-                      isWin
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
-                    }`}>
-                      {getReturnBadge(trade)}
-                    </div>
-                  </div>
+                      {/* Risk : Reward */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Risk : Reward
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {getRiskReward(trade)}
+                        </div>
+                      </div>
 
-                  {/* Right Column: 2x2 Matrix */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
-                        Entry
-                      </div>
-                      <div className="text-xs font-mono font-bold leading-normal whitespace-nowrap overflow-visible">
-                        ${formatPrice(trade.entryPrice, trade.symbol)}
-                      </div>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
-                        Exit
-                      </div>
-                      <div className="text-xs font-mono font-bold leading-normal whitespace-nowrap overflow-visible">
-                        {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Market'}
-                      </div>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
-                        R:R
-                      </div>
-                      <div className="text-xs font-mono font-bold leading-normal">
-                        {getRiskReward(trade)}
-                      </div>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${currentTheme.statsBox}`}>
-                      <div className={`text-[9px] uppercase font-bold tracking-normal mb-1 ${currentTheme.statsLabel}`}>
-                        Duration
-                      </div>
-                      <div className="text-xs font-mono font-bold leading-normal">
-                        {formatDuration(trade)}
+                      {/* Duration */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Duration
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {formatDuration(trade)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
-              {/* CARD FOOTER */}
-              <div className="mt-auto z-10 w-full pt-1.5">
-                <div className={`w-full h-[1px] mb-2 ${currentTheme.divider}`} />
+              {/* FORMAT 2: SQUARE (1:1) COORDINATE LAYOUT */}
+              {aspect === 'square' && (
+                <>
+                  {/* Hero (Coordinates: top 76px, left 24px, right 24px) */}
+                  <div className="absolute top-[76px] left-6 right-6 z-10">
+                    {/* Symbol Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                          {trade.symbol}
+                        </span>
+                        <span
+                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                            isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
+                          }`}
+                        >
+                          {getAssetBadge(trade)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 leading-none h-6 px-2.5 rounded-lg font-black text-[11px] shadow-sm select-none ${
+                            trade.direction === 'BUY'
+                              ? isCardLight
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
+                              : isCardLight
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                          }`}
+                        >
+                          {trade.direction === 'BUY' ? (
+                            <TrendingUp className="w-3.5 h-3.5 stroke-[2.5]" />
+                          ) : (
+                            <TrendingDown className="w-3.5 h-3.5 stroke-[2.5]" />
+                          )}
+                          <span>{trade.direction}</span>
+                        </span>
+                        <span
+                          className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
+                            isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
+                          }`}
+                        >
+                          {trade.lotSize} Lots
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Net P&L Hero + Return Info */}
+                    <div className="flex items-baseline justify-between gap-2 mt-2">
+                      <div
+                        className={`text-[44px] font-black font-mono tracking-tight leading-none ${
+                          isWin
+                            ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                            : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                        }`}
+                      >
+                        {formatCurrency(trade.netPnl)}
+                      </div>
+                      <div
+                        className={`text-xs font-mono font-bold ${
+                          isWin
+                            ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                            : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                        }`}
+                      >
+                        <span>{getReturnBadge(trade)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Coordinate Divider Line */}
+                  <div className={`absolute top-[188px] left-6 right-6 h-[1px] ${currentTheme.divider}`} />
+
+                  {/* Stats Grid (Coordinates: top 208px, left 24px, right 24px - NO MINI CARDS) */}
+                  <div className="absolute top-[208px] left-6 right-6 z-10">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      {/* Entry Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Entry Price
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-base font-mono font-bold leading-normal ${currentTheme.statsValue}`}
+                        >
+                          ${formatPrice(trade.entryPrice, trade.symbol)}
+                        </div>
+                      </div>
+
+                      {/* Exit Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Exit Price
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-base font-mono font-bold leading-normal ${currentTheme.statsValue}`}
+                        >
+                          {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Closed @ Market'}
+                        </div>
+                      </div>
+
+                      {/* Risk : Reward */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Risk : Reward
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-base font-mono font-bold leading-normal ${currentTheme.statsValue}`}
+                        >
+                          {getRiskReward(trade)}
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Duration
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-base font-mono font-bold leading-normal ${currentTheme.statsValue}`}
+                        >
+                          {formatDuration(trade)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* FORMAT 3: STORY (9:16) COORDINATE LAYOUT */}
+              {aspect === 'story' && (
+                <>
+                  {/* Hero (Coordinates: top 82px, left 24px, right 24px) */}
+                  <div className="absolute top-[82px] left-6 right-6 z-10">
+                    {/* Symbol Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
+                          {trade.symbol}
+                        </span>
+                        <span
+                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                            isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
+                          }`}
+                        >
+                          {getAssetBadge(trade)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 leading-none h-6 px-2.5 rounded-lg font-black text-[11px] shadow-sm select-none ${
+                            trade.direction === 'BUY'
+                              ? isCardLight
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
+                              : isCardLight
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-rose-500/30 text-rose-300 border border-rose-500/50'
+                          }`}
+                        >
+                          {trade.direction === 'BUY' ? (
+                            <TrendingUp className="w-3.5 h-3.5 stroke-[2.5]" />
+                          ) : (
+                            <TrendingDown className="w-3.5 h-3.5 stroke-[2.5]" />
+                          )}
+                          <span>{trade.direction}</span>
+                        </span>
+                        <span
+                          className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
+                            isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
+                          }`}
+                        >
+                          {trade.lotSize} Lots
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Net P&L Hero */}
+                    <div
+                      className={`text-[46px] font-black font-mono tracking-tight leading-none mt-3 ${
+                        isWin
+                          ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                          : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                      }`}
+                    >
+                      {formatCurrency(trade.netPnl)}
+                    </div>
+
+                    {/* Return Info */}
+                    <div
+                      className={`text-sm font-mono font-bold mt-2 flex items-center gap-1 ${
+                        isWin
+                          ? isCardLight ? 'text-emerald-600' : 'text-emerald-400'
+                          : isCardLight ? 'text-rose-600' : 'text-rose-400'
+                      }`}
+                    >
+                      <span>{getReturnBadge(trade)}</span>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Coordinate Divider Line */}
+                  <div className={`absolute top-[210px] left-6 right-6 h-[1px] ${currentTheme.divider}`} />
+
+                  {/* Stats Grid (Coordinates: top 230px, left 24px, right 24px - NO MINI CARDS) */}
+                  <div className="absolute top-[230px] left-6 right-6 z-10">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      {/* Entry Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Entry Price
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          ${formatPrice(trade.entryPrice, trade.symbol)}
+                        </div>
+                      </div>
+
+                      {/* Exit Price */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Exit Price
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {trade.exitPrice ? `$${formatPrice(trade.exitPrice, trade.symbol)}` : 'Market'}
+                        </div>
+                      </div>
+
+                      {/* Risk : Reward */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Risk : Reward
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {getRiskReward(trade)}
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Duration
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {formatDuration(trade)}
+                        </div>
+                      </div>
+
+                      {/* Net Pips */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Net Pips
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className={`text-sm font-mono font-bold ${currentTheme.statsValue}`}
+                        >
+                          {trade.pips || 0} Pips
+                        </div>
+                      </div>
+
+                      {/* Execution Score */}
+                      <div>
+                        <div
+                          data-stat-label="true"
+                          className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${currentTheme.statsLabel}`}
+                        >
+                          Execution
+                        </div>
+                        <div
+                          data-stat-text="true"
+                          className="text-sm font-bold text-emerald-500"
+                        >
+                          ★★★★★ Elite
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Setup Tags */}
+                    {trade.setupTags && trade.setupTags.length > 0 && (
+                      <div className="pt-4 flex flex-wrap gap-1.5">
+                        {trade.setupTags.slice(0, 3).map((tag, i) => (
+                          <span
+                            key={i}
+                            className={`text-[10px] font-bold tracking-wide ${currentTheme.statsLabel}`}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* CARD FOOTER (Bottom Coordinates) */}
+              <div
+                className={`absolute left-6 right-6 z-10 ${
+                  aspect === 'banner' ? 'bottom-4' : aspect === 'square' ? 'bottom-5' : 'bottom-6'
+                }`}
+              >
+                <div className={`w-full h-[1px] mb-2.5 ${currentTheme.divider}`} />
                 <div className="flex items-center justify-between gap-2 text-[10.5px] leading-normal">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     <span className={isCardLight ? 'text-slate-500' : 'text-slate-400'}>Strategy:</span>
