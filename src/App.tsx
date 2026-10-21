@@ -12,6 +12,7 @@ import { Header, Footer } from './components/layout/Header';
 import { AddTradeModal } from './components/trades/AddTradeModal';
 import { CsvImportModal } from './components/trades/CsvImportModal';
 import { QuickCalculatorModal } from './components/common/QuickCalculatorModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
@@ -113,37 +114,39 @@ const AppLayout: React.FC = () => {
             : 'p-4 md:p-6'
         } ${collapsed ? 'md:ml-16' : 'md:ml-64'}`}
       >
-        <Routes>
-          <Route path="/dashboard" element={<DashboardPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
-          <Route path="/journal" element={<JournalPage />} />
-          <Route path="/day-view" element={<DayViewPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
-          <Route path="/trades" element={<TradesPage onOpenAddTrade={() => setAddTradeOpen(true)} onOpenCsvImport={() => setCsvImportOpen(true)} />} />
-          <Route path="/trades/:id" element={<TradeDetailPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/strategies" element={<StrategiesPage />} />
-          <Route path="/replay" element={<ReplayPage />} />
-          <Route path="/terminal" element={<TerminalPage />} />
-          <Route path="/ai-2" element={<AIPage />} />
-          <Route path="/hot-topics" element={<HotTopicsPage />} />
-          <Route path="/calendar" element={<EventCalendarPage />} />
-          <Route path="/event-calendar" element={<EventCalendarPage />} />
-          <Route path="/heatmap" element={<MarketHeatmapPage />} />
-          <Route path="/market-heatmap" element={<MarketHeatmapPage />} />
-          <Route path="/progress-tracker" element={<ProgressTrackerPage />} />
-          <Route path="/progress" element={<ProgressTrackerPage />} />
-          <Route path="/discipline-rules" element={<ProgressPage />} />
-          <Route path="/share-cards" element={<ShareCardsPage />} />
-          <Route path="/market-hours" element={<MarketHoursPage />} />
-          <Route path="/broker-hub" element={<BrokerHubPage onOpenCsvImport={() => setCsvImportOpen(true)} />} />
-          <Route path="/broker-hub/account/:id" element={<AccountDetailPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/disclaimer" element={<DisclaimerPage />} />
-          <Route path="*" element={<DashboardPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
-        </Routes>
+        <ErrorBoundary fallbackTitle="View Loading Error">
+          <Routes>
+            <Route path="/dashboard" element={<DashboardPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
+            <Route path="/journal" element={<JournalPage />} />
+            <Route path="/day-view" element={<DayViewPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
+            <Route path="/trades" element={<TradesPage onOpenAddTrade={() => setAddTradeOpen(true)} onOpenCsvImport={() => setCsvImportOpen(true)} />} />
+            <Route path="/trades/:id" element={<TradeDetailPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/strategies" element={<StrategiesPage />} />
+            <Route path="/replay" element={<ReplayPage />} />
+            <Route path="/terminal" element={<TerminalPage />} />
+            <Route path="/ai-2" element={<AIPage />} />
+            <Route path="/hot-topics" element={<HotTopicsPage />} />
+            <Route path="/calendar" element={<EventCalendarPage />} />
+            <Route path="/event-calendar" element={<EventCalendarPage />} />
+            <Route path="/heatmap" element={<MarketHeatmapPage />} />
+            <Route path="/market-heatmap" element={<MarketHeatmapPage />} />
+            <Route path="/progress-tracker" element={<ProgressTrackerPage />} />
+            <Route path="/progress" element={<ProgressTrackerPage />} />
+            <Route path="/discipline-rules" element={<ProgressPage />} />
+            <Route path="/share-cards" element={<ShareCardsPage />} />
+            <Route path="/market-hours" element={<MarketHoursPage />} />
+            <Route path="/broker-hub" element={<BrokerHubPage onOpenCsvImport={() => setCsvImportOpen(true)} />} />
+            <Route path="/broker-hub/account/:id" element={<AccountDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
+            <Route path="*" element={<DashboardPage onOpenAddTrade={() => setAddTradeOpen(true)} />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
 
       {/* Footer */}

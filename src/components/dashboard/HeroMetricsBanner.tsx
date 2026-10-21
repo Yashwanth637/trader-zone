@@ -31,10 +31,11 @@ interface HeroMetricsBannerProps {
  * Uses direct DOM ref updating to prevent component tree re-rendering artifacts.
  */
 export const VendingPnlCounter: React.FC<{
-  targetValue: number;
+  targetValue?: number;
   duration?: number;
-}> = ({ targetValue, duration = 1600 }) => {
+}> = ({ targetValue = 0, duration = 1600 }) => {
   const spanRef = useRef<HTMLSpanElement>(null);
+  const safeTarget = typeof targetValue === 'number' && !isNaN(targetValue) ? targetValue : 0;
 
   useEffect(() => {
     let animationFrameId: number;
@@ -42,13 +43,15 @@ export const VendingPnlCounter: React.FC<{
     const startVal = 0;
 
     const formatVal = (v: number) => {
-      const isNeg = targetValue < -0.001;
-      const isPos = targetValue > 0.001;
+      const isNeg = safeTarget < -0.001;
+      const isPos = safeTarget > 0.001;
       const absVal = Math.abs(v);
-      const formattedAbs = absVal.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      const formattedAbs = isNaN(absVal)
+        ? '0.00'
+        : absVal.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
       return `${isNeg ? '-' : isPos ? '+' : ''}$${formattedAbs}`;
     };
 
@@ -63,7 +66,7 @@ export const VendingPnlCounter: React.FC<{
 
       // Ease-out cubic deceleration curve
       const ease = 1 - Math.pow(1 - progress, 3);
-      const val = startVal + (targetValue - startVal) * ease;
+      const val = startVal + (safeTarget - startVal) * ease;
 
       if (spanRef.current) {
         spanRef.current.textContent = formatVal(val);
@@ -72,16 +75,16 @@ export const VendingPnlCounter: React.FC<{
       if (progress < 1) {
         animationFrameId = requestAnimationFrame(animate);
       } else if (spanRef.current) {
-        spanRef.current.textContent = formatVal(targetValue);
+        spanRef.current.textContent = formatVal(safeTarget);
       }
     };
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [targetValue, duration]);
+  }, [safeTarget, duration]);
 
-  const isNeg = targetValue < -0.001;
-  const isPos = targetValue > 0.001;
+  const isNeg = safeTarget < -0.001;
+  const isPos = safeTarget > 0.001;
   const initialFormatted = Math.abs(0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -334,7 +337,7 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             WIN RATE
           </span>
           <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
-            {stats.winRate.toFixed(0)}%
+            {(stats?.winRate ?? 0).toFixed(0)}%
           </div>
         </div>
 
@@ -344,7 +347,7 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             TOTAL TRADES
           </span>
           <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white tracking-tight">
-            {stats.totalTrades}
+            {stats?.totalTrades ?? 0}
           </div>
         </div>
 
@@ -354,7 +357,7 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             BIGGEST WIN
           </span>
           <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
-            {stats.largestWin > 0 ? `+${formatCurrency(stats.largestWin)}` : '$0.00'}
+            {(stats?.largestWin ?? 0) > 0 ? `+${formatCurrency(stats?.largestWin ?? 0)}` : '$0.00'}
           </div>
         </div>
 
@@ -364,7 +367,7 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             AVG WIN
           </span>
           <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
-            {stats.avgWin > 0 ? `+${formatCurrency(stats.avgWin)}` : '$0.00'}
+            {(stats?.avgWin ?? 0) > 0 ? `+${formatCurrency(stats?.avgWin ?? 0)}` : '$0.00'}
           </div>
         </div>
 
@@ -374,7 +377,7 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
             AVG LOSS
           </span>
           <div className="text-xl sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tracking-tight truncate">
-            {stats.avgLoss > 0 ? formatCurrency(stats.avgLoss) : '$0.00'}
+            {(stats?.avgLoss ?? 0) > 0 ? formatCurrency(stats?.avgLoss ?? 0) : '$0.00'}
           </div>
         </div>
 

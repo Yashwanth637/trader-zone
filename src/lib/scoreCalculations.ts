@@ -393,7 +393,7 @@ export function calculateSymbolBreakdowns(trades: Trade[]): {
   const symbolMap: Record<string, { pnl: number; total: number; wins: number }> = {};
 
   closed.forEach(t => {
-    const sym = t.symbol.toUpperCase();
+    const sym = (t.symbol || 'OTHER').toUpperCase();
     if (!symbolMap[sym]) {
       symbolMap[sym] = { pnl: 0, total: 0, wins: 0 };
     }

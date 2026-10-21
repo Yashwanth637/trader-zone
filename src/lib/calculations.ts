@@ -372,17 +372,25 @@ export function sortTradesDescending(trades: Trade[]): Trade[] {
       return closeB - closeA;
     }
     // Final tie-breaker: ticket / ID
-    return (b.ticket || b.id || '').localeCompare(a.ticket || a.id || '');
+    return String(b.ticket || b.id || '').localeCompare(String(a.ticket || a.id || ''));
   });
 }
 
 export function filterTradesByPeriod(trades: Trade[], period: string, customRange?: { from: string; to: string }): Trade[] {
+  if (!trades || !Array.isArray(trades)) return [];
   const now = new Date();
   
   if (period === 'all') return sortTradesDescending(trades);
 
   const filtered = trades.filter(t => {
-    const tradeDate = new Date(t.openTime || t.closeTime);
+    const rawTime = t.openTime || t.closeTime;
+    if (!rawTime) return false;
+    const safeTime = typeof rawTime === 'string'
+      ? rawTime.replace(/^(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3')
+      : rawTime;
+    const tradeDate = new Date(safeTime);
+    if (isNaN(tradeDate.getTime())) return false;
+
     if (period === 'today') {
       return tradeDate.toDateString() === now.toDateString();
     }

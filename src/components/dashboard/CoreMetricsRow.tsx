@@ -17,14 +17,15 @@ export const CoreMetricsRow: React.FC<CoreMetricsRowProps> = ({ stats, trades = 
     const sumRR = tradesWithRR.reduce((sum, t) => sum + (t.realizedRR || 0), 0);
     const avg = sumRR / tradesWithRR.length;
     rrrDisplay = `${avg.toFixed(2)}:1`;
-  } else if (stats.avgLoss > 0) {
-    const ratio = stats.avgWin / stats.avgLoss;
+  } else if ((stats?.avgLoss ?? 0) > 0) {
+    const ratio = (stats?.avgWin ?? 0) / (stats?.avgLoss ?? 1);
     rrrDisplay = `${ratio.toFixed(2)}:1`;
-  } else if (stats.avgWin > 0) {
+  } else if ((stats?.avgWin ?? 0) > 0) {
     rrrDisplay = '2.50:1';
   }
 
-  const isPfFavorable = stats.profitFactor >= 1.0;
+  const profitFactor = stats?.profitFactor ?? 0;
+  const isPfFavorable = profitFactor >= 1.0;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -34,7 +35,7 @@ export const CoreMetricsRow: React.FC<CoreMetricsRowProps> = ({ stats, trades = 
           PROFIT FACTOR
         </span>
         <span className={`text-2xl sm:text-3xl font-mono font-black ${isPfFavorable ? 'text-emerald-500' : 'text-rose-500'}`}>
-          {stats.profitFactor.toFixed(2)}
+          {profitFactor.toFixed(2)}
         </span>
       </div>
 
@@ -44,7 +45,7 @@ export const CoreMetricsRow: React.FC<CoreMetricsRowProps> = ({ stats, trades = 
           AVG WIN
         </span>
         <span className="text-2xl sm:text-3xl font-mono font-black text-emerald-500">
-          +{formatCurrency(stats.avgWin)}
+          +{formatCurrency(stats?.avgWin ?? 0)}
         </span>
       </div>
 
@@ -54,7 +55,7 @@ export const CoreMetricsRow: React.FC<CoreMetricsRowProps> = ({ stats, trades = 
           AVG LOSS
         </span>
         <span className="text-2xl sm:text-3xl font-mono font-black text-rose-500">
-          -{formatCurrency(stats.avgLoss)}
+          -{formatCurrency(stats?.avgLoss ?? 0)}
         </span>
       </div>
 
