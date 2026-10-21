@@ -200,6 +200,10 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
   }, '');
 
+  const areaPathD = equityPoints.length > 0
+    ? `${eqPathD} L ${getEqX(equityPoints.length - 1)} ${eqH - padBottom} L ${getEqX(0)} ${eqH - padBottom} Z`
+    : '';
+
   // 5 Evenly spaced Y ticks around $0
   const yTicks = [
     maxAxis,
@@ -304,47 +308,50 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             1. TOP-LEFT: Equity Curve (Exact Image 1 Visuals)
            ==================================================== */}
         <div className="premium-card p-5 sm:p-6 flex flex-col justify-between min-h-[360px]">
-          {/* Header matching Image 1: NO icon/logo before 'Equity Curve' as explicitly requested */}
-          <div className="mb-2">
-            <h3 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
-              Equity Curve
-            </h3>
-            <p className="text-xs text-muted font-medium mt-0.5">
+          {/* Header matching exact visual from image with Purple Activity Icon */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-xl font-bold text-foreground tracking-tight">
+                Equity Curve
+              </h3>
+            </div>
+            <p className="text-xs text-muted font-medium mt-1">
               Account balance over time
             </p>
           </div>
 
-          {/* Top 3 Metric Cards matching Image 1 & 2: 100% transparent with subtle borders */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-3">
+          {/* 3 Metric Stats placed directly without any mini cards */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
             {/* 1. Peak */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-transparent border border-border/50 dark:border-white/[0.08] transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Peak</span>
               </div>
-              <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
+              <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
                 {formatCompactCurrency(peakProfit)}
               </div>
             </div>
 
             {/* 2. Max DD */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-transparent border border-border/50 dark:border-white/[0.08] transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
                 <TrendingDown className="w-3.5 h-3.5 text-amber-500" />
                 <span>Max DD</span>
               </div>
-              <div className="text-lg sm:text-2xl font-black font-mono text-amber-500 tracking-tight mt-1 truncate">
+              <div className="text-xl sm:text-2xl font-black font-mono text-amber-500 tracking-tight mt-1 truncate">
                 {maxDdPercent >= 10 ? maxDdPercent.toFixed(1) : maxDdPercent.toFixed(2)}%
               </div>
             </div>
 
             {/* 3. Current */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-transparent border border-border/50 dark:border-white/[0.08] transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <Activity className="w-3.5 h-3.5 text-indigo-500 dark:text-violet-400" />
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+                <Activity className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Current</span>
               </div>
-              <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
+              <div className="text-xl sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
                 {formatCompactCurrency(currentPnl)}
               </div>
             </div>
@@ -390,6 +397,14 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                 onMouseMove={handleEquityMouseMove}
                 onMouseLeave={() => setHoveredPoint(null)}
               >
+                <defs>
+                  <linearGradient id="equityCurveGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={curveColor} stopOpacity="0.22" />
+                    <stop offset="70%" stopColor={curveColor} stopOpacity="0.04" />
+                    <stop offset="100%" stopColor={curveColor} stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
                 {/* Horizontal Grid lines & Y Ticks */}
                 {yTicks.map((tickVal, idx) => {
                   const yPos = getEqY(tickVal);
@@ -436,7 +451,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                       textAnchor="middle"
                       className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500 select-none tracking-wider"
                     >
-                      Initial ($0)
+                      Initial
                     </text>
                   </g>
                 )}
@@ -476,7 +491,13 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                   </text>
                 ))}
 
-                {/* Dynamic Curve Color (#A9E34B or Red #f43f5e) without gradient area fill */}
+                {/* Dynamic Gradient Filled Area */}
+                <path
+                  d={areaPathD}
+                  fill="url(#equityCurveGradient)"
+                />
+
+                {/* Dynamic Curve Color (#A9E34B or Red #f43f5e) */}
                 <path
                   d={eqPathD}
                   fill="none"
@@ -524,7 +545,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </div>
           )}
 
-          {/* Bottom Drawdown Alert Banner */}
+          {/* Bottom Drawdown Alert Banner matching attached image */}
           <div className={`mt-3 rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 text-xs font-bold transition-colors ${
             currentDdPercent > 0.05
               ? 'bg-amber-500/10 border border-amber-500/25 text-amber-500'
@@ -533,12 +554,12 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             {currentDdPercent > 0.05 ? (
               <>
                 <TrendingDown className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>In drawdown: {currentDdPercent.toFixed(2)}% from peak profit ({formatCurrency(peakProfit)})</span>
+                <span>In drawdown: {currentDdPercent.toFixed(2)}% from peak</span>
               </>
             ) : (
               <>
                 <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>At peak profit: {formatCurrency(peakProfit)} (0.00% drawdown)</span>
+                <span>At peak: {formatCurrency(peakProfit)} (0.00% drawdown)</span>
               </>
             )}
           </div>
