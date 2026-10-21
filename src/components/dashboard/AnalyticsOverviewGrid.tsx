@@ -25,17 +25,29 @@ function formatCompactCurrency(val: number): string {
   if (abs >= 1_000) {
     return `${isNeg ? '-' : ''}${sym}${(abs / 1_000).toFixed(1)}K`;
   }
-  return `${isNeg ? '-' : ''}${sym}${abs.toFixed(0)}`;
+  if (abs % 1 === 0) {
+    return `${isNeg ? '-' : ''}${sym}${abs}`;
+  }
+  return `${isNeg ? '-' : ''}${sym}${abs.toFixed(2)}`;
 }
 
-function formatAxisCurrency(val: number): string {
+function formatAxisCurrency(val: number, range: number = 100): string {
   const isNeg = val < -0.001;
   const abs = Math.abs(val);
   const sym = '$';
+  if (abs >= 1_000_000) {
+    return `${isNeg ? '-' : ''}${sym}${(abs / 1_000_000).toFixed(1)}M`;
+  }
   if (abs >= 1_000) {
     return `${isNeg ? '-' : ''}${sym}${(abs / 1_000).toFixed(1)}k`;
   }
-  return `${isNeg ? '-' : ''}${sym}${Math.round(abs)}`;
+  if (abs % 1 === 0) {
+    return `${isNeg ? '-' : ''}${sym}${abs}`;
+  }
+  if (range <= 5) {
+    return `${isNeg ? '-' : ''}${sym}${abs.toFixed(1)}`;
+  }
+  return `${isNeg ? '-' : ''}${sym}${abs.toFixed(0)}`;
 }
 
 export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ trades, initialBalance }) => {
@@ -46,10 +58,6 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   } catch {
     // safe fallback if rendered outside TradingProvider
   }
-
-  const startingBalance = initialBalance !== undefined
-    ? initialBalance
-    : (activeAccount?.initialBalance || 10000);
 
   const closed = useMemo(() => {
     return [...trades]
@@ -66,48 +74,50 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   }, [trades]);
 
   // ----------------------------------------------------
-  // Top-Left: Equity Curve Calculations & Interaction (Image 1 Style)
+  // Top-Left: Equity Curve Calculations (Cumulative P&L starting at $0)
   // ----------------------------------------------------
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
     y: number;
     date: string;
-    balance: number;
     pnl: number;
+    tradePnl: number;
     drawdownPercent: number;
   } | null>(null);
 
   const equitySvgRef = useRef<SVGSVGElement | null>(null);
 
-  // Compute balance progression points
-  const { equityPoints, peakBalance, currentBalance, maxDdPercent, currentDdPercent } = useMemo(() => {
-    let runningBalance = startingBalance;
-    let runningPeak = startingBalance;
+  // Compute cumulative P&L progression starting from 0 and peak profit drawdown
+  const { equityPoints, peakProfit, currentPnl, maxDdPercent, currentDdPercent, isPositivePnl, curveColor } = useMemo(() => {
+    let runningPnl = 0;
+    let runningPeak = 0;
 
     const points: Array<{
       date: string;
       shortDate: string;
-      balance: number;
       pnl: number;
+      tradePnl: number;
       drawdownPercent: number;
     }> = [
       {
-        date: 'Initial',
+        date: 'Start',
         shortDate: 'Start',
-        balance: startingBalance,
         pnl: 0,
+        tradePnl: 0,
         drawdownPercent: 0
       }
     ];
 
     closed.forEach(t => {
       const pnl = Number(t.netPnl) || 0;
-      runningBalance = parseFloat((runningBalance + pnl).toFixed(2));
-      if (runningBalance > runningPeak) {
-        runningPeak = runningBalance;
+      runningPnl = parseFloat((runningPnl + pnl).toFixed(2));
+      if (runningPnl > runningPeak) {
+        runningPeak = runningPnl;
       }
-      const ddUsd = runningPeak - runningBalance;
-      const ddPct = runningPeak > 0 ? (ddUsd / runningPeak) * 100 : 0;
+      const ddAmount = runningPeak - runningPnl;
+      const ddPct = runningPeak > 0
+        ? (ddAmount / runningPeak) * 100
+        : (runningPnl < 0 ? 100 : 0);
 
       const rawTime = t.closeTime || t.openTime;
       const safeTime = typeof rawTime === 'string'
@@ -121,27 +131,32 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
       points.push({
         date: shortDate,
         shortDate,
-        balance: runningBalance,
-        pnl,
+        pnl: runningPnl,
+        tradePnl: pnl,
         drawdownPercent: parseFloat(ddPct.toFixed(2))
       });
     });
 
-    const allBalances = points.map(p => p.balance);
-    const peak = Math.max(...allBalances);
-    const current = points[points.length - 1].balance;
-    const maxDd = Math.max(...points.map(p => p.drawdownPercent));
-    const curDdU = peak - current;
-    const curDdP = peak > 0 ? (curDdU / peak) * 100 : 0;
+    const allPnls = points.map(p => p.pnl);
+    const peak = Math.max(0, ...allPnls);
+    const curPnl = points[points.length - 1].pnl;
+    const maxDd = Math.max(0, ...points.map(p => p.drawdownPercent));
+    const curDdU = peak - curPnl;
+    const curDdP = peak > 0 ? (curDdU / peak) * 100 : (curPnl < 0 ? 100 : 0);
+
+    const isPos = curPnl >= 0;
+    const color = isPos ? '#A9E34B' : '#f43f5e';
 
     return {
       equityPoints: points,
-      peakBalance: peak,
-      currentBalance: current,
+      peakProfit: peak,
+      currentPnl: curPnl,
       maxDdPercent: maxDd,
-      currentDdPercent: curDdP
+      currentDdPercent: curDdP,
+      isPositivePnl: isPos,
+      curveColor: color
     };
-  }, [closed, startingBalance]);
+  }, [closed]);
 
   // SVG dimensions for Equity Curve
   const eqW = 560;
@@ -151,16 +166,16 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   const padTop = 20;
   const padBottom = 35;
 
-  const allBalances = equityPoints.map(p => p.balance);
-  const minVal = Math.min(...allBalances, startingBalance);
-  const maxVal = Math.max(...allBalances, startingBalance);
+  const allPnls = equityPoints.map(p => p.pnl);
+  const minVal = Math.min(...allPnls, 0);
+  const maxVal = Math.max(...allPnls, 0);
   const valRange = maxVal - minVal;
 
-  // Adaptive headroom/footroom
-  const margin = Math.max(startingBalance * 0.05, valRange * 0.15, 10);
-  const minBalanceAxis = minVal - margin;
-  const maxBalanceAxis = maxVal + margin;
-  const balanceRange = (maxBalanceAxis - minBalanceAxis) || 1;
+  // Adaptive headroom/footroom centered around $0
+  const margin = Math.max(1, valRange * 0.18);
+  const minAxis = minVal - margin;
+  const maxAxis = maxVal + margin;
+  const axisRange = (maxAxis - minAxis) || 1;
 
   const getEqX = (index: number) => {
     if (equityPoints.length <= 1) return padLeft + (eqW - padLeft - padRight) / 2;
@@ -168,14 +183,14 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
   };
 
   const getEqY = (val: number) => {
-    return eqH - padBottom - ((val - minBalanceAxis) / balanceRange) * (eqH - padTop - padBottom);
+    return eqH - padBottom - ((val - minAxis) / axisRange) * (eqH - padTop - padBottom);
   };
 
-  const initialY = getEqY(startingBalance);
+  const initialY = getEqY(0);
 
   const eqPathD = equityPoints.reduce((acc, p, i) => {
     const x = getEqX(i);
-    const y = getEqY(p.balance);
+    const y = getEqY(p.pnl);
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
   }, '');
 
@@ -183,13 +198,13 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
     ? `${eqPathD} L ${getEqX(equityPoints.length - 1)} ${eqH - padBottom} L ${getEqX(0)} ${eqH - padBottom} Z`
     : '';
 
-  // 5 Evenly spaced Y ticks matching Image 1
+  // 5 Evenly spaced Y ticks around $0
   const yTicks = [
-    maxBalanceAxis,
-    minBalanceAxis + balanceRange * 0.75,
-    minBalanceAxis + balanceRange * 0.5,
-    minBalanceAxis + balanceRange * 0.25,
-    minBalanceAxis
+    maxAxis,
+    minAxis + axisRange * 0.75,
+    minAxis + axisRange * 0.5,
+    minAxis + axisRange * 0.25,
+    minAxis
   ];
 
   // X-axis date labels: Smart collision detection guaranteeing min 58px gap so dates never overlap (Image 2)
@@ -253,10 +268,10 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
     const p = equityPoints[nearestIdx];
     setHoveredPoint({
       x: getEqX(nearestIdx),
-      y: getEqY(p.balance),
+      y: getEqY(p.pnl),
       date: p.date,
-      balance: p.balance,
       pnl: p.pnl,
+      tradePnl: p.tradePnl,
       drawdownPercent: p.drawdownPercent
     });
   };
@@ -297,22 +312,22 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </p>
           </div>
 
-          {/* Top 3 Metric Cards matching Image 1 */}
+          {/* Top 3 Metric Cards matching Image 1: 85% transparent with subtle borders */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-3">
             {/* 1. Peak */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Peak</span>
               </div>
               <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
-                {formatCompactCurrency(peakBalance)}
+                {formatCompactCurrency(peakProfit)}
               </div>
             </div>
 
             {/* 2. Max DD */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <TrendingDown className="w-3.5 h-3.5 text-amber-500" />
                 <span>Max DD</span>
               </div>
@@ -322,13 +337,13 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </div>
 
             {/* 3. Current */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-border/60 transition-colors">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
-                <Activity className="w-3.5 h-3.5 text-indigo-400 dark:text-violet-400" />
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-black/[0.025] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] backdrop-blur-sm transition-colors">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <Activity className="w-3.5 h-3.5 text-indigo-500 dark:text-violet-400" />
                 <span>Current</span>
               </div>
               <div className="text-lg sm:text-2xl font-black font-mono text-foreground tracking-tight mt-1 truncate">
-                {formatCompactCurrency(currentBalance)}
+                {formatCompactCurrency(currentPnl)}
               </div>
             </div>
           </div>
@@ -339,7 +354,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </div>
           ) : (
             <div className="relative w-full overflow-visible my-1">
-              {/* Interactive Floating Card Tooltip matching Image 1 */}
+              {/* Interactive Floating Card Tooltip flexible for light and dark theme (Image 2) */}
               {hoveredPoint && (
                 <div
                   style={{
@@ -347,19 +362,19 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                     top: `${Math.max(8, Math.min(62, (hoveredPoint.y / eqH) * 100 - 35))}%`,
                     transform: hoveredPoint.x > eqW * 0.62 ? 'translate(-105%, 0)' : 'translate(12px, 0)'
                   }}
-                  className="absolute z-20 pointer-events-none p-3 rounded-2xl bg-slate-900/95 dark:bg-[#0c0d12]/95 border border-slate-700/80 dark:border-white/10 shadow-2xl backdrop-blur-md min-w-[145px] space-y-1 transition-all duration-75"
+                  className="absolute z-20 pointer-events-none p-3 rounded-2xl bg-white/95 dark:bg-[#0c0d12]/95 border border-slate-200/80 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md min-w-[145px] space-y-1 transition-all duration-75"
                 >
-                  <div className="text-[10.5px] font-medium text-slate-400">
+                  <div className="text-[10.5px] font-medium text-slate-500 dark:text-slate-400">
                     {hoveredPoint.date}
                   </div>
-                  <div className="text-base font-black font-mono text-white tracking-tight">
-                    {formatCurrency(hoveredPoint.balance)}
+                  <div className="text-base font-black font-mono text-slate-900 dark:text-white tracking-tight">
+                    {hoveredPoint.pnl >= 0 ? formatCurrency(hoveredPoint.pnl) : `-${formatCurrency(Math.abs(hoveredPoint.pnl))}`}
                   </div>
                   <div className="flex items-center gap-2 pt-0.5 text-xs font-mono">
-                    <span className={hoveredPoint.pnl >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                      {hoveredPoint.pnl >= 0 ? `+${formatCurrency(hoveredPoint.pnl)}` : `-${formatCurrency(Math.abs(hoveredPoint.pnl))}`}
+                    <span className={hoveredPoint.tradePnl >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold'}>
+                      {hoveredPoint.tradePnl >= 0 ? `+${formatCurrency(hoveredPoint.tradePnl)}` : `-${formatCurrency(Math.abs(hoveredPoint.tradePnl))}`}
                     </span>
-                    <span className="text-amber-400 font-semibold text-[11px]">
+                    <span className="text-amber-500 dark:text-amber-400 font-semibold text-[11px]">
                       DD: {hoveredPoint.drawdownPercent.toFixed(2)}%
                     </span>
                   </div>
@@ -374,10 +389,10 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                 onMouseLeave={() => setHoveredPoint(null)}
               >
                 <defs>
-                  <linearGradient id="equityEmeraldGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
-                    <stop offset="65%" stopColor="#10b981" stopOpacity="0.06" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  <linearGradient id="equityCurveGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={curveColor} stopOpacity="0.25" />
+                    <stop offset="65%" stopColor={curveColor} stopOpacity="0.06" />
+                    <stop offset="100%" stopColor={curveColor} stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
@@ -402,13 +417,13 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                         textAnchor="end"
                         className="text-[10px] font-mono fill-muted"
                       >
-                        {formatAxisCurrency(tickVal)}
+                        {formatAxisCurrency(tickVal, valRange)}
                       </text>
                     </g>
                   );
                 })}
 
-                {/* Initial Balance Dashed Line matching Image 1 */}
+                {/* Initial Baseline ($0) Dashed Line */}
                 {initialY >= padTop && initialY <= eqH - padBottom && (
                   <g>
                     <line
@@ -427,12 +442,12 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                       textAnchor="middle"
                       className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500 select-none tracking-wider"
                     >
-                      Initial
+                      Initial ($0)
                     </text>
                   </g>
                 )}
 
-                {/* Left Y-Axis Vertical Line matching Image 1 */}
+                {/* Left Y-Axis Vertical Line */}
                 <line
                   x1={padLeft}
                   y1={padTop}
@@ -454,7 +469,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                   className="text-slate-400 dark:text-slate-600"
                 />
 
-                {/* X Axis Non-Overlapping Date Labels (Guaranteed 58px minimum separation per Requirement 2) */}
+                {/* X Axis Non-Overlapping Date Labels (Guaranteed 58px minimum separation) */}
                 {xLabels.map((item, idx) => (
                   <text
                     key={idx}
@@ -467,17 +482,17 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                   </text>
                 ))}
 
-                {/* Emerald Gradient Filled Area */}
+                {/* Dynamic Gradient Filled Area */}
                 <path
                   d={areaPathD}
-                  fill="url(#equityEmeraldGradient)"
+                  fill="url(#equityCurveGradient)"
                 />
 
-                {/* Vibrant Emerald Green Curve matching Image 1 */}
+                {/* Dynamic Curve Color (#A9E34B or Red #f43f5e) */}
                 <path
                   d={eqPathD}
                   fill="none"
-                  stroke="#22c55e"
+                  stroke={curveColor}
                   strokeWidth="2.75"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -486,32 +501,34 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
                 {/* Hover guideline and glowing dot */}
                 {hoveredPoint && (
                   <g>
-                    {/* Solid vertical guideline matching Image 1 */}
+                    {/* Solid vertical guideline flexible across light and dark theme */}
                     <line
                       x1={hoveredPoint.x}
                       y1={padTop}
                       x2={hoveredPoint.x}
                       y2={eqH - padBottom}
-                      stroke="#ffffff"
-                      strokeOpacity="0.65"
+                      stroke="currentColor"
+                      strokeOpacity="0.45"
                       strokeWidth="1.2"
+                      className="text-slate-900 dark:text-white"
                     />
-                    {/* Glowing green outer ring */}
+                    {/* Glowing outer ring */}
                     <circle
                       cx={hoveredPoint.x}
                       cy={hoveredPoint.y}
                       r="7"
-                      fill="#22c55e"
-                      fillOpacity="0.4"
+                      fill={curveColor}
+                      fillOpacity="0.35"
                     />
-                    {/* Green point with white border */}
+                    {/* Inner point with theme-adaptive border */}
                     <circle
                       cx={hoveredPoint.x}
                       cy={hoveredPoint.y}
                       r="4"
-                      fill="#22c55e"
-                      stroke="#ffffff"
+                      fill={curveColor}
+                      stroke="currentColor"
                       strokeWidth="2"
+                      className="text-white dark:text-[#0b0b0e]"
                     />
                   </g>
                 )}
@@ -519,7 +536,7 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             </div>
           )}
 
-          {/* Bottom Drawdown Alert Banner matching Image 1 */}
+          {/* Bottom Drawdown Alert Banner */}
           <div className={`mt-3 rounded-2xl p-3 sm:p-3.5 flex items-center gap-2.5 text-xs font-bold transition-colors ${
             currentDdPercent > 0.05
               ? 'bg-amber-500/10 border border-amber-500/25 text-amber-500'
@@ -528,12 +545,12 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
             {currentDdPercent > 0.05 ? (
               <>
                 <TrendingDown className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>In drawdown: {currentDdPercent.toFixed(2)}% from peak</span>
+                <span>In drawdown: {currentDdPercent.toFixed(2)}% from peak profit ({formatCurrency(peakProfit)})</span>
               </>
             ) : (
               <>
                 <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>At peak: {formatCurrency(peakBalance)} (0.00% drawdown)</span>
+                <span>At peak profit: {formatCurrency(peakProfit)} (0.00% drawdown)</span>
               </>
             )}
           </div>
