@@ -21,6 +21,8 @@ interface HeroMetricsBannerProps {
   accounts: TradingAccount[];
   profile?: UserProfile;
   user?: User | null;
+  period?: 'all' | 'today' | 'week' | 'month' | 'year';
+  allTimeStats?: SummaryStats;
 }
 
 /**
@@ -98,7 +100,9 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
   activeAccount,
   accounts,
   profile,
-  user
+  user,
+  period = 'all',
+  allTimeStats
 }) => {
   // Time-based greeting (morning / afternoon / evening)
   const greeting = useMemo(() => {
@@ -213,7 +217,15 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
                   <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 )}
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  TOTAL P&L
+                  {period === 'today'
+                    ? "TODAY'S P&L"
+                    : period === 'week'
+                    ? "THIS WEEK'S P&L"
+                    : period === 'month'
+                    ? "THIS MONTH'S P&L"
+                    : period === 'year'
+                    ? "THIS YEAR'S P&L"
+                    : "TOTAL P&L"}
                 </span>
               </div>
 
@@ -245,27 +257,31 @@ export const HeroMetricsBanner: React.FC<HeroMetricsBannerProps> = ({
               </div>
             </div>
 
-            {/* 2. SWAPPED POSITION: TODAY'S P&L */}
+            {/* 2. SECOND STAT: TODAY'S P&L (OR ALL-TIME P&L IF TODAY IS SELECTED) */}
             <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#121217] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 hover:dark:border-white/[0.12] transition-colors space-y-1.5 min-w-[125px]">
               <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                {isTodayPos ? (
+                {period === 'today' ? (
+                  (allTimeStats?.netPnl ?? stats.netPnl) >= 0 ? (
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                  )
+                ) : isTodayPos ? (
                   <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 )}
-                <span>TODAY'S P&L</span>
+                <span>{period === 'today' ? 'ALL-TIME P&L' : "TODAY'S P&L"}</span>
               </div>
               <div
                 className={`text-base sm:text-lg font-black font-mono tracking-tight truncate ${
-                  isTodayPos
+                  (period === 'today' ? (allTimeStats?.netPnl ?? stats.netPnl) : todayPnl) >= 0
                     ? 'text-emerald-600 dark:text-emerald-400'
-                    : isTodayNeg
-                    ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-700 dark:text-slate-300'
+                    : 'text-rose-600 dark:text-rose-400'
                 }`}
               >
-                {isTodayPos ? '+' : ''}
-                {formatCurrency(todayPnl)}
+                {(period === 'today' ? (allTimeStats?.netPnl ?? stats.netPnl) : todayPnl) >= 0 ? '+' : ''}
+                {formatCurrency(period === 'today' ? (allTimeStats?.netPnl ?? stats.netPnl) : todayPnl)}
               </div>
             </div>
 

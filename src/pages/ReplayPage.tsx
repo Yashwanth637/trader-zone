@@ -498,20 +498,6 @@ export const ReplayPage: React.FC = () => {
                     <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border text-muted font-bold font-mono">
                       {timeframe}
                     </span>
-                    {replayData && (
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
-                        replayData.isRealMarketData
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          replayData.isRealMarketData ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                        }`} />
-                        {replayData.isRealMarketData
-                          ? `Real Market Data (${replayData.source})`
-                          : 'Simulation Model'}
-                      </span>
-                    )}
                   </div>
                   <div className="text-xs text-muted mt-1 flex items-center gap-3">
                     <span>Entry: <strong className="text-foreground font-mono">{selectedTrade.entryPrice}</strong></span>

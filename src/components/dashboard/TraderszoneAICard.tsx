@@ -139,7 +139,7 @@ export const TraderszoneAICard: React.FC<TraderszoneAICardProps> = ({ scoreData 
                           <Info className="w-3 h-3" />
                         </button>
                         {activeTooltip === dim.key && (
-                          <div className="absolute left-6 bottom-0 z-30 w-48 p-2 text-[10px] leading-relaxed bg-slate-900 text-white rounded-lg shadow-xl border border-slate-700">
+                          <div className="absolute left-6 bottom-0 z-30 w-52 p-2.5 text-[11px] font-medium leading-relaxed bg-surface border border-border text-foreground rounded-xl shadow-xl">
                             {dim.info}
                           </div>
                         )}

@@ -4,7 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { filterTradesByPeriod, formatCurrency, sortTradesDescending } from '../lib/calculations';
+import { filterTradesByPeriod, formatCurrency, sortTradesDescending, calculateSummaryStats } from '../lib/calculations';
 import {
   calculateTradeScores,
   calculateTradingActivity
@@ -34,21 +34,21 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
   const { accountTrades, activeAccount, accounts, profile, stats, behavioralAlerts } = useTrading();
   const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
 
-  const filteredTrades = filterTradesByPeriod(accountTrades, period);
+  const filteredTrades = useMemo(() => {
+    return filterTradesByPeriod(accountTrades, period);
+  }, [accountTrades, period]);
 
-  // Period-specific calculation
-  const periodPnl = filteredTrades
-    .filter(t => t.status === 'CLOSED')
-    .reduce((sum, t) => sum + t.netPnl, 0);
+  const initialBalance = activeAccount?.initialBalance || 10000;
 
-  const closedPeriodTrades = filteredTrades.filter(t => t.status === 'CLOSED');
-  const winCount = closedPeriodTrades.filter(t => t.netPnl > 0).length;
-  const periodWinRate = closedPeriodTrades.length > 0 ? (winCount / closedPeriodTrades.length) * 100 : 0;
+  // Period-specific summary statistics
+  const periodStats = useMemo(() => {
+    return calculateSummaryStats(filteredTrades, initialBalance);
+  }, [filteredTrades, initialBalance]);
 
-  // Image 1 & 4 dynamic calculations
+  // Image 1 & 4 dynamic calculations based on period
   const scoreData = useMemo(
-    () => calculateTradeScores(accountTrades.length > 0 ? accountTrades : filteredTrades, stats),
-    [accountTrades, filteredTrades, stats]
+    () => calculateTradeScores(filteredTrades, periodStats),
+    [filteredTrades, periodStats]
   );
 
   const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
@@ -123,12 +123,14 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
 
       {/* Hero Metrics Banner (Image 1 Design with Swapped Total P&L / Today's P&L and Vending Counter) */}
       <HeroMetricsBanner
-        stats={stats}
-        trades={accountTrades}
+        stats={periodStats}
+        trades={filteredTrades}
         activeAccount={activeAccount}
         accounts={accounts}
         profile={profile}
         user={user}
+        period={period}
+        allTimeStats={stats}
       />
 
       {/* AI Behavioral Recommendation Banner */}
@@ -168,10 +170,10 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
       </div>
 
       {/* 2. [IMAGE 2] Analytics Overview Grid */}
-      <AnalyticsOverviewGrid trades={filteredTrades.length > 0 ? filteredTrades : accountTrades} />
+      <AnalyticsOverviewGrid trades={filteredTrades} />
 
       {/* 3. [IMAGE 3] Core Metrics Row */}
-      <CoreMetricsRow stats={stats} trades={filteredTrades.length > 0 ? filteredTrades : accountTrades} />
+      <CoreMetricsRow stats={periodStats} trades={filteredTrades} />
 
       {/* 4. [IMAGE 4] Traderszone AI Card */}
       <TraderszoneAICard scoreData={scoreData} />
@@ -201,12 +203,16 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-bold text-foreground tracking-tight">Recent Trade Executions</h3>
-            <p className="text-xs text-muted">Latest activity across your active account.</p>
+            <p className="text-xs text-muted">
+              {period === 'all'
+                ? 'Latest activity across your active account.'
+                : `Showing trades for ${period === 'today' ? 'today' : period === 'week' ? 'this week' : period === 'month' ? 'this month' : 'this year'}.`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/trades">
               <Button size="sm" variant="outline">
-                View All Trades ({accountTrades.length})
+                View All Trades ({filteredTrades.length})
               </Button>
             </Link>
             <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={onOpenAddTrade}>
@@ -231,7 +237,14 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {sortTradesDescending(accountTrades).slice(0, 5).map(t => {
+              {filteredTrades.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-muted">
+                    No trade executions found for {period === 'all' ? 'this account' : `this ${period}`}.
+                  </td>
+                </tr>
+              ) : (
+                sortTradesDescending(filteredTrades).slice(0, 5).map(t => {
                 const isWin = t.netPnl > 0;
                 const isLoss = t.netPnl < 0;
 
@@ -283,7 +296,7 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

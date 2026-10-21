@@ -561,36 +561,30 @@ export const ShareCardsPage: React.FC = () => {
                 </svg>
               </div>
 
-              {/* CARD HEADER (Top Coordinates) */}
+              {/* CARD HEADER (Top Coordinates - Clean Typography, No Mini Cards) */}
               <div
                 className={`absolute left-6 right-6 flex items-center justify-between z-10 ${
                   aspect === 'banner' ? 'top-5' : aspect === 'square' ? 'top-6' : 'top-7'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${
-                      isCardLight
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'bg-white/[0.12] border border-white/10 text-primary-light'
-                    }`}
-                  >
+                  <div className="w-5 h-5 flex items-center justify-center text-primary">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span className="font-extrabold text-sm tracking-tight">
                       <span>Trader</span>
                       <span className="text-primary">Zone</span>
                     </span>
-                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                      <ShieldCheck className="w-2.5 h-2.5" />
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 tracking-wide">
+                      <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>VERIFIED</span>
                     </span>
                   </div>
                 </div>
 
-                <div className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${currentTheme.badge}`}>
-                  {trade.session} Session · {formatTradeDate(trade.openTime)}
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${isCardLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <span>{trade.session} Session</span> <span className="opacity-40">·</span> <span>{formatTradeDate(trade.openTime)}</span>
                 </div>
               </div>
 
@@ -737,11 +731,7 @@ export const ShareCardsPage: React.FC = () => {
                         <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
                           {trade.symbol}
                         </span>
-                        <span
-                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                            isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
-                          }`}
-                        >
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isCardLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {getAssetBadge(trade)}
                         </span>
                       </div>
@@ -765,11 +755,7 @@ export const ShareCardsPage: React.FC = () => {
                           )}
                           <span>{trade.direction}</span>
                         </span>
-                        <span
-                          className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
-                            isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
-                          }`}
-                        >
+                        <span className={`text-xs font-mono font-bold ${isCardLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {trade.lotSize} Lots
                         </span>
                       </div>
@@ -883,11 +869,7 @@ export const ShareCardsPage: React.FC = () => {
                         <span className={`text-2xl font-black tracking-tight ${isCardLight ? 'text-slate-900' : 'text-white'}`}>
                           {trade.symbol}
                         </span>
-                        <span
-                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                            isCardLight ? 'bg-slate-200/80 text-slate-700' : 'bg-white/10 text-slate-300'
-                          }`}
-                        >
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isCardLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {getAssetBadge(trade)}
                         </span>
                       </div>
@@ -911,11 +893,7 @@ export const ShareCardsPage: React.FC = () => {
                           )}
                           <span>{trade.direction}</span>
                         </span>
-                        <span
-                          className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
-                            isCardLight ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-white/[0.06] text-slate-300 border border-white/10'
-                          }`}
-                        >
+                        <span className={`text-xs font-mono font-bold ${isCardLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {trade.lotSize} Lots
                         </span>
                       </div>
