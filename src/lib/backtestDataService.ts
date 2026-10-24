@@ -87,38 +87,97 @@ export const TIMEFRAMES = [
 const memoryCache = new Map<string, BacktestCandle[]>();
 
 /**
- * Fetch a single page of klines from Binance
+ * Fast resilient fetch with timeout to prevent chart buffering hangs
+ */
+async function fetchWithTimeout(url: string, timeoutMs: number = 3500): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+/**
+ * Fetch a single page of klines from Binance Vision (primary fast mirror) or Binance Standard
  */
 async function fetchBinanceBatch(
   pair: string,
   interval: string,
   startTime?: number,
   endTime?: number,
-  limit: number = 1000,
-  useVision: boolean = false
+  limit: number = 1000
 ): Promise<BacktestCandle[] | null> {
-  const host = useVision ? 'https://data-api.binance.vision' : 'https://api.binance.com';
-  let url = `${host}/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
-  if (startTime) url += `&startTime=${startTime}`;
-  if (endTime) url += `&endTime=${endTime}`;
+  // Binance Vision is open, never geo-blocked, and responds in <200ms
+  const hosts = ['https://data-api.binance.vision', 'https://api.binance.com'];
+
+  for (const host of hosts) {
+    let url = `${host}/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
+    if (startTime) url += `&startTime=${startTime}`;
+    if (endTime) url += `&endTime=${endTime}`;
+
+    try {
+      const res = await fetchWithTimeout(url, 3500);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) continue;
+
+      const candles: BacktestCandle[] = data.map((item: any) => ({
+        time: Math.floor(Number(item[0]) / 1000),
+        open: parseFloat(item[1]),
+        high: parseFloat(item[2]),
+        low: parseFloat(item[3]),
+        close: parseFloat(item[4]),
+        volume: parseFloat(item[5])
+      }));
+
+      return candles;
+    } catch {
+      // try next host
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Fetch historical candles from Gate.io as resilient alternative
+ */
+async function fetchGateIoBatch(
+  pair: string,
+  interval: string,
+  startTime?: number,
+  endTime?: number,
+  limit: number = 1000
+): Promise<BacktestCandle[] | null> {
+  // Gate.io pairs: BTC_USDT, PAXG_USDT, ETH_USDT, SOL_USDT, etc.
+  const gatePair = pair.replace(/USDT$/, '_USDT');
+  let url = `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${gatePair}&interval=${interval}&limit=${limit}`;
+  if (startTime) url += `&from=${Math.floor(startTime / 1000)}`;
+  if (endTime) url += `&to=${Math.floor(endTime / 1000)}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url, 3000);
     if (!res.ok) return null;
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) return null;
 
+    // Gate.io format: [ [ timeSec, volume, close, high, low, open ], ... ]
     const candles: BacktestCandle[] = data.map((item: any) => ({
-      time: Math.floor(Number(item[0]) / 1000),
-      open: parseFloat(item[1]),
-      high: parseFloat(item[2]),
-      low: parseFloat(item[3]),
-      close: parseFloat(item[4]),
-      volume: parseFloat(item[5])
-    }));
+      time: Number(item[0]),
+      open: parseFloat(item[5]),
+      high: parseFloat(item[3]),
+      low: parseFloat(item[4]),
+      close: parseFloat(item[2]),
+      volume: parseFloat(item[1])
+    })).sort((a, b) => a.time - b.time);
 
     return candles;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -139,7 +198,7 @@ async function fetchBitfinexBatch(
   if (endTime) url += `&end=${endTime}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url, 2500);
     if (!res.ok) return null;
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) return null;
@@ -178,7 +237,13 @@ export async function fetchRealHistoricalCandles(
   let targetSec: number | undefined = undefined;
   if (targetTimestamp !== undefined && targetTimestamp !== null) {
     if (typeof targetTimestamp === 'number') {
-      targetSec = targetTimestamp > 1e11 ? Math.floor(targetTimestamp / 1000) : targetTimestamp;
+      // Defensive guard: if a small number like 1000 was passed, treat as totalCandlesGoal
+      if (targetTimestamp < 1000000000) {
+        totalCandlesGoal = targetTimestamp;
+        targetSec = undefined;
+      } else {
+        targetSec = targetTimestamp > 1e11 ? Math.floor(targetTimestamp / 1000) : targetTimestamp;
+      }
     } else if (targetTimestamp instanceof Date) {
       targetSec = Math.floor(targetTimestamp.getTime() / 1000);
     }
@@ -205,10 +270,11 @@ export async function fetchRealHistoricalCandles(
 
     while (candles.length < totalCandlesGoal && attempts < maxPages) {
       attempts++;
-      let batch = await fetchBinanceBatch(asset.binancePair, timeframe, undefined, currentEnd, 1000, false);
+      let batch = await fetchBinanceBatch(asset.binancePair, timeframe, undefined, currentEnd, 1000);
 
       if (!batch || batch.length === 0) {
-        batch = await fetchBinanceBatch(asset.binancePair, timeframe, undefined, currentEnd, 1000, true);
+        batch = await fetchGateIoBatch(asset.binancePair, timeframe, undefined, currentEnd, 1000);
+        if (batch) source = 'Gate.io Real Market Feed';
       }
 
       if ((!batch || batch.length === 0) && asset.bitfinexPair) {
@@ -249,10 +315,11 @@ export async function fetchRealHistoricalCandles(
 
     while (candles.length < totalCandlesGoal && attempts < maxPages) {
       attempts++;
-      let batch = await fetchBinanceBatch(asset.binancePair, timeframe, currentStart, undefined, 1000, false);
+      let batch = await fetchBinanceBatch(asset.binancePair, timeframe, currentStart, undefined, 1000);
 
       if (!batch || batch.length === 0) {
-        batch = await fetchBinanceBatch(asset.binancePair, timeframe, currentStart, undefined, 1000, true);
+        batch = await fetchGateIoBatch(asset.binancePair, timeframe, currentStart, undefined, 1000);
+        if (batch) source = 'Gate.io Real Market Feed';
       }
 
       if ((!batch || batch.length === 0) && asset.bitfinexPair) {

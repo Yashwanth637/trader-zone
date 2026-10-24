@@ -236,9 +236,11 @@ export const BacktestStudio: React.FC = () => {
         const savedTime = localStorage.getItem('tz_backtest_last_time');
         if (savedTime) {
           const t = parseInt(savedTime, 10);
-          if (!isNaN(t) && t > 0) {
+          if (!isNaN(t) && t > 1000000000) {
             targetTimeSec = t;
             updateReplayMode(true, t);
+          } else {
+            localStorage.removeItem('tz_backtest_last_time');
           }
         }
       }

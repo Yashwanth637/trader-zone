@@ -98,7 +98,7 @@ export const TerminalPage: React.FC = () => {
     setLiveTick(null);
     setActiveIndicator(null);
 
-    fetchRealHistoricalCandles(symbol, timeframe, 1000).then(({ candles: fetched }) => {
+    fetchRealHistoricalCandles(symbol, timeframe, undefined, 1000).then(({ candles: fetched }) => {
       if (!isCancelled) {
         setCandles(fetched);
         candlesRef.current = fetched;

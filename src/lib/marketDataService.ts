@@ -96,20 +96,36 @@ export function resolveExchangeSymbols(rawSymbol: string): {
 }
 
 /**
- * Fetch historical candles directly from Binance Public API
+ * Fast resilient fetch with timeout to prevent chart buffering hangs
+ */
+async function fetchWithTimeout(url: string, timeoutMs: number = 3500): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+/**
+ * Fetch historical candles directly from Binance Public API (Vision mirror first)
  */
 async function fetchFromBinance(
   pair: string,
   interval: string,
   startMs: number,
   endMs: number,
-  mirror: boolean = false
+  mirror: boolean = true
 ): Promise<ReplayCandle[] | null> {
   const host = mirror ? 'https://data-api.binance.vision' : 'https://api.binance.com';
   const url = `${host}/api/v3/klines?symbol=${pair}&interval=${interval}&startTime=${startMs}&endTime=${endMs}&limit=1000`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url, 3500);
     if (!res.ok) return null;
     const raw = await res.json();
     if (!Array.isArray(raw) || raw.length === 0) return null;
@@ -129,6 +145,38 @@ async function fetchFromBinance(
 }
 
 /**
+ * Fetch historical candles from Gate.io Public API
+ */
+async function fetchFromGateIo(
+  pair: string,
+  interval: string,
+  startMs: number,
+  endMs: number
+): Promise<ReplayCandle[] | null> {
+  const gatePair = pair.replace(/USDT$/, '_USDT');
+  const url = `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${gatePair}&interval=${interval}&from=${Math.floor(startMs / 1000)}&to=${Math.floor(endMs / 1000)}&limit=1000`;
+
+  try {
+    const res = await fetchWithTimeout(url, 3000);
+    if (!res.ok) return null;
+    const raw = await res.json();
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+
+    const candles: ReplayCandle[] = raw.map(item => ({
+      time: Number(item[0]),
+      open: parseFloat(item[5]),
+      high: parseFloat(item[3]),
+      low: parseFloat(item[4]),
+      close: parseFloat(item[2])
+    }));
+
+    return candles.sort((a, b) => a.time - b.time);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch historical candles from Bitfinex Public API
  */
 async function fetchFromBitfinex(
@@ -142,7 +190,7 @@ async function fetchFromBitfinex(
   const url = `https://api-pub.bitfinex.com/v2/candles/trade:${bfxInterval}:${pair}/hist?start=${startMs}&end=${endMs}&sort=1&limit=1000`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url, 2500);
     if (!res.ok) return null;
     const raw = await res.json();
     if (!Array.isArray(raw) || raw.length === 0) return null;
@@ -188,21 +236,7 @@ export async function fetchHistoricalCandlesForTrade(
 
   const { binancePairs, bitfinexPair } = resolveExchangeSymbols(trade.symbol);
 
-  // 1. Try Binance Primary
-  for (const pair of binancePairs) {
-    const candles = await fetchFromBinance(pair, timeframe, startMs, endMs, false);
-    if (candles && candles.length >= 3) {
-      const result: FetchCandlesResult = {
-        candles,
-        source: 'Binance',
-        isRealMarketData: true
-      };
-      candleCache.set(cacheKey, result);
-      return result;
-    }
-  }
-
-  // 2. Try Binance Vision (Alternative mirror)
+  // 1. Try Binance Vision First (Fast, unblocked, 100% reliable)
   for (const pair of binancePairs) {
     const candles = await fetchFromBinance(pair, timeframe, startMs, endMs, true);
     if (candles && candles.length >= 3) {
@@ -216,7 +250,35 @@ export async function fetchHistoricalCandlesForTrade(
     }
   }
 
-  // 3. Try Bitfinex (Particularly reliable for Tether Gold tXAUT:USD)
+  // 2. Try Gate.io (Fast, open CORS)
+  for (const pair of binancePairs) {
+    const candles = await fetchFromGateIo(pair, timeframe, startMs, endMs);
+    if (candles && candles.length >= 3) {
+      const result: FetchCandlesResult = {
+        candles,
+        source: 'Binance Vision',
+        isRealMarketData: true
+      };
+      candleCache.set(cacheKey, result);
+      return result;
+    }
+  }
+
+  // 3. Try Binance Primary (with 3.5s timeout)
+  for (const pair of binancePairs) {
+    const candles = await fetchFromBinance(pair, timeframe, startMs, endMs, false);
+    if (candles && candles.length >= 3) {
+      const result: FetchCandlesResult = {
+        candles,
+        source: 'Binance',
+        isRealMarketData: true
+      };
+      candleCache.set(cacheKey, result);
+      return result;
+    }
+  }
+
+  // 4. Try Bitfinex (Particularly reliable for Tether Gold tXAUT:USD)
   if (bitfinexPair) {
     const candles = await fetchFromBitfinex(bitfinexPair, timeframe, startMs, endMs);
     if (candles && candles.length >= 3) {

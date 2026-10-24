@@ -77,7 +77,8 @@ export function subscribeLiveKlineFeed(
   const binancePair = getBinancePairForSymbol(symbol).toLowerCase();
   // Map 1d to 1d for binance stream
   const interval = timeframe.toLowerCase() === '1d' ? '1d' : timeframe.toLowerCase();
-  const wsUrl = `wss://stream.binance.com:9443/ws/${binancePair}@kline_${interval}`;
+  // Use Binance Vision WebSocket stream (unblocked, reliable public stream)
+  const wsUrl = `wss://data-stream.binance.vision/ws/${binancePair}@kline_${interval}`;
 
   let ws: WebSocket | null = null;
   let isUnsubscribed = false;
@@ -104,9 +105,14 @@ export function subscribeLiveKlineFeed(
         const pairUpper = binancePair.toUpperCase();
         let price: number | null = null;
 
-        // Try standard Binance API
+        // Try Binance Vision API first (open, unblocked, fast)
         try {
-          const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pairUpper}`);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 2500);
+          const res = await fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${pairUpper}`, {
+            signal: controller.signal
+          });
+          clearTimeout(timer);
           if (res.ok) {
             const data = await res.json();
             const p = parseFloat(data.price);
@@ -114,10 +120,15 @@ export function subscribeLiveKlineFeed(
           }
         } catch {}
 
-        // Fallback to Binance Vision API
+        // Fallback to standard Binance API if Vision failed
         if (price === null) {
           try {
-            const res = await fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${pairUpper}`);
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pairUpper}`, {
+              signal: controller.signal
+            });
+            clearTimeout(timer);
             if (res.ok) {
               const data = await res.json();
               const p = parseFloat(data.price);
