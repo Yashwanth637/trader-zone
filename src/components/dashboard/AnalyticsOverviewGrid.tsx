@@ -9,6 +9,7 @@ import {
   WeekdayStat
 } from '../../lib/scoreCalculations';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { AssetLogo, formatSymbolDisplay } from '../common/AssetLogo';
 
 interface AnalyticsOverviewGridProps {
   trades: Trade[];
@@ -583,10 +584,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
 
                 return (
                   <div key={item.symbol} className="flex items-center text-xs">
-                    {/* Symbol Name */}
-                    <span className="w-20 font-bold text-foreground tracking-tight shrink-0">
-                      {item.symbol}
-                    </span>
+                    {/* Symbol Name with Logo */}
+                    <div className="w-24 flex items-center gap-1.5 font-bold text-foreground tracking-tight shrink-0 truncate">
+                      <AssetLogo symbol={item.symbol} size="xs" />
+                      <span className="truncate">{formatSymbolDisplay(item.symbol)}</span>
+                    </div>
 
                     {/* Progress Bar Container */}
                     <div className="flex-1 mx-3 h-3 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden flex items-center">
@@ -692,10 +694,11 @@ export const AnalyticsOverviewGrid: React.FC<AnalyticsOverviewGridProps> = ({ tr
 
                 return (
                   <div key={item.symbol} className="flex items-center text-xs">
-                    {/* Symbol Name */}
-                    <span className="w-20 font-bold text-foreground tracking-tight shrink-0">
-                      {item.symbol}
-                    </span>
+                    {/* Symbol Name with Logo */}
+                    <div className="w-24 flex items-center gap-1.5 font-bold text-foreground tracking-tight shrink-0 truncate">
+                      <AssetLogo symbol={item.symbol} size="xs" />
+                      <span className="truncate">{formatSymbolDisplay(item.symbol)}</span>
+                    </div>
 
                     {/* Win Rate Progress Bar */}
                     <div className="flex-1 mx-3 h-3 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden flex items-center">

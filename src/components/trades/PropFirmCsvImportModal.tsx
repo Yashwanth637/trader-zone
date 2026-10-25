@@ -6,6 +6,7 @@ import { PropStage, Trade } from '../../types/trade';
 import { parseFundedRoomCsv, isFundedRoomCsv } from '../../lib/fundedRoomParser';
 import { parseBrokerCsv } from '../../lib/brokerParser';
 import { formatCurrency } from '../../lib/calculations';
+import { AssetLogo, formatSymbolDisplay } from '../common/AssetLogo';
 import {
   Upload,
   CheckCircle2,
@@ -376,7 +377,12 @@ export const PropFirmCsvImportModal: React.FC<PropFirmCsvImportModalProps> = ({
                         <td className="py-2 px-3 text-muted font-mono whitespace-nowrap">
                           {t.closeTime ? new Date(t.closeTime).toLocaleDateString() : 'Open'}
                         </td>
-                        <td className="py-2 px-3 font-bold text-foreground">{t.symbol}</td>
+                        <td className="py-2 px-3 font-bold text-foreground">
+                          <div className="flex items-center gap-2">
+                            <AssetLogo symbol={t.symbol} size="xs" />
+                            <span>{formatSymbolDisplay(t.symbol)}</span>
+                          </div>
+                        </td>
                         <td className="py-2 px-3">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                             t.direction === 'BUY' ? 'bg-blue-500/15 text-blue-500' : 'bg-rose-500/15 text-rose-500'

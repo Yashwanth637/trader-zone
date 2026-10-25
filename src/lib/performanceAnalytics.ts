@@ -462,7 +462,10 @@ export function calculateSymbolPerformance(trades: Trade[]): SymbolPerformanceDa
   const symbolMap: Record<string, { pnl: number; total: number; wins: number; losses: number }> = {};
 
   closed.forEach(t => {
-    const sym = t.symbol.toUpperCase();
+    let sym = (t.symbol || 'OTHER').toUpperCase().trim();
+    if (sym.startsWith('XAUUSD') || sym.startsWith('XAUTUSD') || sym === 'XAU') {
+      sym = 'GOLD';
+    }
     if (!symbolMap[sym]) {
       symbolMap[sym] = { pnl: 0, total: 0, wins: 0, losses: 0 };
     }

@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/Badge';
 import { formatCurrency, formatSignedPnl, calculatePips, calculatePnlFromPrices } from '../lib/calculations';
 import { Trade } from '../types/trade';
 import { getCandlesForTrade, ReplayData, ReplayCandle } from '../lib/replayCandles';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 import {
   createChart,
   CandlestickSeries,
@@ -445,7 +446,8 @@ export const ReplayPage: React.FC = () => {
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground text-sm">{trade.symbol}</span>
+                          <AssetLogo symbol={trade.symbol} size="xs" />
+                          <span className="font-bold text-foreground text-sm">{formatSymbolDisplay(trade.symbol)}</span>
                           <Badge variant={trade.direction === 'BUY' ? 'buy' : 'sell'} size="sm">
                             {trade.direction}
                           </Badge>
@@ -490,7 +492,8 @@ export const ReplayPage: React.FC = () => {
               {selectedTrade ? (
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <span className="text-xl font-black text-foreground">{selectedTrade.symbol}</span>
+                    <AssetLogo symbol={selectedTrade.symbol} size="sm" />
+                    <span className="text-xl font-black text-foreground">{formatSymbolDisplay(selectedTrade.symbol)}</span>
                     <Badge variant={selectedTrade.direction === 'BUY' ? 'buy' : 'sell'}>
                       {selectedTrade.direction}
                     </Badge>

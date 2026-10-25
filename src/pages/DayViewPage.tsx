@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { calculateDayViewData, generateMonthCalendar, DayPerformanceCardData } from '../lib/dayViewAnalytics';
 import { formatCurrency, formatAdaptivePnl, formatSignedPnl } from '../lib/calculations';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 import {
   ChevronDown,
   ChevronRight,
@@ -331,7 +332,10 @@ export const DayViewPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpenAd
 
                                   {/* Symbol */}
                                   <td className="py-3 font-bold text-foreground">
-                                    {trade.symbol}
+                                    <div className="flex items-center gap-2">
+                                      <AssetLogo symbol={trade.symbol} size="sm" />
+                                      <span>{formatSymbolDisplay(trade.symbol)}</span>
+                                    </div>
                                   </td>
 
                                   {/* Side Badge */}

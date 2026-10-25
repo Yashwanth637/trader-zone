@@ -23,6 +23,7 @@ import { DeltaSyncModal } from '../components/broker/DeltaSyncModal';
 import { Mt5ConnectModal } from '../components/broker/Mt5ConnectModal';
 import { PropFirmCsvImportModal } from '../components/trades/PropFirmCsvImportModal';
 import { ChartLightboxModal } from '../components/trades/ChartLightboxModal';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 
 interface TradesPageProps {
   onOpenAddTrade: () => void;
@@ -71,7 +72,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
     const list = accountTrades.filter(t => {
       if (search) {
         const q = search.toLowerCase();
-        const matchSym = t.symbol.toLowerCase().includes(q);
+        const matchSym = t.symbol.toLowerCase().includes(q) || formatSymbolDisplay(t.symbol).toLowerCase().includes(q);
         const matchTicket = t.ticket.toLowerCase().includes(q);
         const matchNotes = t.notes?.toLowerCase().includes(q);
         if (!matchSym && !matchTicket && !matchNotes) return false;
@@ -342,9 +343,10 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                   return (
                     <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                       <td className="py-3 font-bold text-foreground">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <AssetLogo symbol={t.symbol} size="sm" />
                           <Link to={`/trades/${t.id}`} className="hover:text-primary transition-colors">
-                            {t.symbol}
+                            {formatSymbolDisplay(t.symbol)}
                           </Link>
                           {t.strategyName && (
                             <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-surface border border-border text-muted">

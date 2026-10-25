@@ -3,6 +3,7 @@ import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { filterTradesByPeriod, formatCurrency, calculateSummaryStats, formatSignedPnl } from '../lib/calculations';
 import { generateExecutiveReportPDF } from '../lib/pdfReport';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 import {
   FileText,
   Download,
@@ -198,7 +199,12 @@ export const ReportsPage: React.FC = () => {
                       <td className="px-3.5 py-2 text-slate-400 font-mono text-[11px]">
                         {(t.closeTime || t.openTime).split('T')[0]}
                       </td>
-                      <td className="px-3.5 py-2 font-bold text-white">{t.symbol}</td>
+                      <td className="px-3.5 py-2 font-bold text-white">
+                        <div className="flex items-center gap-2">
+                          <AssetLogo symbol={t.symbol} size="xs" />
+                          <span>{formatSymbolDisplay(t.symbol)}</span>
+                        </div>
+                      </td>
                       <td className="px-3.5 py-2">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           t.direction === 'BUY'

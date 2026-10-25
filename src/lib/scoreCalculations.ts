@@ -184,21 +184,24 @@ export function calculateTradeScores(trades: Trade[], stats: SummaryStats): Trad
     recoveryScore * 0.1
   );
 
-  let ratingLabel = 'Intermediate';
-  let ratingColor = 'text-amber-500';
+  let ratingLabel = 'Needs Work';
+  let ratingColor = 'text-rose-500';
 
   if (overallScore >= 80) {
     ratingLabel = 'Elite';
-    ratingColor = 'text-emerald-400';
+    ratingColor = 'text-emerald-500';
   } else if (overallScore >= 65) {
     ratingLabel = 'Improving';
-    ratingColor = 'text-amber-400';
+    ratingColor = 'text-amber-500';
   } else if (overallScore >= 50) {
     ratingLabel = 'Intermediate';
-    ratingColor = 'text-sky-400';
-  } else {
+    ratingColor = 'text-sky-500';
+  } else if (overallScore >= 40) {
     ratingLabel = 'Developing';
-    ratingColor = 'text-rose-400';
+    ratingColor = 'text-amber-500';
+  } else {
+    ratingLabel = 'Needs Work';
+    ratingColor = 'text-rose-500';
   }
 
   const dimensions = {
@@ -393,7 +396,10 @@ export function calculateSymbolBreakdowns(trades: Trade[]): {
   const symbolMap: Record<string, { pnl: number; total: number; wins: number }> = {};
 
   closed.forEach(t => {
-    const sym = (t.symbol || 'OTHER').toUpperCase();
+    let sym = (t.symbol || 'OTHER').toUpperCase().trim();
+    if (sym.startsWith('XAUUSD') || sym.startsWith('XAUTUSD') || sym === 'XAU') {
+      sym = 'GOLD';
+    }
     if (!symbolMap[sym]) {
       symbolMap[sym] = { pnl: 0, total: 0, wins: 0 };
     }

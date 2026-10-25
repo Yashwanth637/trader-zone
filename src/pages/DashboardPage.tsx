@@ -17,6 +17,7 @@ import { CoreMetricsRow } from '../components/dashboard/CoreMetricsRow';
 import { TraderszoneAICard } from '../components/dashboard/TraderszoneAICard';
 import { PropFirmObjectivesTracker } from '../components/dashboard/PropFirmObjectivesTracker';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 import {
   DollarSign,
   Percent,
@@ -316,7 +317,8 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
                         <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                           <td className="py-3 font-bold text-foreground">
                             <div className="flex items-center gap-2">
-                              <span>{t.symbol}</span>
+                              <AssetLogo symbol={t.symbol} size="sm" />
+                              <span>{formatSymbolDisplay(t.symbol)}</span>
                               {t.setupTags?.[0] && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-muted">
                                   {t.setupTags[0]}

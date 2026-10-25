@@ -19,6 +19,7 @@ import { DrawdownAnalysisCard } from '../components/performance/DrawdownAnalysis
 import { StreakTrackingCard } from '../components/performance/StreakTrackingCard';
 import { AvgHoldTimeCard } from '../components/performance/AvgHoldTimeCard';
 import { PnlDistributionHistogramCard } from '../components/performance/PnlDistributionHistogramCard';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 import {
   TrendingUp,
   Clock,
@@ -87,13 +88,14 @@ export const AnalyticsPage: React.FC = () => {
     }
 
     // Symbol
-    if (!symbolStats[t.symbol]) {
-      symbolStats[t.symbol] = { pnl: 0, count: 0, wins: 0, lots: 0 };
+    const symKey = formatSymbolDisplay(t.symbol);
+    if (!symbolStats[symKey]) {
+      symbolStats[symKey] = { pnl: 0, count: 0, wins: 0, lots: 0 };
     }
-    symbolStats[t.symbol].pnl += t.netPnl;
-    symbolStats[t.symbol].count += 1;
-    symbolStats[t.symbol].lots += t.lotSize;
-    if (t.netPnl > 0) symbolStats[t.symbol].wins += 1;
+    symbolStats[symKey].pnl += t.netPnl;
+    symbolStats[symKey].count += 1;
+    symbolStats[symKey].lots += t.lotSize;
+    if (t.netPnl > 0) symbolStats[symKey].wins += 1;
 
     // Direction
     if (t.direction === 'BUY') {
@@ -256,7 +258,12 @@ export const AnalyticsPage: React.FC = () => {
                   const winRate = s.count > 0 ? Math.round((s.wins / s.count) * 100) : 0;
                   return (
                     <tr key={sym} className="hover:bg-white/5 transition-colors">
-                      <td className="py-3 font-bold text-white">{sym}</td>
+                      <td className="py-3 font-bold text-white">
+                        <div className="flex items-center gap-2">
+                          <AssetLogo symbol={sym} size="xs" />
+                          <span>{sym}</span>
+                        </div>
+                      </td>
                       <td className="py-3 font-mono text-slate-300">{s.count}</td>
                       <td className="py-3 font-mono text-slate-300">{s.lots.toFixed(1)}</td>
                       <td className="py-3 font-mono text-white font-bold">{winRate}%</td>

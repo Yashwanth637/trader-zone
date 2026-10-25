@@ -4,6 +4,7 @@ import { calculatePropStageMetrics, PropStageMetrics, FUNDED_ROOM_RULES } from '
 import { formatCurrency, sortTradesDescending } from '../../lib/calculations';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { AssetLogo, formatSymbolDisplay } from '../common/AssetLogo';
 import {
   ArrowLeft,
   Award,
@@ -869,7 +870,12 @@ export const PropFirmAccountPortal: React.FC<PropFirmAccountPortalProps> = ({
                           <td className="py-2.5 text-muted font-mono">
                             {t.closeTime ? new Date(t.closeTime).toLocaleDateString() : 'Open'}
                           </td>
-                          <td className="py-2.5 font-bold text-foreground">{t.symbol}</td>
+                          <td className="py-2.5 font-bold text-foreground">
+                            <div className="flex items-center gap-2">
+                              <AssetLogo symbol={t.symbol} size="xs" />
+                              <span>{formatSymbolDisplay(t.symbol)}</span>
+                            </div>
+                          </td>
                           <td className="py-2.5">
                             <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
                               t.direction === 'BUY'

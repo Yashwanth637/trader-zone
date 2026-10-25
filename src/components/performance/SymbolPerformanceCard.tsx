@@ -2,6 +2,7 @@ import React from 'react';
 import { SymbolPerformanceData } from '../../lib/performanceAnalytics';
 import { formatAdaptivePnl, formatCurrency, formatSignedPnl } from '../../lib/calculations';
 import { Target, TrendingUp, TrendingDown, Layers } from 'lucide-react';
+import { AssetLogo, formatSymbolDisplay } from '../common/AssetLogo';
 
 interface SymbolPerformanceCardProps {
   data: SymbolPerformanceData;
@@ -85,8 +86,9 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Best</span>
           </div>
-          <div className="text-base font-bold text-foreground mt-1">
-            {bestSymbol ? bestSymbol.symbol : 'None'}
+          <div className="text-base font-bold text-foreground mt-1 flex items-center gap-1.5">
+            {bestSymbol && <AssetLogo symbol={bestSymbol.symbol} size="xs" />}
+            <span>{bestSymbol ? formatSymbolDisplay(bestSymbol.symbol) : 'None'}</span>
           </div>
           <div className="text-sm font-mono font-bold text-emerald-500 mt-0.5">
             {bestSymbol && bestSymbol.netPnl > 0
@@ -101,8 +103,9 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
             <Layers className="w-3.5 h-3.5" />
             <span>Most Traded</span>
           </div>
-          <div className="text-base font-bold text-foreground mt-1">
-            {mostTradedSymbol ? mostTradedSymbol.symbol : 'None'}
+          <div className="text-base font-bold text-foreground mt-1 flex items-center gap-1.5">
+            {mostTradedSymbol && <AssetLogo symbol={mostTradedSymbol.symbol} size="xs" />}
+            <span>{mostTradedSymbol ? formatSymbolDisplay(mostTradedSymbol.symbol) : 'None'}</span>
           </div>
           <div className="text-sm font-mono text-muted mt-0.5">
             {mostTradedSymbol ? `${mostTradedSymbol.tradeCount} trades` : '0 trades'}
@@ -115,8 +118,9 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
             <TrendingDown className="w-3.5 h-3.5" />
             <span>Worst</span>
           </div>
-          <div className="text-base font-bold text-foreground mt-1">
-            {worstSymbol ? worstSymbol.symbol : 'None'}
+          <div className="text-base font-bold text-foreground mt-1 flex items-center gap-1.5">
+            {worstSymbol && <AssetLogo symbol={worstSymbol.symbol} size="xs" />}
+            <span>{worstSymbol ? formatSymbolDisplay(worstSymbol.symbol) : 'None'}</span>
           </div>
           <div className="text-sm font-mono font-bold text-rose-500 mt-0.5">
             {worstSymbol
@@ -142,10 +146,11 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
 
               return (
                 <div key={item.symbol} className="flex items-center text-xs">
-                  {/* Symbol Label */}
-                  <span className="w-20 font-bold text-foreground shrink-0">
-                    {item.symbol}
-                  </span>
+                  {/* Symbol Label with Logo */}
+                  <div className="w-24 flex items-center gap-1.5 font-bold text-foreground shrink-0 truncate">
+                    <AssetLogo symbol={item.symbol} size="xs" />
+                    <span className="truncate">{formatSymbolDisplay(item.symbol)}</span>
+                  </div>
 
                   {/* Bidirectional bar container */}
                   <div className="relative flex-1 h-6 flex items-center">
@@ -218,7 +223,7 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: slice.color }}
                 />
-                <span className="font-mono text-foreground">{slice.symbol} ({slice.sharePct}%)</span>
+                <span className="font-mono text-foreground">{formatSymbolDisplay(slice.symbol)} ({slice.sharePct}%)</span>
               </div>
             ))}
           </div>
@@ -242,14 +247,10 @@ export const SymbolPerformanceCard: React.FC<SymbolPerformanceCardProps> = ({ da
               >
                 {/* Left: Avatar & Symbol Name & Record */}
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                    isPos ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                  }`}>
-                    {item.initials}
-                  </div>
+                  <AssetLogo symbol={item.symbol} size="md" />
                   <div>
                     <div className="text-sm font-bold text-foreground">
-                      {item.symbol}
+                      {formatSymbolDisplay(item.symbol)}
                     </div>
                     <div className="text-xs text-muted font-mono mt-0.5">
                       {item.winningTrades}W / {item.losingTrades}L · {item.winRate}% WR

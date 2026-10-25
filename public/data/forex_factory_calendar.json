@@ -70,7 +70,7 @@
     "impact": "Low",
     "forecast": "5.4%",
     "previous": "5.2%",
-    "actual": "5.5%"
+    "actual": "1.1%"
   },
   {
     "title": "NBS Press Conference",
@@ -361,7 +361,7 @@
     "impact": "Low",
     "forecast": "1.3%",
     "previous": "0.3%",
-    "actual": "0.8%"
+    "actual": "1.5%"
   },
   {
     "title": "PPI Output m/m",
@@ -370,7 +370,7 @@
     "impact": "Low",
     "forecast": "0.7%",
     "previous": "0.7%",
-    "actual": "0.8%"
+    "actual": "1.5%"
   },
   {
     "title": "Public Sector Net Borrowing",
@@ -387,7 +387,7 @@
     "impact": "Low",
     "forecast": "3.9%",
     "previous": "3.4%",
-    "actual": "3.5%"
+    "actual": "8.3%"
   },
   {
     "title": "German Buba President Nagel Speaks",
@@ -428,7 +428,7 @@
     "impact": "Low",
     "forecast": "-0.1M",
     "previous": "-8.6M",
-    "actual": "-3.1M"
+    "actual": "1.0M"
   },
   {
     "title": "CPI q/q",
@@ -436,7 +436,8 @@
     "date": "2026-10-21T17:45:00-04:00",
     "impact": "High",
     "forecast": "0.8%",
-    "previous": "1.5%"
+    "previous": "1.5%",
+    "actual": "0.7%"
   },
   {
     "title": "Summary of Monetary Policy Discussions",
@@ -449,7 +450,7 @@
   {
     "title": "Foreign Direct Investment ytd/y",
     "country": "CNY",
-    "date": "2026-10-22T05:10:00-04:00",
+    "date": "2026-10-22T03:41:00-04:00",
     "impact": "Low",
     "forecast": "",
     "previous": "-5.3%"
@@ -463,36 +464,40 @@
     "previous": "-9"
   },
   {
-    "title": "IPPI m/m",
-    "country": "CAD",
-    "date": "2026-10-22T08:30:00-04:00",
-    "impact": "Low",
-    "forecast": "0.9%",
-    "previous": "1.3%"
-  },
-  {
-    "title": "NHPI m/m",
-    "country": "CAD",
-    "date": "2026-10-22T08:30:00-04:00",
-    "impact": "Low",
-    "forecast": "-0.1%",
-    "previous": "-0.1%"
-  },
-  {
-    "title": "RMPI m/m",
-    "country": "CAD",
-    "date": "2026-10-22T08:30:00-04:00",
-    "impact": "Low",
-    "forecast": "3.1%",
-    "previous": "3.1%"
-  },
-  {
     "title": "Unemployment Claims",
     "country": "USD",
     "date": "2026-10-22T08:30:00-04:00",
     "impact": "Medium",
     "forecast": "200K",
-    "previous": "199K"
+    "previous": "199K",
+    "actual": "194K"
+  },
+  {
+    "title": "IPPI m/m",
+    "country": "CAD",
+    "date": "2026-10-22T08:38:00-04:00",
+    "impact": "Low",
+    "forecast": "0.9%",
+    "previous": "1.3%",
+    "actual": "2.0%"
+  },
+  {
+    "title": "RMPI m/m",
+    "country": "CAD",
+    "date": "2026-10-22T08:38:00-04:00",
+    "impact": "Low",
+    "forecast": "3.1%",
+    "previous": "3.1%",
+    "actual": "4.8%"
+  },
+  {
+    "title": "NHPI m/m",
+    "country": "CAD",
+    "date": "2026-10-22T09:55:00-04:00",
+    "impact": "Low",
+    "forecast": "-0.1%",
+    "previous": "-0.1%",
+    "actual": "4.8%"
   },
   {
     "title": "Consumer Confidence",
@@ -500,7 +505,8 @@
     "date": "2026-10-22T10:00:00-04:00",
     "impact": "Low",
     "forecast": "-17",
-    "previous": "-17"
+    "previous": "-17",
+    "actual": "-17.9"
   },
   {
     "title": "CB Leading Index m/m",
@@ -508,15 +514,17 @@
     "date": "2026-10-22T10:00:00-04:00",
     "impact": "Low",
     "forecast": "-0.1%",
-    "previous": "-0.1%"
+    "previous": "-0.1%",
+    "actual": "0.0%"
   },
   {
     "title": "Natural Gas Storage",
     "country": "USD",
     "date": "2026-10-22T10:30:00-04:00",
     "impact": "Low",
-    "forecast": "83B",
-    "previous": "67B"
+    "forecast": "80B",
+    "previous": "67B",
+    "actual": "77B"
   },
   {
     "title": "Flash Manufacturing PMI",
@@ -540,7 +548,8 @@
     "date": "2026-10-22T19:01:00-04:00",
     "impact": "Low",
     "forecast": "-14",
-    "previous": "-13"
+    "previous": "-13",
+    "actual": "-24"
   },
   {
     "title": "National Core CPI y/y",
@@ -548,7 +557,8 @@
     "date": "2026-10-22T19:30:00-04:00",
     "impact": "Low",
     "forecast": "2.1%",
-    "previous": "1.7%"
+    "previous": "1.7%",
+    "actual": "2.1%"
   },
   {
     "title": "Flash Manufacturing PMI",
@@ -564,7 +574,8 @@
     "date": "2026-10-23T02:00:00-04:00",
     "impact": "Medium",
     "forecast": "-0.1%",
-    "previous": "0.5%"
+    "previous": "0.5%",
+    "actual": "-0.4%"
   },
   {
     "title": "French Flash Manufacturing PMI",
@@ -636,7 +647,8 @@
     "date": "2026-10-23T08:30:00-04:00",
     "impact": "Low",
     "forecast": "1.1%",
-    "previous": "-0.7%"
+    "previous": "-0.7%",
+    "actual": "1.2%"
   },
   {
     "title": "Retail Sales m/m",
@@ -644,7 +656,8 @@
     "date": "2026-10-23T08:30:00-04:00",
     "impact": "Low",
     "forecast": "1.3%",
-    "previous": "-0.7%"
+    "previous": "-0.7%",
+    "actual": "0.7%"
   },
   {
     "title": "Belgian NBB Business Climate",
@@ -660,15 +673,17 @@
     "date": "2026-10-23T09:45:00-04:00",
     "impact": "Medium",
     "forecast": "55.4",
-    "previous": "57.0"
+    "previous": "57.0",
+    "actual": "57.9"
   },
   {
     "title": "Flash Services PMI",
     "country": "USD",
     "date": "2026-10-23T09:45:00-04:00",
     "impact": "Medium",
-    "forecast": "57.8",
-    "previous": "58.7"
+    "forecast": "57.9",
+    "previous": "58.7",
+    "actual": "57.9"
   },
   {
     "title": "Revised UoM Consumer Sentiment",
@@ -684,7 +699,8 @@
     "date": "2026-10-23T10:00:00-04:00",
     "impact": "Medium",
     "forecast": "",
-    "previous": "4.7%"
+    "previous": "4.7%",
+    "actual": "4.7%"
   },
   {
     "title": "Daylight Saving Time Shift",

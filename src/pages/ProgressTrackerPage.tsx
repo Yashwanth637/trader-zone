@@ -34,6 +34,7 @@ import {
   Flame,
   Brain
 } from 'lucide-react';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 
 export const ProgressTrackerPage: React.FC = () => {
   const { trades, accounts, activeAccountId, updateTrade } = useTrading();
@@ -552,11 +553,12 @@ export const ProgressTrackerPage: React.FC = () => {
                     {/* 3. Symbol & Side */}
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5">
+                        <AssetLogo symbol={t.symbol} size="xs" />
                         <Link
                           to={`/trades/${t.id}`}
                           className="font-bold text-foreground hover:text-cyan-400 transition-colors"
                         >
-                          {t.symbol}
+                          {formatSymbolDisplay(t.symbol)}
                         </Link>
                         <Badge
                           variant={t.direction === 'BUY' ? 'buy' : 'sell'}

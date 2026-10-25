@@ -14,6 +14,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { ChartLightboxModal } from '../components/trades/ChartLightboxModal';
+import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
 
 export const TradeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -114,7 +115,8 @@ export const TradeDetailPage: React.FC = () => {
       }`}>
         <div>
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-black text-foreground">{trade.symbol}</span>
+            <AssetLogo symbol={trade.symbol} size="md" />
+            <span className="text-2xl font-black text-foreground">{formatSymbolDisplay(trade.symbol)}</span>
             <Badge variant={trade.direction === 'BUY' ? 'buy' : 'sell'}>{trade.direction}</Badge>
             <span className="text-xs font-mono text-muted">#{trade.ticket}</span>
           </div>
