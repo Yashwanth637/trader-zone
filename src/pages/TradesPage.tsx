@@ -158,7 +158,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search symbol, ticket, notes..."
+              placeholder="Search symbol, notes..."
               className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-surface border border-border text-foreground text-xs focus:border-primary focus:outline-none placeholder:text-muted/60"
             />
           </div>
@@ -373,7 +373,6 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                             </button>
                           )}
                         </div>
-                        <div className="text-[10px] text-muted font-mono">#{t.ticket}</div>
                       </td>
 
                       <td className="py-3">
@@ -451,7 +450,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                           </Link>
                           <button
                             onClick={() => {
-                              if (confirm(`Delete trade #${t.ticket} (${t.symbol})?`)) {
+                              if (confirm(`Delete trade (${formatSymbolDisplay(t.symbol)})?`)) {
                                 deleteTrade(t.id);
                               }
                             }}
@@ -531,7 +530,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
             setChartModalOpen(false);
             setSelectedTradeForChart(null);
           }}
-          title={`${selectedTradeForChart.symbol} #${selectedTradeForChart.ticket}`}
+          title={`${formatSymbolDisplay(selectedTradeForChart.symbol)}`}
           subtitle={`${selectedTradeForChart.direction} ${selectedTradeForChart.lotSize} Lots · ${selectedTradeForChart.netPnl >= 0 ? '+' : ''}${formatCurrency(selectedTradeForChart.netPnl)} (${selectedTradeForChart.realizedRR ? `${selectedTradeForChart.realizedRR}R` : 'Closed'}) · ${new Date(selectedTradeForChart.openTime).toLocaleDateString()}`}
           beforeUrl={selectedTradeForChart.chartBeforeUrl}
           afterUrl={selectedTradeForChart.chartAfterUrl}

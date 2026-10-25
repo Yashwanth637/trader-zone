@@ -118,7 +118,6 @@ export const TradeDetailPage: React.FC = () => {
             <AssetLogo symbol={trade.symbol} size="md" />
             <span className="text-2xl font-black text-foreground">{formatSymbolDisplay(trade.symbol)}</span>
             <Badge variant={trade.direction === 'BUY' ? 'buy' : 'sell'}>{trade.direction}</Badge>
-            <span className="text-xs font-mono text-muted">#{trade.ticket}</span>
           </div>
           <div className="flex items-center gap-4 mt-2 text-xs text-muted flex-wrap">
             <span>Lot Size: <strong className="text-foreground font-mono">{trade.lotSize}</strong></span>
@@ -401,7 +400,7 @@ export const TradeDetailPage: React.FC = () => {
       <ChartLightboxModal
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
-        title={`${trade.symbol} #${trade.ticket}`}
+        title={`${formatSymbolDisplay(trade.symbol)}`}
         subtitle={`${trade.direction} ${trade.lotSize} Lots · ${trade.netPnl >= 0 ? '+' : ''}${formatCurrency(trade.netPnl)} (${trade.realizedRR ? `${trade.realizedRR}R` : 'Closed'}) · ${new Date(trade.openTime).toLocaleDateString()}`}
         beforeUrl={chartBeforeUrl}
         afterUrl={chartAfterUrl}

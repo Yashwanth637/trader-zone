@@ -5,6 +5,7 @@ import { UserProfile } from '../../types/settings';
 import { User } from '../../types/auth';
 import { formatCurrency } from '../../lib/calculations';
 import { useTheme } from '../../context/ThemeContext';
+import { formatSymbolDisplay } from '../common/AssetLogo';
 import {
   X,
   Share2,
@@ -115,7 +116,10 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
     // Top traded symbol
     const symbolMap: Record<string, { count: number; pnl: number }> = {};
     monthTrades.forEach(t => {
-      const s = (t.symbol || 'OTHER').toUpperCase();
+      let s = (t.symbol || 'OTHER').toUpperCase().trim();
+      if (s.startsWith('XAUUSD') || s.startsWith('XAUTUSD') || s === 'XAU') {
+        s = 'GOLD';
+      }
       if (!symbolMap[s]) symbolMap[s] = { count: 0, pnl: 0 };
       symbolMap[s].count += 1;
       symbolMap[s].pnl += Number(t.netPnl) || 0;
@@ -448,16 +452,8 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                   </div>
                 </div>
 
-                {/* 2. Hero Net P&L Figure */}
-                <div
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                    activeMode === 'light'
-                      ? 'bg-white/80 border-slate-200/80 shadow-sm'
-                      : activeMode === 'violet'
-                      ? 'bg-white/[0.04] border-purple-500/20'
-                      : 'bg-white/[0.03] border-white/[0.08]'
-                  }`}
-                >
+                {/* 2. Hero Net P&L Figure (No mini cards, direct coordinate/flex layout) */}
+                <div className="pt-2 pb-1 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-1.5">
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider ${
@@ -539,16 +535,14 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                   </div>
                 </div>
 
-                {/* 3. 4-Card Primary Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {/* 3. Primary Metrics Grid (No mini cards, direct coordinate columns) */}
+                <div
+                  className={`grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t ${
+                    activeMode === 'light' ? 'border-slate-200/80' : 'border-white/[0.08]'
+                  }`}
+                >
                   {/* Total Trades */}
-                  <div
-                    className={`p-3 rounded-xl border ${
-                      activeMode === 'light'
-                        ? 'bg-white border-slate-200/90 shadow-sm'
-                        : 'bg-white/[0.04] border-white/[0.08]'
-                    }`}
-                  >
+                  <div>
                     <span
                       className={`text-[9px] font-bold uppercase tracking-wider block ${
                         activeMode === 'light' ? 'text-slate-500' : 'text-slate-400'
@@ -569,13 +563,7 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                   </div>
 
                   {/* Win Rate */}
-                  <div
-                    className={`p-3 rounded-xl border ${
-                      activeMode === 'light'
-                        ? 'bg-white border-slate-200/90 shadow-sm'
-                        : 'bg-white/[0.04] border-white/[0.08]'
-                    }`}
-                  >
+                  <div>
                     <span
                       className={`text-[9px] font-bold uppercase tracking-wider block ${
                         activeMode === 'light' ? 'text-slate-500' : 'text-slate-400'
@@ -596,13 +584,7 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                   </div>
 
                   {/* Best Trade */}
-                  <div
-                    className={`p-3 rounded-xl border ${
-                      activeMode === 'light'
-                        ? 'bg-white border-slate-200/90 shadow-sm'
-                        : 'bg-white/[0.04] border-white/[0.08]'
-                    }`}
-                  >
+                  <div>
                     <span
                       className={`text-[9px] font-bold uppercase tracking-wider block ${
                         activeMode === 'light' ? 'text-slate-500' : 'text-slate-400'
@@ -619,13 +601,7 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                   </div>
 
                   {/* Worst Trade */}
-                  <div
-                    className={`p-3 rounded-xl border ${
-                      activeMode === 'light'
-                        ? 'bg-white border-slate-200/90 shadow-sm'
-                        : 'bg-white/[0.04] border-white/[0.08]'
-                    }`}
-                  >
+                  <div>
                     <span
                       className={`text-[9px] font-bold uppercase tracking-wider block ${
                         activeMode === 'light' ? 'text-slate-500' : 'text-slate-400'
@@ -704,7 +680,7 @@ export const MonthlyShareModal: React.FC<MonthlyShareModalProps> = ({
                         activeMode === 'light' ? 'text-slate-900' : 'text-white'
                       }`}
                     >
-                      {monthStats.topSymbol}{' '}
+                      {formatSymbolDisplay(monthStats.topSymbol)}{' '}
                       <span className="text-[10px] text-slate-400 font-normal">
                         ({monthStats.topSymbolCount}t)
                       </span>
