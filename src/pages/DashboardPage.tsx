@@ -271,8 +271,8 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
             )}
 
             {/* Recent Trades Table */}
-            <div className="premium-card p-5">
-              <div className="flex items-center justify-between mb-4">
+            <div className="premium-card p-0 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 pb-4">
                 <div>
                   <h3 className="text-base font-bold text-foreground tracking-tight">Recent Trade Executions</h3>
                   <p className="text-xs text-muted">
@@ -296,68 +296,68 @@ export const DashboardPage: React.FC<{ onOpenAddTrade: () => void }> = ({ onOpen
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-border text-muted uppercase tracking-wider font-semibold">
-                      <th className="pb-3">Symbol</th>
-                      <th className="pb-3">Side</th>
-                      <th className="pb-3">Lots</th>
-                      <th className="pb-3">Entry</th>
-                      <th className="pb-3">Exit</th>
-                      <th className="pb-3">Net P&L</th>
-                      <th className="pb-3">R:R</th>
-                      <th className="pb-3">Status</th>
-                      <th className="pb-3 text-right">Details</th>
+                    <tr className="border-b border-slate-200/50 dark:border-white/[0.05] text-muted uppercase tracking-wider font-semibold">
+                      <th className="py-3 px-3.5 first:pl-5 sm:first:pl-6">Symbol</th>
+                      <th className="py-3 px-3.5">Side</th>
+                      <th className="py-3 px-3.5 font-mono">Lots</th>
+                      <th className="py-3 px-3.5 font-mono">Entry</th>
+                      <th className="py-3 px-3.5 font-mono">Exit</th>
+                      <th className="py-3 px-3.5 font-mono">Net P&L</th>
+                      <th className="py-3 px-3.5 font-mono">R:R</th>
+                      <th className="py-3 px-3.5">Status</th>
+                      <th className="py-3 px-3.5 last:pr-5 sm:last:pr-6 text-right">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-slate-200/40 dark:divide-white/[0.04]">
                     {sortTradesDescending(filteredTrades).slice(0, 5).map(t => {
                       const isWin = t.netPnl > 0;
                       const isLoss = t.netPnl < 0;
 
                       return (
-                        <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                          <td className="py-3 font-bold text-foreground">
-                            <div className="flex items-center gap-2">
+                        <tr key={t.id} className="hover:bg-slate-500/[0.03] dark:hover:bg-white/[0.03] transition-colors">
+                          <td className="py-3.5 px-3.5 first:pl-5 sm:first:pl-6 font-bold text-foreground">
+                            <div className="flex items-center gap-2.5">
                               <AssetLogo symbol={t.symbol} size="sm" />
                               <span>{formatSymbolDisplay(t.symbol)}</span>
                               {t.setupTags?.[0] && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-muted">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border/60 text-muted font-normal">
                                   {t.setupTags[0]}
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="py-3">
+                          <td className="py-3.5 px-3.5">
                             <Badge variant={t.direction === 'BUY' ? 'buy' : 'sell'} size="sm">
                               {t.direction}
                             </Badge>
                           </td>
-                          <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
-                          <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>
-                          <td className="py-3 font-mono text-foreground">{t.exitPrice || '-'}</td>
-                          <td className="py-3 font-mono font-bold">
+                          <td className="py-3.5 px-3.5 font-mono text-foreground">{t.lotSize}</td>
+                          <td className="py-3.5 px-3.5 font-mono text-foreground">{t.entryPrice}</td>
+                          <td className="py-3.5 px-3.5 font-mono text-foreground">{t.exitPrice || '-'}</td>
+                          <td className="py-3.5 px-3.5 font-mono font-bold">
                             <span className={isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-muted'}>
                               {formatCurrency(t.netPnl)}
                             </span>
                           </td>
-                          <td className="py-3 font-mono text-foreground">
+                          <td className="py-3.5 px-3.5 font-mono text-foreground">
                             {t.realizedRR ? `1:${t.realizedRR}` : t.plannedRR ? `1:${t.plannedRR} (P)` : '-'}
                           </td>
-                          <td className="py-3">
+                          <td className="py-3.5 px-3.5">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               t.status === 'OPEN'
-                                ? 'bg-sky-500/20 text-sky-500 border border-sky-500/30'
-                                : 'bg-black/5 dark:bg-slate-800 text-muted'
+                                ? 'bg-sky-500/15 text-sky-500 border border-sky-500/25'
+                                : 'bg-black/5 dark:bg-white/[0.06] text-muted'
                             }`}>
                               {t.status}
                             </span>
                           </td>
-                          <td className="py-3 text-right">
+                          <td className="py-3.5 px-3.5 last:pr-5 sm:last:pr-6 text-right">
                             <Link
                               to={`/trades/${t.id}`}
                               className="text-primary hover:underline font-semibold inline-flex items-center gap-1"
                             >
                               <span>Review</span>
-                              <ArrowUpRight className="w-3 h-3" />
+                              <ArrowUpRight className="w-3.5 h-3.5" />
                             </Link>
                           </td>
                         </tr>

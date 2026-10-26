@@ -307,49 +307,49 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
       </div>
 
       {/* Trades Table */}
-      <div className="premium-card p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="premium-card p-0 overflow-hidden">
+        <div className="flex items-center justify-between p-5 pb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-muted">
             Showing {filteredTrades.length} of {accountTrades.length} Trades
           </span>
         </div>
 
         {filteredTrades.length === 0 ? (
-          <div className="py-12 text-center text-xs text-muted border border-dashed border-border rounded-xl">
+          <div className="m-5 py-12 text-center text-xs text-muted border border-dashed border-border/60 rounded-xl">
             No trades match your search criteria.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border text-muted uppercase tracking-wider font-semibold">
-                  <th className="pb-3">Symbol & Setup</th>
-                  <th className="pb-3">Side</th>
-                  <th className="pb-3">Lots</th>
-                  <th className="pb-3">Open Date & Time</th>
-                  <th className="pb-3">Entry</th>
-                  <th className="pb-3">Exit</th>
-                  <th className="pb-3">Net P&L</th>
-                  <th className="pb-3">R:R</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3 text-right">Actions</th>
+                <tr className="border-b border-slate-200/50 dark:border-white/[0.05] text-muted uppercase tracking-wider font-semibold">
+                  <th className="py-3 px-3.5 first:pl-5 sm:first:pl-6">Symbol & Setup</th>
+                  <th className="py-3 px-3.5">Side</th>
+                  <th className="py-3 px-3.5 font-mono">Lots</th>
+                  <th className="py-3 px-3.5 font-mono">Open Date & Time</th>
+                  <th className="py-3 px-3.5 font-mono">Entry</th>
+                  <th className="py-3 px-3.5 font-mono">Exit</th>
+                  <th className="py-3 px-3.5 font-mono">Net P&L</th>
+                  <th className="py-3 px-3.5 font-mono">R:R</th>
+                  <th className="py-3 px-3.5">Status</th>
+                  <th className="py-3 px-3.5 last:pr-5 sm:last:pr-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-slate-200/40 dark:divide-white/[0.04]">
                 {filteredTrades.map(t => {
                   const isWin = t.netPnl > 0.01;
                   const isLoss = t.netPnl < -0.01;
 
                   return (
-                    <tr key={t.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 font-bold text-foreground">
+                    <tr key={t.id} className="hover:bg-slate-500/[0.03] dark:hover:bg-white/[0.03] transition-colors">
+                      <td className="py-3.5 px-3.5 first:pl-5 sm:first:pl-6 font-bold text-foreground">
                         <div className="flex items-center gap-2.5 flex-wrap">
                           <AssetLogo symbol={t.symbol} size="sm" />
                           <Link to={`/trades/${t.id}`} className="hover:text-primary transition-colors">
                             {formatSymbolDisplay(t.symbol)}
                           </Link>
                           {t.strategyName && (
-                            <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-surface border border-border text-muted">
+                            <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-surface border border-border/60 text-muted">
                               {t.strategyName}
                             </span>
                           )}
@@ -375,39 +375,39 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                         </div>
                       </td>
 
-                      <td className="py-3">
+                      <td className="py-3.5 px-3.5">
                         <Badge variant={t.direction === 'BUY' ? 'buy' : 'sell'} size="sm">
                           {t.direction}
                         </Badge>
                       </td>
 
-                      <td className="py-3 font-mono text-foreground">{t.lotSize}</td>
+                      <td className="py-3.5 px-3.5 font-mono text-foreground">{t.lotSize}</td>
 
-                      <td className="py-3 text-muted font-mono whitespace-nowrap">
+                      <td className="py-3.5 px-3.5 text-muted font-mono whitespace-nowrap">
                         {new Date(t.openTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
                       </td>
 
-                      <td className="py-3 font-mono text-foreground">{t.entryPrice}</td>
-                      <td className="py-3 font-mono text-foreground">{t.exitPrice || '-'}</td>
+                      <td className="py-3.5 px-3.5 font-mono text-foreground">{t.entryPrice}</td>
+                      <td className="py-3.5 px-3.5 font-mono text-foreground">{t.exitPrice || '-'}</td>
 
-                      <td className="py-3 font-mono font-bold">
+                      <td className="py-3.5 px-3.5 font-mono font-bold">
                         <span className={isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-muted'}>
                           {formatCurrency(t.netPnl)}
                         </span>
                       </td>
 
-                      <td className="py-3 font-mono text-muted">
+                      <td className="py-3.5 px-3.5 font-mono text-muted">
                         {t.realizedRR ? `1:${t.realizedRR}` : t.plannedRR ? `1:${t.plannedRR} (P)` : '-'}
                       </td>
 
-                      <td className="py-3">
+                      <td className="py-3.5 px-3.5">
                         {t.status === 'OPEN' ? (
                           <button
                             onClick={() => {
                               setClosingTradeId(t.id);
                               setCloseExitPrice(t.entryPrice.toString());
                             }}
-                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-500 border border-sky-500/40 hover:bg-sky-500/30 transition-colors"
+                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-500 border border-sky-500/30 hover:bg-sky-500/25 transition-colors"
                           >
                             Close Trade
                           </button>
@@ -416,7 +416,7 @@ export const TradesPage: React.FC<TradesPageProps> = ({ onOpenAddTrade, onOpenCs
                         )}
                       </td>
 
-                      <td className="py-3 text-right">
+                      <td className="py-3.5 px-3.5 last:pr-5 sm:last:pr-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {(t.chartBeforeUrl || t.chartAfterUrl) && (
                             <button
