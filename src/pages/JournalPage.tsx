@@ -183,13 +183,13 @@ export const JournalPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Bottom: Trades pill */}
+                  {/* Bottom: Trades count (pure text positioned at bottom, no mini-card container) */}
                   {dayData ? (
-                    <div className="text-[9px] text-center rounded bg-black/10 dark:bg-black/40 text-foreground py-0.5 font-medium">
+                    <div className="text-[10px] text-center text-muted font-mono font-medium">
                       {dayData.count} trade{dayData.count > 1 ? 's' : ''}
                     </div>
                   ) : (
-                    <div />
+                    <div className="h-3.5" />
                   )}
                 </div>
               );
