@@ -41,7 +41,7 @@ export const DiaryPageContainer: React.FC<DiaryPageContainerProps> = ({
   return (
     <div className="space-y-6">
       {/* Dairy Sub-Navigation Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-surface-card border border-border shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07] shadow-sm">
         <div className="flex items-center gap-1.5 overflow-x-auto p-1">
           <button
             onClick={() => setDiaryTab('daily')}
@@ -82,7 +82,7 @@ export const DiaryPageContainer: React.FC<DiaryPageContainerProps> = ({
 
         <button
           onClick={onSwitchToCalendar}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border hover:border-primary/50 text-xs font-semibold text-muted hover:text-foreground transition-all self-end sm:self-auto mr-1"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border/40 hover:border-primary/50 text-xs font-semibold text-muted hover:text-foreground transition-all self-end sm:self-auto mr-1"
         >
           <CalendarIcon className="w-3.5 h-3.5" />
           <span>View Monthly Calendar</span>

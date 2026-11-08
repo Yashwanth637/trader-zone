@@ -52,21 +52,24 @@
   }
 
   /* Thin, delicate horizontal dividers throughout the entire journal */
-  hr,
-  .border-b,
-  .border-t,
-  .divide-y > :not([hidden]) ~ :not([hidden]) {
+  hr {
     border-color: var(--border-divider);
-    border-width: 1px;
+    border-top-width: 1px;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
   }
 
-  @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-    hr,
-    .border-b,
-    .border-t,
-    .divide-y > :not([hidden]) ~ :not([hidden]) {
-      border-width: 0.5px;
-    }
+  .border-b {
+    border-bottom-color: var(--border-divider);
+  }
+
+  .border-t {
+    border-top-color: var(--border-divider);
+  }
+
+  .divide-y > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-divider);
   }
 
   /* =========================================================================

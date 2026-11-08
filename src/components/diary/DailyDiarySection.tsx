@@ -12,7 +12,6 @@ import {
   Save,
   Check,
   Calendar,
-  Sparkles,
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight
@@ -126,7 +125,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Date Bar & Quick Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <Calendar className="w-5 h-5" />
@@ -138,7 +137,9 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               </h2>
               {dayTrades.length > 0 && (
                 <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
-                  dayPnl >= 0 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                  dayPnl >= 0
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                 }`}>
                   {formatSignedPnl(dayPnl)}
                 </span>
@@ -156,7 +157,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
             type="date"
             value={selectedDate}
             onChange={e => e.target.value && onSelectDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-mono text-foreground focus:outline-none focus:border-primary"
+            className="px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs font-mono text-foreground focus:outline-none focus:border-primary"
           />
 
           <button
@@ -182,14 +183,14 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
         </div>
       </div>
 
-      {/* Trade History Section (Requirement 2) */}
-      <div className="p-4 rounded-2xl bg-surface-card border border-border space-y-3">
+      {/* Trade History Section (Requirement 2 & Image 4 softened borders) */}
+      <div className="p-4 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-muted">
               Trades Taken on This Date
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border text-foreground font-mono font-bold">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-border/40 text-foreground font-mono font-bold">
               {dayTrades.length}
             </span>
           </div>
@@ -199,7 +200,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               onClick={() => {
                 detectedTradeMistakes.forEach(m => handleAddDont(m));
               }}
-              className="text-[11px] font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
+              className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-1 transition-colors"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Import {detectedTradeMistakes.length} mistakes into Don'ts</span>
@@ -208,7 +209,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
         </div>
 
         {dayTrades.length === 0 ? (
-          <div className="p-4 rounded-xl border border-dashed border-border/80 text-center text-xs text-muted">
+          <div className="p-4 rounded-xl border border-dashed border-border/30 dark:border-white/[0.06] text-center text-xs text-muted">
             No trade executions logged on this date. You can still write your daily Do's & Don'ts or psychological reflections.
           </div>
         ) : (
@@ -222,7 +223,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               return (
                 <div
                   key={t.id}
-                  className="p-3 rounded-xl bg-surface border border-border/70 flex items-center justify-between gap-3 hover:border-border-glow transition-all"
+                  className="p-3 rounded-xl bg-surface border border-border/30 dark:border-white/[0.07] flex items-center justify-between gap-3 hover:border-primary/40 transition-all shadow-sm"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <AssetLogo symbol={t.symbol} size="sm" />
@@ -233,8 +234,8 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
                         </span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${
                           t.direction === 'BUY'
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-rose-500/10 text-rose-500'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'
                         }`}>
                           {t.direction}
                         </span>
@@ -247,13 +248,13 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
 
                   <div className="text-right flex-shrink-0">
                     <div className={`text-xs font-black font-mono flex items-center justify-end gap-0.5 ${
-                      isProfit ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-foreground'
+                      isProfit ? 'text-emerald-600 dark:text-emerald-400' : isLoss ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'
                     }`}>
                       {isProfit ? <ArrowUpRight className="w-3.5 h-3.5" /> : isLoss ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
                       <span>{formatCurrency(pnlVal)}</span>
                     </div>
                     {t.mistakeTags && t.mistakeTags.length > 0 && (
-                      <div className="text-[9px] text-rose-400 font-medium truncate max-w-[100px]">
+                      <div className="text-[9px] text-rose-600 dark:text-rose-400 font-medium truncate max-w-[100px]">
                         {t.mistakeTags.join(', ')}
                       </div>
                     )}
@@ -268,17 +269,17 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
       {/* Two Main Columns: Do's (Green) and Don'ts (Red) as in video */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* LEFT COLUMN: Do's (What Went Right) */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-emerald-500/20 space-y-4 shadow-sm">
+        <div className="p-5 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-black text-foreground">
                 Do's <span className="text-xs font-normal text-muted">(What went right today)</span>
               </h3>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-mono font-bold border border-emerald-500/20">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono font-bold border border-emerald-500/20">
               {dos.length} logged
             </span>
           </div>
@@ -286,22 +287,22 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
           {/* List of active Do's */}
           <div className="space-y-2 min-h-[90px]">
             {dos.length === 0 ? (
-              <div className="p-3 rounded-xl border border-dashed border-emerald-500/20 text-center text-xs text-muted">
+              <div className="p-3 rounded-xl border border-dashed border-border/30 dark:border-white/[0.06] text-center text-xs text-muted">
                 No Do's logged yet. Pick from quick tags below or write what you did right.
               </div>
             ) : (
               dos.map(item => (
                 <div
                   key={item}
-                  className="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between gap-2 group hover:border-emerald-500/40 transition-all"
+                  className="p-2.5 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-2 group hover:border-emerald-500/40 transition-all"
                 >
                   <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <span>{item}</span>
                   </div>
                   <button
                     onClick={() => handleRemoveDo(item)}
-                    className="p-1 rounded text-muted hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity"
+                    className="p-1 rounded text-muted hover:text-rose-600 dark:hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity"
                     title="Remove"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -326,7 +327,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
                     className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
                       isSelected
                         ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
-                        : 'bg-surface border-border text-muted hover:text-foreground hover:border-emerald-500/40'
+                        : 'bg-surface border-border/40 text-slate-700 dark:text-muted hover:text-foreground hover:border-emerald-500/40'
                     }`}
                   >
                     + {preset}
@@ -342,19 +343,19 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               e.preventDefault();
               handleAddDo(customDo);
             }}
-            className="flex items-center gap-2 pt-2 border-t border-border"
+            className="flex items-center gap-2 pt-2 border-t border-border/30 dark:border-white/[0.06]"
           >
             <input
               type="text"
               placeholder="Add your own custom Do..."
               value={customDo}
               onChange={e => setCustomDo(e.target.value)}
-              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
+              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
             />
             <button
               type="submit"
               disabled={!customDo.trim()}
-              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-40"
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-40"
             >
               Add
             </button>
@@ -362,17 +363,17 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Don'ts (Mistakes Made) */}
-        <div className="p-5 rounded-2xl bg-surface-card border border-rose-500/20 space-y-4 shadow-sm">
+        <div className="p-5 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500">
+              <div className="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
                 <XCircle className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-black text-foreground">
                 Don'ts <span className="text-xs font-normal text-muted">(Mistakes made today)</span>
               </h3>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 font-mono font-bold border border-rose-500/20">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 font-mono font-bold border border-rose-500/20">
               {donts.length} logged
             </span>
           </div>
@@ -380,22 +381,22 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
           {/* List of active Don'ts */}
           <div className="space-y-2 min-h-[90px]">
             {donts.length === 0 ? (
-              <div className="p-3 rounded-xl border border-dashed border-rose-500/20 text-center text-xs text-muted">
+              <div className="p-3 rounded-xl border border-dashed border-border/30 dark:border-white/[0.06] text-center text-xs text-muted">
                 No Don'ts logged today! Keep execution clean, or record any slips below.
               </div>
             ) : (
               donts.map(item => (
                 <div
                   key={item}
-                  className="p-2.5 rounded-xl bg-rose-500/5 border border-rose-500/20 flex items-center justify-between gap-2 group hover:border-rose-500/40 transition-all"
+                  className="p-2.5 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 flex items-center justify-between gap-2 group hover:border-rose-500/40 transition-all"
                 >
                   <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                    <XCircle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
+                    <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
                     <span>{item}</span>
                   </div>
                   <button
                     onClick={() => handleRemoveDont(item)}
-                    className="p-1 rounded text-muted hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity"
+                    className="p-1 rounded text-muted hover:text-rose-600 dark:hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity"
                     title="Remove"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -420,7 +421,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
                     className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
                       isSelected
                         ? 'bg-rose-500 text-white border-rose-500 font-semibold'
-                        : 'bg-surface border-border text-muted hover:text-foreground hover:border-rose-500/40'
+                        : 'bg-surface border-border/40 text-slate-700 dark:text-muted hover:text-foreground hover:border-rose-500/40'
                     }`}
                   >
                     ✕ {preset}
@@ -436,19 +437,19 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               e.preventDefault();
               handleAddDont(customDont);
             }}
-            className="flex items-center gap-2 pt-2 border-t border-border"
+            className="flex items-center gap-2 pt-2 border-t border-border/30 dark:border-white/[0.06]"
           >
             <input
               type="text"
               placeholder="Add your own custom Don't..."
               value={customDont}
               onChange={e => setCustomDont(e.target.value)}
-              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-rose-500"
+              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-rose-500"
             />
             <button
               type="submit"
               disabled={!customDont.trim()}
-              className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40"
+              className="px-3 py-1.5 rounded-xl bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs font-bold hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40"
             >
               Add
             </button>
@@ -457,7 +458,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
       </div>
 
       {/* Reflection & Mental Notes */}
-      <div className="p-4 rounded-2xl bg-surface-card border border-border space-y-2">
+      <div className="p-4 rounded-2xl bg-surface-card border border-border/30 dark:border-white/[0.07] space-y-2">
         <label className="text-xs font-bold uppercase tracking-wider text-muted block">
           Daily Diary Reflections & Trade Psychology
         </label>
@@ -466,7 +467,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
           value={reflection}
           onChange={e => setReflection(e.target.value)}
           placeholder="What felt good? What caused emotional friction? Notes for tomorrow..."
-          className="w-full p-3 rounded-xl bg-surface border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors resize-none"
+          className="w-full p-3 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors resize-none"
         />
         <div className="flex items-center justify-end">
           <button
