@@ -157,7 +157,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
             type="date"
             value={selectedDate}
             onChange={e => e.target.value && onSelectDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs font-mono text-foreground focus:outline-none focus:border-primary"
+            className="px-3 py-1.5 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] text-xs font-mono text-foreground focus:outline-none focus:border-primary"
           />
 
           <button
@@ -327,7 +327,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
                     className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
                       isSelected
                         ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
-                        : 'bg-surface border-border/40 text-slate-700 dark:text-muted hover:text-foreground hover:border-emerald-500/40'
+                        : 'bg-surface border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-muted hover:text-foreground hover:border-emerald-500/40'
                     }`}
                   >
                     + {preset}
@@ -343,14 +343,14 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               e.preventDefault();
               handleAddDo(customDo);
             }}
-            className="flex items-center gap-2 pt-2 border-t border-border/30 dark:border-white/[0.06]"
+            className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-white/[0.06]"
           >
             <input
               type="text"
               placeholder="Add your own custom Do..."
               value={customDo}
               onChange={e => setCustomDo(e.target.value)}
-              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
+              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
             />
             <button
               type="submit"
@@ -421,7 +421,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
                     className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
                       isSelected
                         ? 'bg-rose-500 text-white border-rose-500 font-semibold'
-                        : 'bg-surface border-border/40 text-slate-700 dark:text-muted hover:text-foreground hover:border-rose-500/40'
+                        : 'bg-surface border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-muted hover:text-foreground hover:border-rose-500/40'
                     }`}
                   >
                     ✕ {preset}
@@ -437,14 +437,14 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
               e.preventDefault();
               handleAddDont(customDont);
             }}
-            className="flex items-center gap-2 pt-2 border-t border-border/30 dark:border-white/[0.06]"
+            className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-white/[0.06]"
           >
             <input
               type="text"
               placeholder="Add your own custom Don't..."
               value={customDont}
               onChange={e => setCustomDont(e.target.value)}
-              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-rose-500"
+              className="flex-1 px-3 py-1.5 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-rose-500"
             />
             <button
               type="submit"
@@ -467,7 +467,7 @@ export const DailyDiarySection: React.FC<DailyDiarySectionProps> = ({
           value={reflection}
           onChange={e => setReflection(e.target.value)}
           placeholder="What felt good? What caused emotional friction? Notes for tomorrow..."
-          className="w-full p-3 rounded-xl bg-surface border border-border/40 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors resize-none"
+          className="w-full p-3 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors resize-none"
         />
         <div className="flex items-center justify-end">
           <button

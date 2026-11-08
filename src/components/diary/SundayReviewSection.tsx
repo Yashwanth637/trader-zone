@@ -90,11 +90,11 @@ export const SundayReviewSection: React.FC<SundayReviewSectionProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={jumpToThisWeek}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-border/40 text-xs font-bold text-muted hover:text-foreground hover:border-primary/40 transition-all"
+            className="px-3 py-1.5 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] text-xs font-bold text-muted hover:text-foreground hover:border-primary/40 transition-all"
           >
             Current Week
           </button>
-          <div className="flex items-center gap-1 bg-surface border border-border/40 p-1 rounded-xl shadow-sm">
+          <div className="flex items-center gap-1 bg-surface border border-slate-200/80 dark:border-white/[0.08] p-1 rounded-xl shadow-sm">
             <button
               onClick={prevWeek}
               className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"

@@ -59,7 +59,7 @@ export const MonthlyFocusStickyCard: React.FC<MonthlyFocusStickyCardProps> = ({
 
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-border/40 hover:border-primary/50 text-xs font-bold text-foreground transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-slate-200/80 dark:border-white/[0.08] hover:border-primary/50 text-xs font-bold text-foreground transition-all shadow-sm"
         >
           {copied ? (
             <>
