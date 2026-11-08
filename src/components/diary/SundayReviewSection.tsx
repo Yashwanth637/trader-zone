@@ -170,13 +170,13 @@ export const SundayReviewSection: React.FC<SundayReviewSectionProps> = ({
                   </div>
                 </div>
 
-                {/* Bottom: Pure text coordinates - NO mini-card, NO inner borders */}
-                <div className="flex items-center justify-between text-[10px] font-mono">
+                {/* Bottom: Grouped together side-by-side like before, without any mini-card box */}
+                <div className="flex items-center gap-1.5 text-[10px] font-mono">
                   <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>{day.dos.length}</span>
                   </span>
-                  <span className="text-muted/30">/</span>
+                  <span className="text-muted/40">/</span>
                   <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold">
                     <XCircle className="w-3 h-3" />
                     <span>{day.donts.length}</span>
