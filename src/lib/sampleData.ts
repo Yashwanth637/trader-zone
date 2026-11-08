@@ -404,6 +404,8 @@ export const initialJournalEntries: DailyJournalEntry[] = [
       'rule-5': true
     },
     marketConditions: 'Trending',
+    dos: ['Waited for confirmation', 'Followed my stop loss', 'Booked profit at target'],
+    donts: ['Moved my stop loss'],
     updatedAt: '2026-09-08T20:00:00Z'
   },
   {
@@ -422,6 +424,8 @@ export const initialJournalEntries: DailyJournalEntry[] = [
       'rule-5': true
     },
     marketConditions: 'High Volatility',
+    dos: ['Followed my stop loss', 'Traded only my setup'],
+    donts: ['Moved my stop loss', 'Took a revenge trade'],
     updatedAt: '2026-09-09T21:00:00Z'
   },
   {
@@ -440,6 +444,8 @@ export const initialJournalEntries: DailyJournalEntry[] = [
       'rule-5': true
     },
     marketConditions: 'News Driven',
+    dos: ['Waited for confirmation'],
+    donts: ['Traded ahead of high-impact news', 'Moved my stop loss'],
     updatedAt: '2026-09-10T19:30:00Z'
   }
 ];

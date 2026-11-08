@@ -1,19 +1,39 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTrading } from '../context/TradingContext';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/calculations';
+import { DiaryPageContainer } from '../components/diary/DiaryPageContainer';
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  FileText
+  FileText,
+  BookOpen
 } from 'lucide-react';
 
 export const JournalPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { accountTrades, journalEntries } = useTrading();
   
+  // Section toggle: 'calendar' vs 'diary'
+  const initialSection = searchParams.get('section') === 'diary' || searchParams.get('tab') === 'dairy' ? 'diary' : 'calendar';
+  const [activeSection, setActiveSection] = useState<'calendar' | 'diary'>(initialSection);
+
+  const toggleSection = (section: 'calendar' | 'diary') => {
+    setActiveSection(section);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (section === 'diary') {
+        next.set('section', 'diary');
+      } else {
+        next.delete('section');
+      }
+      return next;
+    });
+  };
+
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
   const year = currentDate.getFullYear();
@@ -79,11 +99,26 @@ export const JournalPage: React.FC = () => {
             <span>Trading Journal</span>
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Review daily performance, log reflections, and track consistency on the calendar.
+            {activeSection === 'diary'
+              ? "Daily Dairy for Do's & Don'ts, weekly leak tracking, and Sunday review synthesis."
+              : 'Review daily performance, log reflections, and track consistency on the calendar.'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Clickable button 'Dairy' placed right before Current Month */}
+          <Button
+            size="sm"
+            variant={activeSection === 'diary' ? 'primary' : 'outline'}
+            onClick={() => toggleSection(activeSection === 'diary' ? 'calendar' : 'diary')}
+            className={`font-bold flex items-center gap-1.5 transition-all ${
+              activeSection === 'diary' ? 'shadow-sm shadow-primary/25' : ''
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Dairy</span>
+          </Button>
+
           <Button size="sm" variant="outline" onClick={today}>
             Current Month
           </Button>
@@ -107,8 +142,14 @@ export const JournalPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Calendar (3/4) & Month Summary (1/4) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {activeSection === 'diary' ? (
+        <DiaryPageContainer
+          currentDate={currentDate}
+          onSwitchToCalendar={() => toggleSection('calendar')}
+        />
+      ) : (
+        /* Main Grid: Calendar (3/4) & Month Summary (1/4) */
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Calendar Grid */}
         <div className="lg:col-span-3 premium-card p-5">
           {/* Day of Week Headers */}
@@ -261,6 +302,7 @@ export const JournalPage: React.FC = () => {
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 };
