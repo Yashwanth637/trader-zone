@@ -65,12 +65,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex items-center justify-between h-16 px-4 border-b sidebar-border-subtle">
         {!collapsed && (
           <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 dark:from-slate-700 dark:to-slate-900 flex items-center justify-center shadow-md dark:border dark:border-white/20 border border-primary/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-white dark:text-slate-100" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F5E5BE] via-[#DDB86C] to-[#B8883B] border border-[#CCA051]/60 shadow-sm shadow-[#B8883B]/20 dark:bg-gradient-to-br dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 dark:border-white/20 dark:shadow-none flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-white drop-shadow-sm dark:text-slate-100" />
             </div>
             <div className="flex items-baseline font-black text-lg tracking-tight">
               <span className="text-foreground">Trader</span>
-              <span className="text-primary dark:text-slate-200 ml-0.5">Zone</span>
+              <span className="text-[#B8883B] dark:text-slate-200 ml-0.5">Zone</span>
               <span className="text-[10px] font-black uppercase ml-1.5 px-1.5 py-0.5 rounded dark:bg-white/10 dark:text-slate-200 dark:border dark:border-white/20 bg-[#F4E6CA] text-[#785114] border border-[#CCA051]/60">
                 AI 2.0
               </span>
@@ -79,8 +79,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
         {collapsed && (
           <NavLink to="/dashboard" className="mx-auto">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 dark:from-slate-700 dark:to-slate-900 flex items-center justify-center shadow-md dark:border dark:border-white/20 border border-primary/30">
-              <Sparkles className="w-5 h-5 text-white dark:text-slate-100" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5E5BE] via-[#DDB86C] to-[#B8883B] border border-[#CCA051]/60 shadow-sm shadow-[#B8883B]/20 dark:bg-gradient-to-br dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 dark:border-white/20 dark:shadow-none flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white drop-shadow-sm dark:text-slate-100" />
             </div>
           </NavLink>
         )}
@@ -253,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Event Calendar</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors dark:bg-red-500/20 dark:text-red-400 dark:border dark:border-red-500/40 dark:shadow-[0_0_8px_rgba(239,68,68,0.25)] bg-red-600/15 text-red-600 border border-red-600/30">
+              <span className="badge-live-red text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-all">
                 LIVE
               </span>
             </div>
@@ -271,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Market Heatmap</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors dark:bg-emerald-500/20 dark:text-emerald-400 dark:border dark:border-emerald-500/40 dark:shadow-[0_0_8px_rgba(16,185,129,0.25)] bg-emerald-600/15 text-emerald-700 border border-emerald-600/30">
+              <span className="badge-live-green text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-all">
                 LIVE
               </span>
             </div>

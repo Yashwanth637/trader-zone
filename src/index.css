@@ -162,38 +162,29 @@
      Sidebar Premium Theme (Silver/Chrome Dark Mode & Champagne Gold Light Mode)
      ========================================================================= */
 
-  /* Sidebar Container */
+  /* Sidebar Container - Matches App Background Seamlessly */
   .sidebar-container {
+    background-color: var(--bg-surface);
+    border-right-color: var(--border-divider);
     transition: background-color 0.25s ease, border-color 0.25s ease;
-  }
-  html:not(.dark) .sidebar-container {
-    background-color: #FAF7F2;
-    border-right-color: rgba(205, 165, 90, 0.22);
-  }
-  .dark .sidebar-container {
-    background-color: #07080A;
-    border-right-color: rgba(255, 255, 255, 0.08);
   }
 
   /* Sidebar Dividers / Borders */
-  html:not(.dark) .sidebar-border-subtle {
-    border-color: rgba(205, 165, 90, 0.2) !important;
-  }
-  .dark .sidebar-border-subtle {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+  .sidebar-border-subtle {
+    border-color: var(--border-divider) !important;
   }
 
   /* Inactive Navigation Links */
   html:not(.dark) .sidebar-item-inactive,
   html:not(.dark) .sidebar-item-inactive span {
-    color: #382C1E;
+    color: #4A3E2D;
   }
   html:not(.dark) .sidebar-item-inactive svg {
     color: #B8883B;
     transition: color 0.2s ease, transform 0.2s ease;
   }
   html:not(.dark) .sidebar-item-inactive:hover {
-    background-color: rgba(225, 212, 190, 0.45);
+    background-color: rgba(184, 136, 59, 0.08);
   }
   html:not(.dark) .sidebar-item-inactive:hover,
   html:not(.dark) .sidebar-item-inactive:hover span {
@@ -222,24 +213,20 @@
     color: #FFFFFF;
   }
 
-  /* Active 3D Metallic Pill in Dark Mode: Silver / Chrome Premium */
+  /* Softened Active 3D Metallic Pill in Dark Mode: Silver / Chrome Premium (Reduced Intensity) */
   .dark .sidebar-item-active {
     position: relative;
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.45) 0%,
-      rgba(200, 215, 230, 0.25) 15%,
-      rgba(100, 115, 135, 0.3) 48%,
-      rgba(40, 50, 65, 0.6) 52%,
-      rgba(80, 95, 115, 0.4) 82%,
-      rgba(180, 200, 220, 0.35) 100%
-    ),
-    linear-gradient(135deg, #2A323D 0%, #10141A 100%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+      #3E4652 0%,
+      #2E3540 45%,
+      #252C36 55%,
+      #353D4A 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.22);
     box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
-      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.6),
-      0 4px 18px -2px rgba(0, 0, 0, 0.75);
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.4);
     font-weight: 600;
   }
   .dark .sidebar-item-active,
@@ -249,36 +236,64 @@
   }
   .dark .sidebar-item-active svg {
     color: #FFFFFF !important;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
   }
 
-  /* Active 3D Metallic Pill in Light Mode: Champagne Gold Premium */
+  /* Softened Active 3D Metallic Pill in Light Mode: Champagne Gold Premium (Reduced Intensity) */
   html:not(.dark) .sidebar-item-active {
     position: relative;
     background: linear-gradient(
       180deg,
-      #FFF7E6 0%,
-      #FDE8B8 18%,
-      #E5BD6C 48%,
-      #CD9E4A 52%,
-      #E7C275 80%,
-      #F7E3B5 100%
+      #FCF9F1 0%,
+      #F6EDD6 30%,
+      #EFE0B8 65%,
+      #F5E9C8 100%
     );
-    border: 1px solid #D4AC57;
+    border: 1px solid #DFCAA0;
     box-shadow: 
-      inset 0 1px 2px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 2px 0 rgba(160, 115, 30, 0.3),
-      0 4px 16px 0 rgba(197, 152, 45, 0.28);
+      inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95),
+      0 2px 6px rgba(180, 140, 60, 0.08);
     font-weight: 600;
   }
   html:not(.dark) .sidebar-item-active,
   html:not(.dark) .sidebar-item-active span,
   html:not(.dark) .sidebar-item-active div {
-    color: #291C08 !important;
+    color: #382A14 !important;
   }
   html:not(.dark) .sidebar-item-active svg {
-    color: #63430A !important;
-    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.6));
+    color: #7A5618 !important;
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
+  }
+
+  /* Dedicated LIVE Badges (Matching Sidebar Ref Design in Both Themes) */
+  html:not(.dark) .badge-live-red,
+  html:not(.dark) .badge-live-red span {
+    background-color: #842029 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #721C24 !important;
+    box-shadow: 0 1px 2px rgba(132, 32, 41, 0.15);
+  }
+  html:not(.dark) .badge-live-green,
+  html:not(.dark) .badge-live-green span {
+    background-color: #1E4620 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #163C19 !important;
+    box-shadow: 0 1px 2px rgba(30, 70, 32, 0.15);
+  }
+
+  .dark .badge-live-red,
+  .dark .badge-live-red span {
+    background-color: rgba(185, 28, 28, 0.22) !important;
+    color: #F87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+  }
+  .dark .badge-live-green,
+  .dark .badge-live-green span {
+    background-color: rgba(22, 101, 52, 0.25) !important;
+    color: #4ADE80 !important;
+    border: 1px solid rgba(34, 197, 94, 0.4) !important;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
   }
 
   .premium-card {
