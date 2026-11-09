@@ -55,23 +55,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navClass = (isActive: boolean) =>
     `group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
       isActive
-        ? 'bg-gradient-to-r from-primary/20 to-purple-600/10 text-primary-light dark:text-white border border-primary/30 shadow-sm font-semibold'
-        : 'text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
+        ? 'sidebar-item-active'
+        : 'sidebar-item-inactive'
     }`;
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-surface border-r border-border transition-colors duration-200">
+    <div className="flex flex-col h-full sidebar-container border-r sidebar-border-subtle transition-colors duration-200">
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-border">
+      <div className="flex items-center justify-between h-16 px-4 border-b sidebar-border-subtle">
         {!collapsed && (
           <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-md shadow-primary/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 dark:from-slate-700 dark:to-slate-900 flex items-center justify-center shadow-md dark:border dark:border-white/20 border border-primary/30 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-white dark:text-slate-100" />
             </div>
             <div className="flex items-baseline font-black text-lg tracking-tight">
               <span className="text-foreground">Trader</span>
-              <span className="text-primary ml-0.5">Zone</span>
-              <span className="text-[10px] font-black uppercase ml-1.5 px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+              <span className="text-primary dark:text-slate-200 ml-0.5">Zone</span>
+              <span className="text-[10px] font-black uppercase ml-1.5 px-1.5 py-0.5 rounded dark:bg-white/10 dark:text-slate-200 dark:border dark:border-white/20 bg-[#F4E6CA] text-[#785114] border border-[#CCA051]/60">
                 AI 2.0
               </span>
             </div>
@@ -79,14 +79,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
         {collapsed && (
           <NavLink to="/dashboard" className="mx-auto">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-md shadow-primary/30">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 dark:from-slate-700 dark:to-slate-900 flex items-center justify-center shadow-md dark:border dark:border-white/20 border border-primary/30">
+              <Sparkles className="w-5 h-5 text-white dark:text-slate-100" />
             </div>
           </NavLink>
         )}
         <button
           onClick={onToggleCollapse}
-          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg sidebar-item-inactive hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Dashboard" : undefined}
         >
-          <LayoutDashboard className="w-4 h-4 shrink-0 text-primary" />
+          <LayoutDashboard className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Dashboard</span>}
         </NavLink>
 
@@ -109,17 +109,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <button
             onClick={() => setAnalyticsOpen(!analyticsOpen)}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              isAnalyticsActive ? 'text-foreground font-semibold' : 'text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              isAnalyticsActive ? 'sidebar-item-active' : 'sidebar-item-inactive'
             }`}
           >
             <div className="flex items-center gap-3">
-              <BarChart3 className="w-4 h-4 shrink-0 text-violet-500" />
+              <BarChart3 className="w-4 h-4 shrink-0" />
               {!collapsed && <span>Analytics</span>}
             </div>
             {!collapsed && (
               <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 text-muted ${
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
                   analyticsOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {(!collapsed || mobileOpen) && analyticsOpen && (
-            <div className="pl-6 pr-1 py-1 space-y-1 border-l border-border ml-4 mt-1">
+            <div className="pl-6 pr-1 py-1 space-y-1 border-l sidebar-border-subtle ml-4 mt-1">
               <NavLink
                 to="/analytics"
                 onClick={onMobileClose}
@@ -187,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Web Terminal" : undefined}
         >
-          <Tv className="w-4 h-4 shrink-0 text-sky-500" />
+          <Tv className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Web Terminal</span>}
         </NavLink>
 
@@ -198,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Trade History" : undefined}
         >
-          <History className="w-4 h-4 shrink-0 text-emerald-500" />
+          <History className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Trade History</span>}
         </NavLink>
 
@@ -209,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Journal" : undefined}
         >
-          <Calendar className="w-4 h-4 shrink-0 text-amber-500" />
+          <Calendar className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Journal</span>}
         </NavLink>
 
@@ -217,22 +217,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <NavLink
           to="/ai-2"
           onClick={onMobileClose}
-          className={({ isActive }) =>
-            `group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              isActive
-                ? 'bg-gradient-to-r from-pink-500/20 via-primary/20 to-purple-500/20 text-foreground border border-pink-500/30 font-semibold'
-                : 'text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'
-            }`
-          }
+          className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Trader Zone AI 2.0" : undefined}
         >
-          <Sparkles className="w-4 h-4 shrink-0 text-pink-500 animate-pulse" />
+          <Sparkles className="w-4 h-4 shrink-0" />
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
-              <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 dark:from-pink-400 dark:via-purple-300 dark:to-indigo-300">
-                Trader Zone AI
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-600 dark:text-pink-300 border border-pink-500/30">
+              <span>Trader Zone AI</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors dark:bg-white/10 dark:text-slate-200 dark:border dark:border-white/20 bg-[#F4E6CA] text-[#785114] border border-[#CCA051]/60">
                 2.0
               </span>
             </div>
@@ -246,7 +238,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Hot Topics" : undefined}
         >
-          <Flame className="w-4 h-4 shrink-0 text-orange-500" />
+          <Flame className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Hot Topics</span>}
         </NavLink>
 
@@ -257,11 +249,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Event Calendar" : undefined}
         >
-          <CalendarDays className="w-4 h-4 shrink-0 text-red-500" />
+          <CalendarDays className="w-4 h-4 shrink-0" />
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Event Calendar</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors dark:bg-red-500/20 dark:text-red-400 dark:border dark:border-red-500/40 dark:shadow-[0_0_8px_rgba(239,68,68,0.25)] bg-red-600/15 text-red-600 border border-red-600/30">
                 LIVE
               </span>
             </div>
@@ -275,11 +267,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Market Heatmap" : undefined}
         >
-          <LayoutGrid className="w-4 h-4 shrink-0 text-emerald-400" />
+          <LayoutGrid className="w-4 h-4 shrink-0" />
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Market Heatmap</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors dark:bg-emerald-500/20 dark:text-emerald-400 dark:border dark:border-emerald-500/40 dark:shadow-[0_0_8px_rgba(16,185,129,0.25)] bg-emerald-600/15 text-emerald-700 border border-emerald-600/30">
                 LIVE
               </span>
             </div>
@@ -293,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "100 Trades Challenge" : undefined}
         >
-          <Target className="w-4 h-4 shrink-0 text-cyan-400" />
+          <Target className="w-4 h-4 shrink-0" />
           {!collapsed && <span>100 Trades Challenge</span>}
         </NavLink>
 
@@ -304,7 +296,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Market Hours" : undefined}
         >
-          <Clock className="w-4 h-4 shrink-0 text-cyan-500" />
+          <Clock className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Market Hours</span>}
         </NavLink>
 
@@ -316,7 +308,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Broker Hub" : undefined}
         >
-          <Layers className="w-4 h-4 shrink-0 text-purple-500" />
+          <Layers className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Broker Hub</span>}
         </NavLink>
 
@@ -327,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={({ isActive }) => navClass(isActive)}
           title={collapsed ? "Settings" : undefined}
         >
-          <Sliders className="w-4 h-4 shrink-0 text-muted" />
+          <Sliders className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Settings</span>}
         </NavLink>
       </div>
@@ -337,10 +329,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <NavLink
           to={user ? "/settings" : "/login"}
           onClick={onMobileClose}
-          className="p-3.5 border-t border-border bg-surface-card/40 hover:bg-black/5 dark:hover:bg-white/5 transition-colors block"
+          className="p-3.5 border-t sidebar-border-subtle transition-colors block hover:bg-black/5 dark:hover:bg-white/5"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 dark:from-slate-700 dark:to-slate-500 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
               {user?.name ? user.name.slice(0, 2).toUpperCase() : 'TZ'}
             </div>
             <div className="overflow-hidden">
@@ -375,7 +367,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onMobileClose}
           />
-          <div className="relative w-64 h-full bg-surface shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+          <div className="relative w-64 h-full sidebar-container shadow-2xl z-10 animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </div>
         </div>
