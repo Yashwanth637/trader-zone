@@ -1,0 +1,19 @@
+{
+  "name": "Trader Zone - AI Trading Journal",
+  "short_name": "Trader Zone",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "description": "Institutional-grade AI-powered trading journal workstation.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
