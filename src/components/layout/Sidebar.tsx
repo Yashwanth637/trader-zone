@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import {
   LayoutDashboard,
   BarChart3,
@@ -22,9 +21,7 @@ import {
   Target,
   Flame,
   CalendarDays,
-  LayoutGrid,
-  Sun,
-  Moon
+  LayoutGrid
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -41,7 +38,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onMobileClose
 }) => {
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const location = useLocation();
 
@@ -68,10 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div className="flex items-baseline font-black text-lg tracking-tight">
               <span className="text-[var(--sidebar-accent-strong)]">Trader</span>
-              <span className="text-[var(--sidebar-accent)] ml-0.5">Zone</span>
-              <span className="sidebar-badge ai ml-1.5 text-[9px] uppercase tracking-wider">
-                2.0
-              </span>
+              <span className="text-[var(--sidebar-accent)] ml-1">Zone 2.0</span>
             </div>
           </NavLink>
         )}
@@ -82,24 +75,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </NavLink>
         )}
-        <div className="flex items-center gap-1.5">
-          {!collapsed && (
-            <button
-              onClick={toggleTheme}
-              className="sidebar-theme-toggle"
-              title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          )}
-          <button
-            onClick={onToggleCollapse}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-[var(--sidebar-muted)] hover:text-[var(--sidebar-accent-strong)] hover:bg-[var(--sidebar-surface)] transition-colors"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
+        <button
+          onClick={onToggleCollapse}
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-[var(--sidebar-muted)] hover:text-[var(--sidebar-accent-strong)] hover:bg-[var(--sidebar-surface)] transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
       </div>
 
       {/* Navigation Links */}
@@ -231,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Trader Zone AI</span>
-              <span className="sidebar-badge ai">2.0</span>
+              <span className="sidebar-badge">2.0</span>
             </div>
           )}
         </NavLink>
@@ -258,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Event Calendar</span>
-              <span className="sidebar-badge live-red">LIVE</span>
+              <span className="sidebar-badge">LIVE</span>
             </div>
           )}
         </NavLink>
@@ -274,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Market Heatmap</span>
-              <span className="sidebar-badge live-green">LIVE</span>
+              <span className="sidebar-badge">LIVE</span>
             </div>
           )}
         </NavLink>
@@ -311,10 +293,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Layers className="shrink-0" />
           {!collapsed && <span>Broker Hub</span>}
         </NavLink>
-      </div>
 
-      {/* Footer User Info + Settings */}
-      <div className="sidebar-footer mt-auto px-3 py-3 border-t border-[var(--sidebar-border)] space-y-1">
+        {/* Settings */}
         <NavLink
           to="/settings"
           onClick={onMobileClose}
@@ -324,8 +304,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Sliders className="shrink-0" />
           {!collapsed && <span>Settings</span>}
         </NavLink>
+      </div>
 
-        {!collapsed && (
+      {/* Footer User Info */}
+      {!collapsed && (
+        <div className="sidebar-footer mt-auto px-3 py-3 border-t border-[var(--sidebar-border)]">
           <NavLink
             to={user ? "/settings" : "/login"}
             onClick={onMobileClose}
@@ -345,8 +328,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           </NavLink>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 

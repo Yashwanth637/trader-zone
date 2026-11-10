@@ -285,72 +285,30 @@
     filter: drop-shadow(0 0 6px var(--sidebar-glow));
   }
 
-  /* Theme Toggle Button */
-  .sidebar-theme-toggle {
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--sidebar-border);
-    border-radius: 10px;
-    color: var(--sidebar-accent);
-    background: var(--sidebar-surface);
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    transition: .25s ease;
-  }
-
-  .sidebar-theme-toggle:hover {
-    background: var(--sidebar-badge-bg);
-    box-shadow: 0 0 15px var(--sidebar-glow);
-    transform: rotate(12deg);
-  }
-
-  /* Badges */
+  /* Badges - Matching Silver in Dark Mode and Gold in Light Mode */
   .sidebar-badge {
     margin-left: auto;
     padding: 3px 8px;
-    border-radius: 7px;
-    font-size: 11px;
+    border-radius: 6px;
+    font-size: 10px;
     font-weight: 800;
-    letter-spacing: .4px;
-    border: 1px solid transparent;
+    letter-spacing: .5px;
     line-height: 1.2;
+    transition: all .2s ease;
   }
 
-  .sidebar-badge.ai {
-    color: #d89cce;
-    background: rgba(195, 80, 155, .13);
-    border-color: rgba(195, 80, 155, .3);
+  .dark .sidebar-badge {
+    color: #dce1ed !important;
+    background: rgba(220, 225, 240, 0.08) !important;
+    border: 1px solid rgba(220, 225, 240, 0.28) !important;
+    box-shadow: 0 0 8px rgba(220, 225, 240, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
-  .sidebar-badge.live-green {
-    color: #27c998;
-    background: rgba(39, 201, 152, .12);
-    border-color: rgba(39, 201, 152, .28);
-  }
-
-  .sidebar-badge.live-red {
-    color: #f87171;
-    background: rgba(239, 68, 68, .12);
-    border-color: rgba(239, 68, 68, .28);
-  }
-
-  .light .sidebar-badge.ai, html:not(.dark) .sidebar-badge.ai {
-    color: #99517e;
-    background: #f6e5ef;
-    border-color: #e8c3d8;
-  }
-
-  .light .sidebar-badge.live-green, html:not(.dark) .sidebar-badge.live-green {
-    color: #137d5b;
-    background: #dff5eb;
-    border-color: #b6e6d2;
-  }
-
-  .light .sidebar-badge.live-red, html:not(.dark) .sidebar-badge.live-red {
-    color: #b91c1c;
-    background: #fee2e2;
-    border-color: #fca5a5;
+  .light .sidebar-badge, html:not(.dark) .sidebar-badge {
+    color: #80560e !important;
+    background: rgba(177, 132, 48, 0.12) !important;
+    border: 1px solid rgba(190, 145, 54, 0.42) !important;
+    box-shadow: 0 1px 3px rgba(180, 140, 60, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
   /* Dropdown Submenu */
