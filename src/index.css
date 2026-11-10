@@ -159,141 +159,255 @@
 
 @layer components {
   /* =========================================================================
-     Sidebar Premium Theme (Silver/Chrome Dark Mode & Champagne Gold Light Mode)
+     PREMIUM TRADING SIDEBAR (Exact implementation of user code & images)
      ========================================================================= */
 
-  /* Sidebar Container - Matches App Background Seamlessly */
+  :root, .dark {
+    --sidebar-bg: var(--bg-app, #090a0e);
+    --sidebar-border: rgba(220, 225, 235, 0.16);
+    --sidebar-text: #c5cad5;
+    --sidebar-muted: #858c9a;
+    --sidebar-accent: #dce1ed;
+    --sidebar-accent-strong: #ffffff;
+    --sidebar-active-bg: linear-gradient(120deg, #252832, #11131b);
+    --sidebar-active-border: rgba(220, 225, 240, 0.5);
+    --sidebar-glow: rgba(215, 225, 245, 0.16);
+    --sidebar-badge-bg: rgba(210, 220, 240, 0.10);
+    --sidebar-divider: rgba(220, 225, 240, 0.12);
+    --sidebar-surface: rgba(255, 255, 255, 0.035);
+    --sidebar-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+  }
+
+  .light, html:not(.dark) {
+    --sidebar-bg: var(--bg-app, #f8f6f1);
+    --sidebar-border: rgba(164, 119, 35, 0.22);
+    --sidebar-text: #39362f;
+    --sidebar-muted: #858071;
+    --sidebar-accent: #b18430;
+    --sidebar-accent-strong: #80560e;
+    --sidebar-active-bg: linear-gradient(120deg, #fff5df, #f4e5c5);
+    --sidebar-active-border: rgba(190, 145, 54, 0.7);
+    --sidebar-glow: rgba(208, 157, 55, 0.18);
+    --sidebar-badge-bg: rgba(191, 143, 47, 0.13);
+    --sidebar-divider: rgba(165, 125, 48, 0.2);
+    --sidebar-surface: rgba(255, 255, 255, 0.65);
+    --sidebar-shadow: 0 15px 45px rgba(120, 90, 35, 0.10);
+  }
+
   .sidebar-container {
-    background-color: var(--bg-surface);
-    border-right-color: var(--border-divider);
-    transition: background-color 0.25s ease, border-color 0.25s ease;
-  }
-
-  /* Sidebar Dividers / Borders */
-  .sidebar-border-subtle {
-    border-color: var(--border-divider) !important;
-  }
-
-  /* Inactive Navigation Links */
-  html:not(.dark) .sidebar-item-inactive,
-  html:not(.dark) .sidebar-item-inactive span {
-    color: #4A3E2D;
-  }
-  html:not(.dark) .sidebar-item-inactive svg {
-    color: #B8883B;
-    transition: color 0.2s ease, transform 0.2s ease;
-  }
-  html:not(.dark) .sidebar-item-inactive:hover {
-    background-color: rgba(184, 136, 59, 0.08);
-  }
-  html:not(.dark) .sidebar-item-inactive:hover,
-  html:not(.dark) .sidebar-item-inactive:hover span {
-    color: #17110A;
-  }
-  html:not(.dark) .sidebar-item-inactive:hover svg {
-    color: #93631A;
-  }
-
-  .dark .sidebar-item-inactive,
-  .dark .sidebar-item-inactive span {
-    color: #94A3B8;
-  }
-  .dark .sidebar-item-inactive svg {
-    color: #CBD5E1;
-    transition: color 0.2s ease, transform 0.2s ease;
-  }
-  .dark .sidebar-item-inactive:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-  }
-  .dark .sidebar-item-inactive:hover,
-  .dark .sidebar-item-inactive:hover span {
-    color: #FFFFFF;
-  }
-  .dark .sidebar-item-inactive:hover svg {
-    color: #FFFFFF;
-  }
-
-  /* Softened Active 3D Metallic Pill in Dark Mode: Silver / Chrome Premium (Reduced Intensity) */
-  .dark .sidebar-item-active {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    box-shadow: var(--sidebar-shadow);
     position: relative;
-    background: linear-gradient(
-      180deg,
-      #3E4652 0%,
-      #2E3540 45%,
-      #252C36 55%,
-      #353D4A 100%
-    );
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-      0 2px 8px rgba(0, 0, 0, 0.4);
-    font-weight: 600;
-  }
-  .dark .sidebar-item-active,
-  .dark .sidebar-item-active span,
-  .dark .sidebar-item-active div {
-    color: #FFFFFF !important;
-  }
-  .dark .sidebar-item-active svg {
-    color: #FFFFFF !important;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+    transition: all .3s ease;
   }
 
-  /* Softened Active 3D Metallic Pill in Light Mode: Champagne Gold Premium (Reduced Intensity) */
-  html:not(.dark) .sidebar-item-active {
+  .sidebar-container::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      135deg,
+      var(--sidebar-glow),
+      transparent 30%,
+      transparent 75%,
+      var(--sidebar-glow)
+    );
+    opacity: .35;
+  }
+
+  /* Nav Item */
+  .sidebar-nav-item {
+    min-height: 48px;
+    padding: 0 13px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    border-radius: 14px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 520;
+    border: 1px solid transparent;
+    cursor: pointer;
+    background: transparent;
+    transition: all .25s ease;
     position: relative;
-    background: linear-gradient(
-      180deg,
-      #FCF9F1 0%,
-      #F6EDD6 30%,
-      #EFE0B8 65%,
-      #F5E9C8 100%
-    );
-    border: 1px solid #DFCAA0;
-    box-shadow: 
-      inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95),
-      0 2px 6px rgba(180, 140, 60, 0.08);
+    width: 100%;
+  }
+
+  .sidebar-nav-item svg {
+    width: 19px;
+    height: 19px;
+    color: var(--sidebar-accent);
+    flex-shrink: 0;
+    transition: .25s ease;
+  }
+
+  .sidebar-nav-item:hover {
+    background: var(--sidebar-surface);
+    border-color: var(--sidebar-border);
+    color: var(--sidebar-accent-strong);
+    transform: translateX(3px);
+  }
+
+  .sidebar-nav-item:hover svg {
+    filter: drop-shadow(0 0 5px var(--sidebar-glow));
+    color: var(--sidebar-accent-strong);
+  }
+
+  /* Active Item - Matches Attached Images with Left Indicator Bar */
+  .sidebar-nav-item.active {
+    color: var(--sidebar-accent-strong) !important;
+    background: var(--sidebar-active-bg) !important;
+    border: 1px solid var(--sidebar-active-border) !important;
+    box-shadow:
+      inset 0 0 15px var(--sidebar-glow),
+      0 0 15px var(--sidebar-glow) !important;
+    font-weight: 700 !important;
+  }
+
+  .sidebar-nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 5px;
+    background: var(--sidebar-accent);
+    box-shadow: 0 0 10px var(--sidebar-accent);
+  }
+
+  .sidebar-nav-item.active svg {
+    color: var(--sidebar-accent-strong) !important;
+    filter: drop-shadow(0 0 6px var(--sidebar-glow));
+  }
+
+  /* Theme Toggle Button */
+  .sidebar-theme-toggle {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--sidebar-border);
+    border-radius: 10px;
+    color: var(--sidebar-accent);
+    background: var(--sidebar-surface);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: .25s ease;
+  }
+
+  .sidebar-theme-toggle:hover {
+    background: var(--sidebar-badge-bg);
+    box-shadow: 0 0 15px var(--sidebar-glow);
+    transform: rotate(12deg);
+  }
+
+  /* Badges */
+  .sidebar-badge {
+    margin-left: auto;
+    padding: 3px 8px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .4px;
+    border: 1px solid transparent;
+    line-height: 1.2;
+  }
+
+  .sidebar-badge.ai {
+    color: #d89cce;
+    background: rgba(195, 80, 155, .13);
+    border-color: rgba(195, 80, 155, .3);
+  }
+
+  .sidebar-badge.live-green {
+    color: #27c998;
+    background: rgba(39, 201, 152, .12);
+    border-color: rgba(39, 201, 152, .28);
+  }
+
+  .sidebar-badge.live-red {
+    color: #f87171;
+    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239, 68, 68, .28);
+  }
+
+  .light .sidebar-badge.ai, html:not(.dark) .sidebar-badge.ai {
+    color: #99517e;
+    background: #f6e5ef;
+    border-color: #e8c3d8;
+  }
+
+  .light .sidebar-badge.live-green, html:not(.dark) .sidebar-badge.live-green {
+    color: #137d5b;
+    background: #dff5eb;
+    border-color: #b6e6d2;
+  }
+
+  .light .sidebar-badge.live-red, html:not(.dark) .sidebar-badge.live-red {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  /* Dropdown Submenu */
+  .sidebar-chevron {
+    margin-left: auto;
+    width: 17px !important;
+    height: 17px !important;
+    transition: transform .3s ease;
+  }
+
+  .sidebar-nav-item.expanded .sidebar-chevron {
+    transform: rotate(180deg);
+  }
+
+  .sidebar-submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .3s ease;
+  }
+
+  .sidebar-submenu.open {
+    grid-template-rows: 1fr;
+  }
+
+  .sidebar-submenu-inner {
+    overflow: hidden;
+  }
+
+  .sidebar-submenu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px 9px 44px;
+    color: var(--sidebar-muted);
+    text-decoration: none;
+    font-size: 13px;
+    border-radius: 10px;
+    transition: .2s ease;
+  }
+
+  .sidebar-submenu a:hover {
+    color: var(--sidebar-accent-strong);
+    background: var(--sidebar-surface);
+    transform: translateX(2px);
+  }
+
+  .sidebar-submenu a.active {
+    color: var(--sidebar-accent-strong);
     font-weight: 600;
-  }
-  html:not(.dark) .sidebar-item-active,
-  html:not(.dark) .sidebar-item-active span,
-  html:not(.dark) .sidebar-item-active div {
-    color: #382A14 !important;
-  }
-  html:not(.dark) .sidebar-item-active svg {
-    color: #7A5618 !important;
-    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
+    background: var(--sidebar-surface);
   }
 
-  /* Dedicated LIVE Badges (Matching Sidebar Ref Design in Both Themes) */
-  html:not(.dark) .badge-live-red,
-  html:not(.dark) .badge-live-red span {
-    background-color: #842029 !important;
-    color: #FFFFFF !important;
-    border: 1px solid #721C24 !important;
-    box-shadow: 0 1px 2px rgba(132, 32, 41, 0.15);
-  }
-  html:not(.dark) .badge-live-green,
-  html:not(.dark) .badge-live-green span {
-    background-color: #1E4620 !important;
-    color: #FFFFFF !important;
-    border: 1px solid #163C19 !important;
-    box-shadow: 0 1px 2px rgba(30, 70, 32, 0.15);
-  }
-
-  .dark .badge-live-red,
-  .dark .badge-live-red span {
-    background-color: rgba(185, 28, 28, 0.22) !important;
-    color: #F87171 !important;
-    border: 1px solid rgba(239, 68, 68, 0.4) !important;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
-  }
-  .dark .badge-live-green,
-  .dark .badge-live-green span {
-    background-color: rgba(22, 101, 52, 0.25) !important;
-    color: #4ADE80 !important;
-    border: 1px solid rgba(34, 197, 94, 0.4) !important;
-    box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+  /* Divider */
+  .sidebar-nav-divider {
+    height: 1px;
+    background: var(--sidebar-divider);
+    margin: 10px 8px;
   }
 
   .premium-card {
