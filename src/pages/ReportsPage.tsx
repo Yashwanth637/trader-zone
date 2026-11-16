@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { filterTradesByPeriod, formatCurrency, calculateSummaryStats, formatSignedPnl } from '../lib/calculations';
 import { generateExecutiveReportPDF } from '../lib/pdfReport';
 import { AssetLogo, formatSymbolDisplay } from '../components/common/AssetLogo';
+import logoImg from '../assets/logo.png';
 import {
   FileText,
   Download,
@@ -81,12 +82,17 @@ export const ReportsPage: React.FC = () => {
       <div ref={printRef} className="premium-card p-8 space-y-8 bg-surface border-border">
         {/* Document Header */}
         <div className="flex items-center justify-between border-b border-border pb-6">
-          <div>
-            <div className="text-2xl font-black tracking-tight text-white">
-              <span>Trader</span>
-              <span className="text-primary-light ml-0.5">Zone</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-[#090a0e] shadow-sm">
+              <img src={logoImg} alt="Trader Zone" className="w-full h-full object-cover" />
             </div>
-            <div className="text-xs text-slate-400 mt-0.5">Audited Performance Statement</div>
+            <div>
+              <div className="text-2xl font-black tracking-tight text-white">
+                <span>Trader</span>
+                <span className="text-primary-light ml-0.5">Zone</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">Audited Performance Statement</div>
+            </div>
           </div>
 
           <div className="text-right text-xs text-slate-400 space-y-0.5">

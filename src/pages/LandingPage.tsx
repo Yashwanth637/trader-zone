@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 export const LandingPage: React.FC = () => {
   const { user } = useAuth();
@@ -79,8 +80,8 @@ export const LandingPage: React.FC = () => {
       {/* Navigation Header */}
       <nav className="border-b border-border/80 bg-surface/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-md shadow-primary/30">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-md bg-[#090a0e]">
+            <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
           </div>
           <div className="font-extrabold text-xl tracking-tight">
             <span className="text-white">Trader</span>

@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Button';
 import { formatCurrency, formatSignedPnl } from '../lib/calculations';
 import { Trade } from '../types/trade';
+import logoImg from '../assets/logo.png';
 import {
   Share2,
   Download,
@@ -568,8 +569,8 @@ export const ShareCardsPage: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 flex items-center justify-center text-primary">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-5 h-5 rounded-md overflow-hidden flex items-center justify-center bg-[#090a0e]">
+                    <img src={logoImg} alt="Trader Zone" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-sm tracking-tight">

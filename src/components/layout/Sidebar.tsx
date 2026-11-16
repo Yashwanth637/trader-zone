@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import logoImg from '../../assets/logo.png';
 import {
   LayoutDashboard,
   BarChart3,
@@ -59,8 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex items-center justify-between h-16 px-3.5 border-b border-[var(--sidebar-border)]">
         {!collapsed && (
           <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-[var(--sidebar-surface)] border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-[var(--sidebar-accent)]" />
+            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform bg-[#090a0e] shrink-0">
+              <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex items-baseline font-black text-lg tracking-tight">
               <span className="text-[var(--sidebar-accent-strong)]">Trader</span>
@@ -69,9 +70,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </NavLink>
         )}
         {collapsed && (
-          <NavLink to="/dashboard" className="mx-auto">
-            <div className="w-9 h-9 rounded-xl bg-[var(--sidebar-surface)] border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm">
-              <Sparkles className="w-5 h-5 text-[var(--sidebar-accent)]" />
+          <NavLink to="/dashboard" className="mx-auto" title="Trader Zone">
+            <div className="w-9 h-9 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm hover:scale-105 transition-transform bg-[#090a0e] shrink-0">
+              <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
             </div>
           </NavLink>
         )}

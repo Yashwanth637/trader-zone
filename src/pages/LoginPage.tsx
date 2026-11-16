@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
+import logoImg from '../assets/logo.png';
 import {
   Sparkles,
   Mail,
@@ -75,8 +76,8 @@ export const LoginPage: React.FC = () => {
       {/* Brand Header */}
       <div className="text-center mb-8 relative z-10">
         <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-surface border border-border shadow-md mb-4">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white shadow-sm">
-            <Sparkles className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl overflow-hidden border border-border flex items-center justify-center shadow-sm bg-[#090a0e]">
+            <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-black text-xl tracking-tight">
             Trader<span className="text-primary">Zone</span>
