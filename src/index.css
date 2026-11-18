@@ -484,12 +484,17 @@
   align-self: stretch !important;
   position: relative !important;
   overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .klinecharts-pro-widget > div {
   width: 100% !important;
   height: 100% !important;
   min-height: 100% !important;
+  flex: 1 1 0% !important;
   position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 

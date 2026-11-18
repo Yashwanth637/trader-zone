@@ -111,8 +111,11 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
         periods: DEFAULT_PERIODS,
         datafeed: binanceDatafeed,
         chartType: 'candle_solid',
-        mainIndicators: ['EMA'],
-        subIndicators: ['VOL'],
+        mainIndicators: [],
+        subIndicators: [],
+        persistence: {
+          enabled: true
+        },
         drawingBarVisible: true,
         watermark: '',
         onLayoutClick: () => {
@@ -411,6 +414,11 @@ export const TerminalPage: React.FC = () => {
       })();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...prev, layout: newLayout }));
     } catch (_) {}
+
+    // Dispatch resize events across animation frames so all panes fit screen exactly
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 40);
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
   };
 
   return (
@@ -423,67 +431,25 @@ export const TerminalPage: React.FC = () => {
         backgroundColor: '#151517'
       }}
     >
-      {/* Quick Action Overlay: Undo, Redo, Layout Indicator */}
-      <div className="absolute top-2 right-4 z-40 flex items-center gap-1.5 bg-[#1e1f25]/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 shadow-xl pointer-events-auto">
-        <button
-          onClick={handleUndo}
-          disabled={!canUndo}
-          title="Undo Drawing (Ctrl/Cmd+Z)"
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-            canUndo
-              ? 'text-white hover:bg-white/15 cursor-pointer active:scale-95'
-              : 'text-white/30 cursor-not-allowed'
-          }`}
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Undo</span>
-        </button>
-
-        <div className="w-[1px] h-3.5 bg-white/15" />
-
-        <button
-          onClick={handleRedo}
-          disabled={!canRedo}
-          title="Redo Drawing (Ctrl/Cmd+Shift+Z or Ctrl+Y)"
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-            canRedo
-              ? 'text-white hover:bg-white/15 cursor-pointer active:scale-95'
-              : 'text-white/30 cursor-not-allowed'
-          }`}
-        >
-          <RotateCw className="w-3.5 h-3.5" />
-          <span>Redo</span>
-        </button>
-
-        <div className="w-[1px] h-3.5 bg-white/15" />
-
-        <button
-          onClick={() => setShowLayoutModal(true)}
-          title="Switch Multi-Chart Layout"
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-white/90 hover:bg-white/15 transition-all cursor-pointer active:scale-95"
-        >
-          <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
-          <span className="capitalize">{layout}</span>
-        </button>
-      </div>
-
       {/* Multi-Chart Grid Renderers */}
       {layout === '1x1' && (
-        <SingleChartPane
-          paneId="main-1"
-          initialSymbol={primarySymbol}
-          initialPeriod={primaryPeriod}
-          onLayoutClick={() => setShowLayoutModal(true)}
-          onDrawingsUpdate={handleDrawingsUpdate}
-          onSaveState={handleSaveState}
-          chartRefCallback={(inst) => {
-            primaryChartRef.current = inst;
-          }}
-        />
+        <div className="grid grid-cols-1 h-full w-full min-h-0 overflow-hidden bg-[#151517]">
+          <SingleChartPane
+            paneId="main-1"
+            initialSymbol={primarySymbol}
+            initialPeriod={primaryPeriod}
+            onLayoutClick={() => setShowLayoutModal(true)}
+            onDrawingsUpdate={handleDrawingsUpdate}
+            onSaveState={handleSaveState}
+            chartRefCallback={(inst) => {
+              primaryChartRef.current = inst;
+            }}
+          />
+        </div>
       )}
 
       {layout === '1x2' && (
-        <div className="grid grid-cols-2 h-full w-full gap-[2px] bg-[#22242a]">
+        <div className="grid grid-cols-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
           <SingleChartPane
             paneId="split-h-1"
             initialSymbol={primarySymbol}
@@ -505,7 +471,7 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '2x1' && (
-        <div className="grid grid-rows-2 h-full w-full gap-[2px] bg-[#22242a]">
+        <div className="grid grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
           <SingleChartPane
             paneId="split-v-1"
             initialSymbol={primarySymbol}
@@ -527,8 +493,8 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '1+2' && (
-        <div className="grid grid-cols-2 h-full w-full gap-[2px] bg-[#22242a]">
-          <div className="h-full w-full">
+        <div className="grid grid-cols-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
+          <div className="h-full w-full min-h-0 overflow-hidden">
             <SingleChartPane
               paneId="split-t-1"
               initialSymbol={primarySymbol}
@@ -541,7 +507,7 @@ export const TerminalPage: React.FC = () => {
               }}
             />
           </div>
-          <div className="grid grid-rows-2 h-full w-full gap-[2px] bg-[#22242a]">
+          <div className="grid grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
             <SingleChartPane
               paneId="split-t-2"
               initialSymbol={PRESET_SYMBOLS.ETHUSDT}
@@ -559,7 +525,7 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '2x2' && (
-        <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-[2px] bg-[#22242a]">
+        <div className="grid grid-cols-2 grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
           <SingleChartPane
             paneId="grid-4-1"
             initialSymbol={primarySymbol}
