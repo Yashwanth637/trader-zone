@@ -405,3 +405,85 @@
     -webkit-text-fill-color: transparent;
   }
 }
+
+/* ==========================================================================
+   KlineCharts Pro Full-Viewport Layout Fixes
+   ========================================================================== */
+#klinecharts-pro-container {
+  width: 100% !important;
+  height: calc(100vh - 4rem) !important;
+  max-height: calc(100vh - 4rem) !important;
+  min-height: calc(100vh - 4rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  background-color: #151517 !important;
+  overflow: hidden !important;
+}
+
+#klinecharts-pro-container:fullscreen,
+#klinecharts-pro-container:-webkit-full-screen {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+.klinecharts-pro {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  position: relative !important;
+  background-color: #151517 !important;
+  overflow: hidden !important;
+}
+
+.klinecharts-pro-period-bar {
+  height: 38px !important;
+  min-height: 38px !important;
+  flex-shrink: 0 !important;
+}
+
+.klinecharts-pro-bottom-bar {
+  height: 28px !important;
+  min-height: 28px !important;
+  flex-shrink: 0 !important;
+}
+
+.klinecharts-pro-content {
+  width: 100% !important;
+  height: calc(100% - 66px) !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.klinecharts-pro-drawing-bar {
+  width: 52px !important;
+  height: 100% !important;
+  flex-shrink: 0 !important;
+}
+
+.klinecharts-pro-widget {
+  width: calc(100% - 52px) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 0% !important;
+  align-self: stretch !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.klinecharts-pro-widget > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  position: relative !important;
+}
+

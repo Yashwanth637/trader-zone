@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { KLineChartPro, SymbolInfo, Period } from '@simahfud/klinecharts-pro';
-import { LineType } from 'klinecharts';
 import '@simahfud/klinecharts-pro/dist/klinecharts-pro.css';
 import { binanceDatafeed } from '../lib/binanceDatafeed';
 
@@ -11,7 +10,7 @@ export const TerminalPage: React.FC = () => {
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Default symbol according to requirements: BTCUSDT on Binance
+    // Default symbol: BTCUSDT on Binance
     const defaultSymbol: SymbolInfo = {
       ticker: 'BTCUSDT',
       name: 'BTC/USDT',
@@ -24,14 +23,14 @@ export const TerminalPage: React.FC = () => {
       type: 'crypto'
     };
 
-    // Default timeframe according to requirements: 1H
+    // Default timeframe: 1H
     const defaultPeriod: Period = {
       multiplier: 1,
       timespan: 'hour',
       text: '1H'
     };
 
-    // Built-in timeframe switcher: 1m, 5m, 15m, 1h, 4h, 1D, 1W
+    // Timeframe switcher items: 1m, 5m, 15m, 1h, 4h, 1D, 1W
     const periods: Period[] = [
       { multiplier: 1, timespan: 'minute', text: '1m' },
       { multiplier: 5, timespan: 'minute', text: '5m' },
@@ -42,64 +41,66 @@ export const TerminalPage: React.FC = () => {
       { multiplier: 1, timespan: 'week', text: '1W' }
     ];
 
+    let resizeObserver: ResizeObserver | null = null;
+    let resizeTimer: any = null;
+
     try {
-      // Initialize institutional TradingView-style KLineChartPro
+      // Initialize TradingView-style KLineChartPro with English locale and dark theme
       const chart = new KLineChartPro({
         container: chartContainerRef.current,
         theme: 'dark',
+        locale: 'en-US', // Explicit English locale for all toolbars, menus & settings
         symbol: defaultSymbol,
         period: defaultPeriod,
         periods,
         datafeed: binanceDatafeed,
+        chartType: 'candle_solid',
         mainIndicators: ['EMA'],
         subIndicators: ['VOL'],
         drawingBarVisible: true,
-        styles: {
-          grid: {
-            horizontal: {
-              style: LineType.Dashed,
-              color: 'rgba(255, 255, 255, 0.08)'
-            },
-            vertical: {
-              style: LineType.Dashed,
-              color: 'rgba(255, 255, 255, 0.08)'
-            }
-          },
-          candle: {
-            priceMark: {
-              last: {
-                show: true,
-                line: {
-                  show: true,
-                  style: LineType.Dashed
-                },
-                text: {
-                  show: true
-                }
-              }
-            }
-          }
-        }
+        watermark: ''
       });
 
       chartInstanceRef.current = chart;
 
-      // Safely ensure EMA and VOL indicators are created if supported by widget API
-      try {
-        const widget = chart.getWidget?.();
-        if (widget && typeof widget.createIndicator === 'function') {
-          widget.createIndicator('EMA', false, { id: 'candle_pane' });
-          widget.createIndicator('VOL', true);
-        }
-      } catch (widgetErr) {
-        // Options mainIndicators and subIndicators handle it natively
+      const triggerResize = () => {
+        try {
+          const widget = chart.getWidget?.();
+          if (widget) {
+            widget.resize();
+          }
+          window.dispatchEvent(new Event('resize'));
+        } catch (_) {}
+      };
+
+      // Ensure multiple resize cycles after layout paint
+      requestAnimationFrame(() => triggerResize());
+      setTimeout(triggerResize, 50);
+      setTimeout(triggerResize, 150);
+      setTimeout(triggerResize, 350);
+      setTimeout(triggerResize, 700);
+
+      if (chart.ready) {
+        chart.ready().then(() => {
+          setTimeout(triggerResize, 100);
+          setTimeout(triggerResize, 400);
+        });
       }
+
+      // Keep chart responsive to sidebar toggle and container resizes
+      resizeObserver = new ResizeObserver(() => {
+        triggerResize();
+      });
+      resizeObserver.observe(chartContainerRef.current);
     } catch (err) {
       console.error('[TerminalPage] Error initializing KLineChartPro:', err);
     }
 
     return () => {
-      // Clean up chart and underlying WebSockets on unmount
+      if (resizeTimer) clearTimeout(resizeTimer);
+      if (resizeObserver) resizeObserver.disconnect();
+
+      // Clean up chart instance and WebSockets on unmount
       if (chartInstanceRef.current) {
         try {
           chartInstanceRef.current.destroy?.();
@@ -114,21 +115,22 @@ export const TerminalPage: React.FC = () => {
 
   return (
     <div
-      className="w-full h-full bg-[#151517] relative overflow-hidden"
+      className="w-full flex-1 min-h-0 bg-[#151517] relative overflow-hidden"
       style={{
         width: '100%',
-        height: '100%',
-        minHeight: '100%',
+        height: 'calc(100vh - 4rem)',
+        maxHeight: 'calc(100vh - 4rem)',
         backgroundColor: '#151517'
       }}
     >
       <div
         ref={chartContainerRef}
         id="klinecharts-pro-container"
-        className="w-full h-full"
+        className="w-full"
         style={{
           width: '100%',
-          height: '100%',
+          height: 'calc(100vh - 4rem)',
+          maxHeight: 'calc(100vh - 4rem)',
           backgroundColor: '#151517'
         }}
       />

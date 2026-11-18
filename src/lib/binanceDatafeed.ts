@@ -224,13 +224,24 @@ export class BinanceDatafeed implements Datafeed {
         url += `&endTime=${Math.floor(to)}`;
       }
 
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch klines: ${res.statusText}`);
+      let res = await fetch(url);
+      let rawData = res.ok ? await res.json() : [];
+
+      // If bounded query returned empty (e.g. system date drift or holiday gap), fetch the most recent 1000 klines
+      if (!Array.isArray(rawData) || rawData.length === 0) {
+        const fallbackUrl = `https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(
+          symbol.ticker
+        )}&interval=${interval}&limit=1000`;
+        const fbRes = await fetch(fallbackUrl);
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          if (Array.isArray(fbData) && fbData.length > 0) {
+            rawData = fbData;
+          }
+        }
       }
 
-      const rawData = await res.json();
-      if (!Array.isArray(rawData)) {
+      if (!Array.isArray(rawData) || rawData.length === 0) {
         return [];
       }
 
