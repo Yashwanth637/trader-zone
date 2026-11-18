@@ -110,7 +110,7 @@ const AppLayout: React.FC = () => {
       <main
         className={`flex-1 transition-all duration-300 ${
           isTerminal
-            ? 'p-2 md:p-3 h-[calc(100vh-4rem)] overflow-hidden flex flex-col'
+            ? 'p-0 h-[calc(100vh-4rem)] overflow-hidden flex flex-col'
             : 'p-4 md:p-6'
         } ${collapsed ? 'md:ml-16' : 'md:ml-64'}`}
       >

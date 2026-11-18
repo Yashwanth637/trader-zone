@@ -11,9 +11,11 @@
     "deploy": "(node scripts/sync_forex_factory.js || true) && npm run build && cd dist && git init -b gh-pages && git add -A && git commit -m 'Deploy Trader Zone' && git remote add origin https://github.com/Yashwanth637/trader-zone.git && git push -f origin gh-pages && rm -rf .git"
   },
   "dependencies": {
+    "@simahfud/klinecharts-pro": "^1.2.1",
     "clsx": "^2.1.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
+    "klinecharts": "^9.8.12",
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^0.441.0",
     "react": "^18.3.1",
