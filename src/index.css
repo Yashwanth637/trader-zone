@@ -409,20 +409,26 @@
 /* ==========================================================================
    KlineCharts Pro Full-Viewport Layout Fixes
    ========================================================================== */
-#klinecharts-pro-container {
+#klinecharts-pro-container,
+[id^="klinecharts-pro-container"],
+.terminal-chart-pane {
   width: 100% !important;
-  height: calc(100vh - 4rem) !important;
-  max-height: calc(100vh - 4rem) !important;
-  min-height: calc(100vh - 4rem) !important;
+  height: 100% !important;
+  min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
+  flex: 1 1 0% !important;
   position: relative !important;
   background-color: #151517 !important;
   overflow: hidden !important;
 }
 
 #klinecharts-pro-container:fullscreen,
-#klinecharts-pro-container:-webkit-full-screen {
+#klinecharts-pro-container:-webkit-full-screen,
+[id^="klinecharts-pro-container"]:fullscreen,
+[id^="klinecharts-pro-container"]:-webkit-full-screen,
+.terminal-chart-pane:fullscreen,
+.terminal-chart-pane:-webkit-full-screen {
   height: 100vh !important;
   max-height: 100vh !important;
   min-height: 100vh !important;
