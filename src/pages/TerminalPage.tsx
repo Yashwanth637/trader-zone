@@ -269,6 +269,10 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
       style={{
         width: '100%',
         height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: '1 1 0%',
+        minHeight: 0,
         backgroundColor: '#151517'
       }}
     />
@@ -433,7 +437,10 @@ export const TerminalPage: React.FC = () => {
     >
       {/* Multi-Chart Grid Renderers */}
       {layout === '1x1' && (
-        <div className="grid grid-cols-1 h-full w-full min-h-0 overflow-hidden bg-[#151517]">
+        <div
+          className="grid grid-cols-1 grid-rows-1 flex-1 h-full w-full min-h-0 overflow-hidden bg-[#151517]"
+          style={{ flex: '1 1 0%', height: '100%', gridTemplateRows: '1fr' }}
+        >
           <SingleChartPane
             paneId="main-1"
             initialSymbol={primarySymbol}
@@ -449,7 +456,10 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '1x2' && (
-        <div className="grid grid-cols-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
+        <div
+          className="grid grid-cols-2 grid-rows-1 flex-1 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]"
+          style={{ flex: '1 1 0%', height: '100%', gridTemplateRows: '1fr' }}
+        >
           <SingleChartPane
             paneId="split-h-1"
             initialSymbol={primarySymbol}
@@ -471,7 +481,10 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '2x1' && (
-        <div className="grid grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
+        <div
+          className="grid grid-cols-1 grid-rows-2 flex-1 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]"
+          style={{ flex: '1 1 0%', height: '100%', gridTemplateRows: 'repeat(2, minmax(0, 1fr))' }}
+        >
           <SingleChartPane
             paneId="split-v-1"
             initialSymbol={primarySymbol}
@@ -493,8 +506,11 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '1+2' && (
-        <div className="grid grid-cols-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
-          <div className="h-full w-full min-h-0 overflow-hidden">
+        <div
+          className="grid grid-cols-2 grid-rows-1 flex-1 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]"
+          style={{ flex: '1 1 0%', height: '100%', gridTemplateRows: '1fr' }}
+        >
+          <div className="h-full w-full min-h-0 overflow-hidden flex flex-col flex-1">
             <SingleChartPane
               paneId="split-t-1"
               initialSymbol={primarySymbol}
@@ -507,7 +523,10 @@ export const TerminalPage: React.FC = () => {
               }}
             />
           </div>
-          <div className="grid grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
+          <div
+            className="grid grid-cols-1 grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]"
+            style={{ height: '100%', gridTemplateRows: 'repeat(2, minmax(0, 1fr))' }}
+          >
             <SingleChartPane
               paneId="split-t-2"
               initialSymbol={PRESET_SYMBOLS.ETHUSDT}
@@ -525,7 +544,10 @@ export const TerminalPage: React.FC = () => {
       )}
 
       {layout === '2x2' && (
-        <div className="grid grid-cols-2 grid-rows-2 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]">
+        <div
+          className="grid grid-cols-2 grid-rows-2 flex-1 h-full w-full min-h-0 overflow-hidden gap-[2px] bg-[#22242a]"
+          style={{ flex: '1 1 0%', height: '100%', gridTemplateRows: 'repeat(2, minmax(0, 1fr))' }}
+        >
           <SingleChartPane
             paneId="grid-4-1"
             initialSymbol={primarySymbol}
