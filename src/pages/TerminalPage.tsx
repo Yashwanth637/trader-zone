@@ -87,9 +87,67 @@ export const getStoredCandleStyles = (): ChartCandleStyles => {
   return DEFAULT_CANDLE_STYLES;
 };
 
-export const applyCandleStylesToChart = (chart: KLineChartPro, styles: ChartCandleStyles) => {
+export const applyCandleStylesToChart = (chart: KLineChartPro, styles: ChartCandleStyles, isDark: boolean = true) => {
   try {
     chart.setStyles({
+      grid: {
+        horizontal: {
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
+        },
+        vertical: {
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)'
+        }
+      },
+      xAxis: {
+        axisLine: {
+          color: isDark ? '#2a2e39' : '#e0e3eb'
+        },
+        tickText: {
+          color: isDark ? '#cbd5e1' : '#0f172a',
+          size: 12
+        },
+        tickLine: {
+          color: isDark ? '#2a2e39' : '#e0e3eb'
+        }
+      },
+      yAxis: {
+        type: styles.priceAxisType as any,
+        axisLine: {
+          color: isDark ? '#2a2e39' : '#e0e3eb'
+        },
+        tickText: {
+          color: isDark ? '#cbd5e1' : '#0f172a',
+          size: 12
+        },
+        tickLine: {
+          color: isDark ? '#2a2e39' : '#e0e3eb'
+        }
+      },
+      separator: {
+        color: isDark ? '#2a2e39' : '#e0e3eb'
+      },
+      crosshair: {
+        horizontal: {
+          line: {
+            color: isDark ? '#787b86' : '#9598a1'
+          },
+          text: {
+            color: '#ffffff',
+            borderColor: isDark ? '#363a45' : '#131722',
+            backgroundColor: isDark ? '#363a45' : '#131722'
+          }
+        },
+        vertical: {
+          line: {
+            color: isDark ? '#787b86' : '#9598a1'
+          },
+          text: {
+            color: '#ffffff',
+            borderColor: isDark ? '#363a45' : '#131722',
+            backgroundColor: isDark ? '#363a45' : '#131722'
+          }
+        }
+      },
       candle: {
         type: styles.candleType as any,
         bar: {
@@ -118,15 +176,40 @@ export const applyCandleStylesToChart = (chart: KLineChartPro, styles: ChartCand
             noChangeColor: '#888888',
           },
           high: {
-            show: styles.showHighLow
+            show: styles.showHighLow,
+            color: isDark ? '#d1d4dc' : '#131722'
           },
           low: {
-            show: styles.showHighLow
+            show: styles.showHighLow,
+            color: isDark ? '#d1d4dc' : '#131722'
+          }
+        },
+        tooltip: {
+          text: {
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            size: 12
           }
         }
       },
-      yAxis: {
-        type: styles.priceAxisType as any
+      indicator: {
+        tooltip: {
+          text: {
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            size: 12
+          }
+        }
+      },
+      overlay: {
+        text: {
+          color: '#ffffff',
+          backgroundColor: isDark ? 'rgba(30, 34, 45, 0.9)' : 'rgba(15, 23, 42, 0.9)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+          borderRadius: 4,
+          paddingLeft: 6,
+          paddingRight: 6,
+          paddingTop: 3,
+          paddingBottom: 3
+        }
       }
     });
   } catch (err) {
@@ -267,7 +350,7 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
       }
 
       // Apply initial custom candle styles
-      applyCandleStylesToChart(chart, candleStyles);
+      applyCandleStylesToChart(chart, candleStyles, theme === 'dark');
 
       const triggerResize = () => {
         try {
@@ -288,7 +371,7 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
 
       if (chart.ready) {
         chart.ready().then(() => {
-          if (chart) applyCandleStylesToChart(chart, candleStyles);
+          if (chart) applyCandleStylesToChart(chart, candleStyles, theme === 'dark');
           setTimeout(triggerResize, 100);
           setTimeout(triggerResize, 350);
         });
@@ -373,6 +456,214 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
     containerEl.addEventListener('wheel', handleWheel, { passive: false });
     containerEl.addEventListener('dblclick', handleDblClick);
 
+    // Track cursor hover and coordinates for TradingView shortcuts (Alt/Option + H, V, T, F, P, J, R, C)
+    let isHovered = false;
+    let mousePos: { x: number; y: number } | null = null;
+    let lastCrosshair: any = null;
+
+    const handleMouseEnter = () => { isHovered = true; };
+    const handleMouseLeave = () => { isHovered = false; };
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = containerEl.getBoundingClientRect();
+      mousePos = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    };
+
+    containerEl.addEventListener('mouseenter', handleMouseEnter);
+    containerEl.addEventListener('mouseleave', handleMouseLeave);
+    containerEl.addEventListener('mousemove', handleMouseMove);
+
+    try {
+      const widget = chart?.getWidget?.();
+      if (widget) {
+        widget.subscribeAction?.('onCrosshairChange', (p: any) => {
+          if (p) lastCrosshair = p;
+        });
+      }
+    } catch (_) {}
+
+    const syncDrawings = () => {
+      try {
+        const widget = chartInstanceRef.current?.getWidget?.();
+        const overlayStore = widget?._chartStore?.getOverlayStore?.();
+        if (overlayStore) {
+          const instances = overlayStore.getInstances?.() || [];
+          const serialized = instances.map((inst: any) => ({
+            name: inst.name,
+            id: inst.id,
+            groupId: inst.groupId,
+            lock: inst.lock,
+            visible: inst.visible !== false,
+            points: inst.points,
+            styles: inst.styles,
+            extendData: inst.extendData
+          }));
+          if (onDrawingsUpdate) onDrawingsUpdate(serialized);
+        }
+      } catch (_) {}
+    };
+
+    const handleChartShortcuts = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      // Check if cursor is over this pane or if this is the active single chart
+      if (!isHovered && paneId !== 'main-1') return;
+
+      const widget = chartInstanceRef.current?.getWidget?.();
+      if (!widget) return;
+
+      // Handle Option key (Mac) or Alt key (Windows/Linux)
+      if (e.altKey) {
+        // 1. Opt + H: Horizontal Line at cursor
+        if (e.code === 'KeyH') {
+          e.preventDefault();
+          e.stopPropagation();
+          let price: number | null = null;
+          if (mousePos) {
+            try {
+              const candlePane = widget.getDrawPaneById?.('candle_pane');
+              const yAxis = candlePane?.getAxisComponent?.();
+              price = yAxis?.convertFromPixel(mousePos.y);
+            } catch (_) {}
+          }
+          if (price == null && lastCrosshair?.kLineData) {
+            price = lastCrosshair.kLineData.close;
+          }
+          if (price == null) {
+            try {
+              const dataList = widget.getDataList?.();
+              if (dataList && dataList.length > 0) {
+                price = dataList[dataList.length - 1].close;
+              }
+            } catch (_) {}
+          }
+          if (price != null) {
+            widget.createOverlay({
+              name: 'horizontalStraightLine',
+              points: [{ value: price }]
+            });
+            syncDrawings();
+          }
+          return;
+        }
+
+        // 2. Opt + V: Vertical Line at cursor
+        if (e.code === 'KeyV') {
+          e.preventDefault();
+          e.stopPropagation();
+          let timestamp: number | null = null;
+          if (mousePos) {
+            try {
+              const timeScaleStore = widget._chartStore?.getTimeScaleStore?.();
+              const dataIndex = timeScaleStore?.coordinateToDataIndex?.(mousePos.x);
+              if (dataIndex !== undefined) {
+                timestamp = timeScaleStore?.dataIndexToTimestamp?.(dataIndex);
+              }
+            } catch (_) {}
+          }
+          if (timestamp == null && lastCrosshair?.kLineData) {
+            timestamp = lastCrosshair.kLineData.timestamp;
+          }
+          if (timestamp == null) {
+            try {
+              const dataList = widget.getDataList?.();
+              if (dataList && dataList.length > 0) {
+                timestamp = dataList[dataList.length - 1].timestamp;
+              }
+            } catch (_) {}
+          }
+          if (timestamp != null) {
+            widget.createOverlay({
+              name: 'verticalStraightLine',
+              points: [{ timestamp }]
+            });
+            syncDrawings();
+          }
+          return;
+        }
+
+        // 3. Opt + T: Trend Line
+        if (e.code === 'KeyT') {
+          e.preventDefault();
+          e.stopPropagation();
+          widget.createOverlay('segment');
+          return;
+        }
+
+        // 4. Opt + F: Fibonacci Retracement
+        if (e.code === 'KeyF') {
+          e.preventDefault();
+          e.stopPropagation();
+          widget.createOverlay('fibonacciLine');
+          return;
+        }
+
+        // 5. Opt + P: Parallel Channel
+        if (e.code === 'KeyP') {
+          e.preventDefault();
+          e.stopPropagation();
+          widget.createOverlay('parallelStraightLine');
+          return;
+        }
+
+        // 6. Opt + J: Crosshair Line
+        if (e.code === 'KeyJ') {
+          e.preventDefault();
+          e.stopPropagation();
+          let price: number | null = null;
+          let timestamp: number | null = null;
+          if (mousePos) {
+            try {
+              const candlePane = widget.getDrawPaneById?.('candle_pane');
+              const yAxis = candlePane?.getAxisComponent?.();
+              price = yAxis?.convertFromPixel(mousePos.y);
+              const timeScaleStore = widget._chartStore?.getTimeScaleStore?.();
+              const dataIndex = timeScaleStore?.coordinateToDataIndex?.(mousePos.x);
+              if (dataIndex !== undefined) {
+                timestamp = timeScaleStore?.dataIndexToTimestamp?.(dataIndex);
+              }
+            } catch (_) {}
+          }
+          if (price != null) {
+            widget.createOverlay({ name: 'horizontalStraightLine', points: [{ value: price }] });
+          }
+          if (timestamp != null) {
+            widget.createOverlay({ name: 'verticalStraightLine', points: [{ timestamp }] });
+          }
+          syncDrawings();
+          return;
+        }
+
+        // 7. Opt + R: Reset Scale
+        if (e.code === 'KeyR') {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            const candlePane = widget.getDrawPaneById?.('candle_pane');
+            candlePane?.getAxisComponent()?.setAutoCalcTickFlag(true);
+            widget._chartStore?.getTimeScaleStore()?.resetOffsetRightDistance();
+            widget.adjustPaneViewport(false, true, true, true);
+          } catch (_) {}
+          return;
+        }
+
+        // 8. Opt + C: Clear All Drawings
+        if (e.code === 'KeyC') {
+          e.preventDefault();
+          e.stopPropagation();
+          widget.removeOverlay();
+          syncDrawings();
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleChartShortcuts, true);
+
     // Capture-phase interceptor for toolbar Setting button to open custom Candle & Theme settings
     const handleCaptureClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
@@ -406,10 +697,14 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
     return () => {
       clearInterval(stateInterval);
       if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener('keydown', handleChartShortcuts, true);
       if (containerEl) {
         containerEl.removeEventListener('wheel', handleWheel);
         containerEl.removeEventListener('dblclick', handleDblClick);
         containerEl.removeEventListener('click', handleCaptureClick, true);
+        containerEl.removeEventListener('mouseenter', handleMouseEnter);
+        containerEl.removeEventListener('mouseleave', handleMouseLeave);
+        containerEl.removeEventListener('mousemove', handleMouseMove);
       }
       if (chartInstanceRef.current) {
         try {
@@ -428,7 +723,7 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
     if (chartInstanceRef.current) {
       try {
         chartInstanceRef.current.setTheme(theme);
-        applyCandleStylesToChart(chartInstanceRef.current, candleStyles);
+        applyCandleStylesToChart(chartInstanceRef.current, candleStyles, theme === 'dark');
       } catch (_) {}
     }
   }, [theme]);
@@ -436,7 +731,7 @@ const SingleChartPane: React.FC<SingleChartProps> = ({
   // Sync candleStyles changes dynamically
   useEffect(() => {
     if (chartInstanceRef.current) {
-      applyCandleStylesToChart(chartInstanceRef.current, candleStyles);
+      applyCandleStylesToChart(chartInstanceRef.current, candleStyles, theme === 'dark');
     }
   }, [candleStyles]);
 
@@ -507,9 +802,9 @@ export const TerminalPage: React.FC = () => {
       localStorage.setItem(CANDLE_STYLES_KEY, JSON.stringify(newStyles));
     } catch (_) {}
     activeChartsRef.current.forEach((inst) => {
-      applyCandleStylesToChart(inst, newStyles);
+      applyCandleStylesToChart(inst, newStyles, theme === 'dark');
     });
-  }, []);
+  }, [theme]);
 
   // Undo / Redo Stacks for Drawings
   const undoStackRef = useRef<any[][]>([]);

@@ -509,13 +509,53 @@
   flex-direction: column !important;
 }
 
-/* KlineCharts Theme Support */
+/* KlineCharts Theme Support & High Contrast Text */
 .klinecharts-pro[data-theme="light"] {
   background-color: #ffffff !important;
+  --klinecharts-pro-text-color: #0f172a !important;
+  --klinecharts-pro-text-second-color: #334155 !important;
+  --klinecharts-pro-border-color: #e2e8f0 !important;
+}
+
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-period-bar,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-bottom-bar,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-drawing-bar {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-period-bar .item,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-period-bar .symbol,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-period-bar .period,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-period-bar .tools,
+.klinecharts-pro[data-theme="light"] .klinecharts-pro-drawing-bar .item {
+  color: #0f172a !important;
+  fill: #0f172a !important;
 }
 
 .klinecharts-pro[data-theme="dark"] {
   background-color: #151517 !important;
+  --klinecharts-pro-text-color: #f8fafc !important;
+  --klinecharts-pro-text-second-color: #cbd5e1 !important;
+  --klinecharts-pro-border-color: #22242a !important;
+}
+
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-period-bar,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-bottom-bar,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-drawing-bar {
+  background-color: #151517 !important;
+  color: #f8fafc !important;
+  border-color: #22242a !important;
+}
+
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-period-bar .item,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-period-bar .symbol,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-period-bar .period,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-period-bar .tools,
+.klinecharts-pro[data-theme="dark"] .klinecharts-pro-drawing-bar .item {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
 }
 
 .terminal-chart-pane {

@@ -126,10 +126,63 @@ for filename in ['node_modules/@simahfud/klinecharts-pro/dist/klinecharts-pro.js
         code = code.replace(old_xu_umd, new_xu_umd)
         print(f"[{filename}] Patched XU options passthrough with onSettingClick UMD!")
 
+    # 9. Measure Tool High-Contrast Badge Styling (removes blue background with green text)
+    old_measure_js = '''      // Info label
+      {
+        type: "text",
+        ignoreEvent: !0,
+        attrs: {
+          x: d + 8,
+          y: m - 8,
+          text: `${b}${s.toFixed(2)} (${b}${a.toFixed(2)}%)`
+        },
+        styles: { color: g, size: 12 }
+      },
+      {
+        type: "text",
+        ignoreEvent: !0,
+        attrs: {
+          x: d + 8,
+          y: m + 8,
+          text: `⏱ ${p}`
+        },
+        styles: { color: "#999", size: 11 }
+      }'''
+    new_measure_js = '''      // Info label
+      {
+        type: "text",
+        ignoreEvent: !0,
+        attrs: {
+          x: d + 8,
+          y: m - 8,
+          text: `${b}${s.toFixed(2)} (${b}${a.toFixed(2)}%)`
+        },
+        styles: { color: "#ffffff", size: 12, backgroundColor: f ? "#089981" : "#f23645", borderColor: "transparent", borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3 }
+      },
+      {
+        type: "text",
+        ignoreEvent: !0,
+        attrs: {
+          x: d + 8,
+          y: m + 14,
+          text: `⏱ ${p}`
+        },
+        styles: { color: "#ffffff", size: 11, backgroundColor: "rgba(15, 23, 42, 0.9)", borderColor: "rgba(255, 255, 255, 0.2)", borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2 }
+      }'''
+    if old_measure_js in code:
+        code = code.replace(old_measure_js, new_measure_js)
+        print(f"[{filename}] Patched measure tool text badge JS!")
+
+    old_measure_umd = '{type:"text",ignoreEvent:!0,attrs:{x:d+8,y:m-8,text:`${b}${s.toFixed(2)} (${b}${a.toFixed(2)}%)`},styles:{color:_,size:12}},{type:"text",ignoreEvent:!0,attrs:{x:d+8,y:m+8,text:`⏱ ${p}`},styles:{color:"#999",size:11}}'
+    new_measure_umd = '{type:"text",ignoreEvent:!0,attrs:{x:d+8,y:m-8,text:`${b}${s.toFixed(2)} (${b}${a.toFixed(2)}%)`},styles:{color:"#ffffff",size:12,backgroundColor:f?"#089981":"#f23645",borderColor:"transparent",borderRadius:4,paddingLeft:6,paddingRight:6,paddingTop:3,paddingBottom:3}},{type:"text",ignoreEvent:!0,attrs:{x:d+8,y:m+14,text:`⏱ ${p}`},styles:{color:"#ffffff",size:11,backgroundColor:"rgba(15, 23, 42, 0.9)",borderColor:"rgba(255, 255, 255, 0.2)",borderRadius:4,paddingLeft:6,paddingRight:6,paddingTop:2,paddingBottom:2}}'
+    if old_measure_umd in code:
+        code = code.replace(old_measure_umd, new_measure_umd)
+        print(f"[{filename}] Patched measure tool text badge UMD!")
+
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(code)
 
-# 9. Type definitions patch for ChartProOptions.onSettingClick
+# 10. Type definitions patch for ChartProOptions.onSettingClick
 dts_path = 'node_modules/@simahfud/klinecharts-pro/dist/index.d.ts'
 if os.path.exists(dts_path):
     with open(dts_path, 'r', encoding='utf-8') as f:
