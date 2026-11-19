@@ -509,3 +509,17 @@
   flex-direction: column !important;
 }
 
+/* KlineCharts Theme Support */
+.klinecharts-pro[data-theme="light"] {
+  background-color: #ffffff !important;
+}
+
+.klinecharts-pro[data-theme="dark"] {
+  background-color: #151517 !important;
+}
+
+.terminal-chart-pane {
+  background-color: transparent !important;
+}
+
+
