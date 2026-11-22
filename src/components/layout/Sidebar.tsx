@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import logoImg from '../../assets/logo.png';
@@ -42,6 +42,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const location = useLocation();
 
+  const desktopSidebarRef = useRef<HTMLElement>(null);
+  const mobileSidebarRef = useRef<HTMLDivElement>(null);
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+
+  // Independent Scrolling Isolation:
+  // When hovering on the sidebar, wheel events only scroll the sidebar
+  // and are strictly prevented from bubbling or chaining to the main page / document.
+  useEffect(() => {
+    const bindWheelIsolation = (
+      wrapper: HTMLElement | null,
+      scroller: HTMLDivElement | null
+    ) => {
+      if (!wrapper || !scroller) return () => {};
+
+      const handleWheel = (e: WheelEvent) => {
+        const { deltaY } = e;
+        if (deltaY === 0) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = scroller;
+        const maxScrollTop = scrollHeight - clientHeight;
+        const canScrollUp = scrollTop > 0;
+        const canScrollDown = scrollTop < maxScrollTop - 1;
+
+        // If hovering on sidebar header or footer (outside scroller)
+        if (e.target && !scroller.contains(e.target as Node)) {
+          if ((deltaY > 0 && canScrollDown) || (deltaY < 0 && canScrollUp)) {
+            scroller.scrollTop += deltaY;
+          }
+          // Strictly prevent document/main page scroll
+          e.preventDefault();
+          return;
+        }
+
+        // If hovering inside scroller:
+        // Prevent scroll past top or past bottom so it never chains to main page
+        if (deltaY < 0 && !canScrollUp) {
+          e.preventDefault();
+        } else if (deltaY > 0 && !canScrollDown) {
+          e.preventDefault();
+        }
+      };
+
+      wrapper.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        wrapper.removeEventListener('wheel', handleWheel);
+      };
+    };
+
+    const cleanupDesktop = bindWheelIsolation(desktopSidebarRef.current, desktopScrollRef.current);
+    const cleanupMobile = bindWheelIsolation(mobileSidebarRef.current, mobileScrollRef.current);
+
+    return () => {
+      cleanupDesktop();
+      cleanupMobile();
+    };
+  }, [mobileOpen, collapsed]);
+
   const isAnalyticsActive = [
     '/analytics',
     '/reports',
@@ -54,39 +112,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navClass = (isActive: boolean) =>
     `sidebar-nav-item ${isActive ? 'active' : ''} ${collapsed ? 'justify-center !px-0' : ''}`;
 
-  const sidebarContent = (
-    <div className="flex flex-col h-full sidebar-container border-r border-[var(--sidebar-border)] transition-colors duration-200">
+  const renderSidebar = (scrollerRef: React.RefObject<HTMLDivElement>) => (
+    <div className="flex flex-col h-full sidebar-container">
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-3.5 border-b border-[var(--sidebar-border)]">
+      <div className="flex items-center justify-between h-16 px-3.5 border-b border-[var(--sidebar-border)] shrink-0">
         {!collapsed && (
           <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform bg-[#090a0e] shrink-0">
+            <div className="w-8 h-8 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform bg-[var(--sidebar-bg)] shrink-0">
               <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex items-baseline font-black text-lg tracking-tight">
-              <span className="text-[var(--sidebar-accent-strong)]">Trader</span>
-              <span className="text-[var(--sidebar-accent)] ml-1">Zone 2.0</span>
+              <span className="text-[var(--text-hover)]">Trader</span>
+              <span className="text-[var(--text-inactive)] ml-1 font-semibold">Zone 2.0</span>
             </div>
           </NavLink>
         )}
         {collapsed && (
           <NavLink to="/dashboard" className="mx-auto" title="Trader Zone">
-            <div className="w-9 h-9 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm hover:scale-105 transition-transform bg-[#090a0e] shrink-0">
+            <div className="w-9 h-9 rounded-xl overflow-hidden border border-[var(--sidebar-border)] flex items-center justify-center shadow-sm hover:scale-105 transition-transform bg-[var(--sidebar-bg)] shrink-0">
               <img src={logoImg} alt="Trader Zone Logo" className="w-full h-full object-cover" />
             </div>
           </NavLink>
         )}
         <button
           onClick={onToggleCollapse}
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-[var(--sidebar-muted)] hover:text-[var(--sidebar-accent-strong)] hover:bg-[var(--sidebar-surface)] transition-colors"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-inactive)] hover:text-[var(--text-hover)] hover:bg-[var(--item-hover-bg)] transition-colors"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+      {/* Navigation Links - Isolated Scroll Area */}
+      <div
+        ref={scrollerRef}
+        className="flex-1 sidebar-scroll-area px-3 py-4 space-y-1.5 overscroll-contain"
+      >
         {/* Main Dashboard */}
         <NavLink
           to="/dashboard"
@@ -214,7 +275,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Trader Zone AI</span>
-              <span className="sidebar-badge">2.0</span>
+              <span className="sidebar-badge sidebar-badge-version">2.0</span>
             </div>
           )}
         </NavLink>
@@ -241,7 +302,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Event Calendar</span>
-              <span className="sidebar-badge">LIVE</span>
+              <span className="sidebar-badge sidebar-badge-live">
+                <span className="sidebar-badge-dot" />
+                LIVE
+              </span>
             </div>
           )}
         </NavLink>
@@ -257,7 +321,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center justify-between w-full">
               <span>Market Heatmap</span>
-              <span className="sidebar-badge">LIVE</span>
+              <span className="sidebar-badge sidebar-badge-live">
+                <span className="sidebar-badge-dot" />
+                LIVE
+              </span>
             </div>
           )}
         </NavLink>
@@ -307,23 +374,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </NavLink>
       </div>
 
-      {/* Footer User Info */}
+      {/* Footer User Info - Strictly Solid Matte */}
       {!collapsed && (
-        <div className="sidebar-footer mt-auto px-3 py-3 border-t border-[var(--sidebar-border)]">
+        <div className="sidebar-footer mt-auto px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0">
           <NavLink
             to={user ? "/settings" : "/login"}
             onClick={onMobileClose}
-            className="p-2.5 rounded-xl hover:bg-[var(--sidebar-surface)] transition-all block group"
+            className="p-2.5 rounded-xl hover:bg-[var(--item-hover-bg)] transition-colors block group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--sidebar-accent)] to-[var(--sidebar-accent-strong)] flex items-center justify-center text-white dark:text-black font-bold text-xs shadow-sm shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[var(--item-active-bg)] border border-[var(--item-active-border)] flex items-center justify-center text-[var(--text-hover)] font-bold text-xs shadow-sm shrink-0">
                 {user?.name ? user.name.slice(0, 2).toUpperCase() : 'TZ'}
               </div>
               <div className="overflow-hidden">
-                <div className="text-xs font-semibold text-[var(--sidebar-accent-strong)] truncate">
+                <div className="text-xs font-semibold text-[var(--text-hover)] truncate">
                   {user ? user.name : 'Guest Trader'}
                 </div>
-                <div className="text-[10px] text-[var(--sidebar-muted)] truncate">
+                <div className="text-[10px] text-[var(--text-sub-item)] truncate">
                   {user ? user.email : 'Click to Sign In / Sync'}
                 </div>
               </div>
@@ -338,11 +405,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:block fixed top-0 left-0 h-screen z-30 transition-all duration-300 ${
-          collapsed ? 'w-16' : 'w-64'
+        ref={desktopSidebarRef}
+        className={`hidden md:block fixed top-0 left-0 h-screen z-30 transition-all duration-300 overflow-hidden ${
+          collapsed ? 'w-16' : 'w-[268px]'
         }`}
+        style={{ width: collapsed ? '4rem' : 'var(--sidebar-width, 268px)' }}
       >
-        {sidebarContent}
+        {renderSidebar(desktopScrollRef)}
       </aside>
 
       {/* Mobile Drawer */}
@@ -352,8 +421,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onMobileClose}
           />
-          <div className="relative w-64 h-full sidebar-container shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-            {sidebarContent}
+          <div
+            ref={mobileSidebarRef}
+            className="relative w-[268px] h-full sidebar-container shadow-2xl z-10 animate-in slide-in-from-left duration-200 overflow-hidden"
+          >
+            {renderSidebar(mobileScrollRef)}
           </div>
         </div>
       )}

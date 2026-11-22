@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header
       className={`sticky top-0 z-40 h-16 bg-surface/85 backdrop-blur-md border-b border-border transition-all duration-300 px-4 md:px-6 flex items-center justify-between ${
-        collapsed ? 'md:ml-16' : 'md:ml-64'
+        collapsed ? 'md:ml-16' : 'md:ml-[268px]'
       }`}
     >
       {/* Left side: Mobile Toggle & Account Selector */}
@@ -277,7 +277,7 @@ export const Footer: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   return (
     <footer
       className={`py-8 px-6 border-t border-border text-center text-xs text-muted transition-all duration-300 ${
-        collapsed ? 'md:ml-16' : 'md:ml-64'
+        collapsed ? 'md:ml-16' : 'md:ml-[268px]'
       }`}
     >
       <div className="flex flex-col sm:flex-row items-center justify-between max-w-6xl mx-auto gap-4">

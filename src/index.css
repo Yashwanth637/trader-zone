@@ -159,164 +159,253 @@
 
 @layer components {
   /* =========================================================================
-     PREMIUM TRADING SIDEBAR (Exact implementation of user code & images)
+     TraderZone Solid Sidebar Design Tokens (Monochrome Solid Accent)
+     Strictly solid matte surfaces — zero metallic gradients
      ========================================================================= */
 
-  :root, .dark {
-    --sidebar-bg: var(--bg-app, #090a0e);
-    --sidebar-border: rgba(220, 225, 235, 0.16);
-    --sidebar-text: #c5cad5;
-    --sidebar-muted: #858c9a;
-    --sidebar-accent: #dce1ed;
-    --sidebar-accent-strong: #ffffff;
-    --sidebar-active-bg: linear-gradient(120deg, #252832, #11131b);
-    --sidebar-active-border: rgba(220, 225, 240, 0.5);
-    --sidebar-glow: rgba(215, 225, 245, 0.16);
-    --sidebar-badge-bg: rgba(210, 220, 240, 0.10);
-    --sidebar-divider: rgba(220, 225, 240, 0.12);
-    --sidebar-surface: rgba(255, 255, 255, 0.035);
-    --sidebar-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+  :root,
+  [data-theme="light"],
+  .light {
+    --sidebar-width: 268px;
+    --sidebar-bg: #FFFFFF;
+    --sidebar-border: #E4E7EC;
+    --sidebar-divider: #ECEFF4;
+    --sidebar-tree-line: #E4E7EC;
+
+    --sidebar-text-primary: #101828;
+    --sidebar-text-inactive: #475467;
+    --sidebar-text-sub-item: #667085;
+    --sidebar-text-hover: #101828;
+
+    --sidebar-item-hover-bg: #F5F7FA;
+    --sidebar-item-active-bg: #F2F4F8;
+    --sidebar-item-active-border: #DCE1EA;
+    --sidebar-item-active-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --sidebar-accent-solid: #0F172A;
+
+    /* Pure Monochrome Badges (No blue/green/purple) */
+    --sidebar-badge-version-bg: #F2F4F8;
+    --sidebar-badge-version-text: #101828;
+    --sidebar-badge-version-border: #DCE1EA;
+
+    --sidebar-badge-live-bg: #F2F4F8;
+    --sidebar-badge-live-text: #101828;
+    --sidebar-badge-live-border: #DCE1EA;
+    --sidebar-badge-live-dot: #475467;
   }
 
-  .light, html:not(.dark) {
-    --sidebar-bg: var(--bg-app, #f8f6f1);
-    --sidebar-border: rgba(164, 119, 35, 0.22);
-    --sidebar-text: #39362f;
-    --sidebar-muted: #858071;
-    --sidebar-accent: #b18430;
-    --sidebar-accent-strong: #80560e;
-    --sidebar-active-bg: linear-gradient(120deg, #fff5df, #f4e5c5);
-    --sidebar-active-border: rgba(190, 145, 54, 0.7);
-    --sidebar-glow: rgba(208, 157, 55, 0.18);
-    --sidebar-badge-bg: rgba(191, 143, 47, 0.13);
-    --sidebar-divider: rgba(165, 125, 48, 0.2);
-    --sidebar-surface: rgba(255, 255, 255, 0.65);
-    --sidebar-shadow: 0 15px 45px rgba(120, 90, 35, 0.10);
+  html.dark,
+  html[data-theme="dark"],
+  [data-theme="dark"],
+  .dark {
+    --sidebar-width: 268px;
+    --sidebar-bg: #0C0D10;
+    --sidebar-border: #1E2028;
+    --sidebar-divider: #1A1D24;
+    --sidebar-tree-line: #22252E;
+
+    --sidebar-text-primary: #F3F4F6;
+    --sidebar-text-inactive: #9CA3AF;
+    --sidebar-text-sub-item: #7B8291;
+    --sidebar-text-hover: #FFFFFF;
+
+    --sidebar-item-hover-bg: #14161B;
+    --sidebar-item-active-bg: #181B22;
+    --sidebar-item-active-border: #2A2F3D;
+    --sidebar-item-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --sidebar-accent-solid: #FFFFFF;
+
+    /* Pure Monochrome Badges (No blue/green/purple) */
+    --sidebar-badge-version-bg: #181B22;
+    --sidebar-badge-version-text: #F3F4F6;
+    --sidebar-badge-version-border: #2A2F3D;
+
+    --sidebar-badge-live-bg: #181B22;
+    --sidebar-badge-live-text: #F3F4F6;
+    --sidebar-badge-live-border: #2A2F3D;
+    --sidebar-badge-live-dot: #9CA3AF;
   }
 
+  /* Solid Matte Sidebar Container */
   .sidebar-container {
+    --text-primary: var(--sidebar-text-primary);
+    --text-inactive: var(--sidebar-text-inactive);
+    --text-sub-item: var(--sidebar-text-sub-item);
+    --text-hover: var(--sidebar-text-hover);
+
+    --item-hover-bg: var(--sidebar-item-hover-bg);
+    --item-active-bg: var(--sidebar-item-active-bg);
+    --item-active-border: var(--sidebar-item-active-border);
+    --item-active-shadow: var(--sidebar-item-active-shadow);
+    --accent-solid: var(--sidebar-accent-solid);
+
+    --badge-version-bg: var(--sidebar-badge-version-bg);
+    --badge-version-text: var(--sidebar-badge-version-text);
+    --badge-version-border: var(--sidebar-badge-version-border);
+
+    --badge-live-bg: var(--sidebar-badge-live-bg);
+    --badge-live-text: var(--sidebar-badge-live-text);
+    --badge-live-border: var(--sidebar-badge-live-border);
+    --badge-live-dot: var(--sidebar-badge-live-dot);
+
+    /* Backwards compatibility aliases */
+    --sidebar-accent-strong: var(--sidebar-text-hover);
+    --sidebar-accent: var(--sidebar-text-inactive);
+    --sidebar-muted: var(--sidebar-text-sub-item);
+    --sidebar-surface: var(--sidebar-item-hover-bg);
+    --sidebar-text: var(--sidebar-text-inactive);
+
     background: var(--sidebar-bg);
     border-right: 1px solid var(--sidebar-border);
-    box-shadow: var(--sidebar-shadow);
     position: relative;
-    transition: all .3s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
   }
 
-  .sidebar-container::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(
-      135deg,
-      var(--sidebar-glow),
-      transparent 30%,
-      transparent 75%,
-      var(--sidebar-glow)
-    );
-    opacity: .35;
+  /* Independent scroll area for sidebar */
+  .sidebar-scroll-area {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-scroll-area::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .sidebar-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark .sidebar-scroll-area::-webkit-scrollbar-thumb,
+  [data-theme="dark"] .sidebar-scroll-area::-webkit-scrollbar-thumb {
+    background: #2A2F3D;
+    border-radius: 4px;
+  }
+
+  .light .sidebar-scroll-area::-webkit-scrollbar-thumb,
+  [data-theme="light"] .sidebar-scroll-area::-webkit-scrollbar-thumb,
+  html:not(.dark) .sidebar-scroll-area::-webkit-scrollbar-thumb {
+    background: #DCE1EA;
+    border-radius: 4px;
   }
 
   /* Nav Item */
   .sidebar-nav-item {
-    min-height: 48px;
-    padding: 0 13px;
+    min-height: 44px;
+    padding: 0 12px;
     display: flex;
     align-items: center;
-    gap: 13px;
-    border-radius: 14px;
-    color: var(--sidebar-text);
+    gap: 12px;
+    border-radius: 10px;
+    color: var(--text-inactive);
     text-decoration: none;
-    font-size: 14.5px;
-    font-weight: 520;
+    font-size: 14px;
+    font-weight: 500;
     border: 1px solid transparent;
     cursor: pointer;
     background: transparent;
-    transition: all .25s ease;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     position: relative;
     width: 100%;
+    user-select: none;
   }
 
   .sidebar-nav-item svg {
-    width: 19px;
-    height: 19px;
-    color: var(--sidebar-accent);
+    width: 18px;
+    height: 18px;
+    color: var(--text-inactive);
     flex-shrink: 0;
-    transition: .25s ease;
+    transition: color 0.15s ease;
   }
 
   .sidebar-nav-item:hover {
-    background: var(--sidebar-surface);
-    border-color: var(--sidebar-border);
-    color: var(--sidebar-accent-strong);
-    transform: translateX(3px);
+    background: var(--item-hover-bg);
+    color: var(--text-hover);
   }
 
   .sidebar-nav-item:hover svg {
-    filter: drop-shadow(0 0 5px var(--sidebar-glow));
-    color: var(--sidebar-accent-strong);
+    color: var(--text-hover);
   }
 
-  /* Active Item - Matches Attached Images with Left Indicator Bar */
+  /* Active Item - Strictly solid matte surface with solid accent */
   .sidebar-nav-item.active {
-    color: var(--sidebar-accent-strong) !important;
-    background: var(--sidebar-active-bg) !important;
-    border: 1px solid var(--sidebar-active-border) !important;
-    box-shadow:
-      inset 0 0 15px var(--sidebar-glow),
-      0 0 15px var(--sidebar-glow) !important;
-    font-weight: 700 !important;
+    color: var(--text-hover) !important;
+    background: var(--item-active-bg) !important;
+    border: 1px solid var(--item-active-border) !important;
+    box-shadow: var(--item-active-shadow) !important;
+    font-weight: 600 !important;
   }
 
   .sidebar-nav-item.active::before {
     content: "";
     position: absolute;
-    left: -1px;
-    top: 10px;
-    bottom: 10px;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
     width: 3px;
-    border-radius: 5px;
-    background: var(--sidebar-accent);
-    box-shadow: 0 0 10px var(--sidebar-accent);
+    border-radius: 0 2px 2px 0;
+    background: var(--accent-solid);
   }
 
   .sidebar-nav-item.active svg {
-    color: var(--sidebar-accent-strong) !important;
-    filter: drop-shadow(0 0 6px var(--sidebar-glow));
+    color: var(--accent-solid) !important;
   }
 
-  /* Badges - Matching Silver in Dark Mode and Gold in Light Mode */
+  /* Badges - Pure Monochrome Solid */
   .sidebar-badge {
     margin-left: auto;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: 6px;
     font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     line-height: 1.2;
-    transition: all .2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    user-select: none;
   }
 
-  .dark .sidebar-badge {
-    color: #dce1ed !important;
-    background: rgba(220, 225, 240, 0.08) !important;
-    border: 1px solid rgba(220, 225, 240, 0.28) !important;
-    box-shadow: 0 0 8px rgba(220, 225, 240, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  .sidebar-badge-version {
+    background: var(--badge-version-bg) !important;
+    color: var(--badge-version-text) !important;
+    border: 1px solid var(--badge-version-border) !important;
   }
 
-  .light .sidebar-badge, html:not(.dark) .sidebar-badge {
-    color: #80560e !important;
-    background: rgba(177, 132, 48, 0.12) !important;
-    border: 1px solid rgba(190, 145, 54, 0.42) !important;
-    box-shadow: 0 1px 3px rgba(180, 140, 60, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  .sidebar-badge-live {
+    background: var(--badge-live-bg) !important;
+    color: var(--badge-live-text) !important;
+    border: 1px solid var(--badge-live-border) !important;
+  }
+
+  .sidebar-badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background-color: var(--badge-live-dot);
+    display: inline-block;
   }
 
   /* Dropdown Submenu */
   .sidebar-chevron {
     margin-left: auto;
-    width: 17px !important;
-    height: 17px !important;
-    transition: transform .3s ease;
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--text-inactive);
+    transition: transform 0.2s ease, color 0.15s ease;
+  }
+
+  .sidebar-nav-item:hover .sidebar-chevron {
+    color: var(--text-hover);
   }
 
   .sidebar-nav-item.expanded .sidebar-chevron {
@@ -326,7 +415,7 @@
   .sidebar-submenu {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows .3s ease;
+    transition: grid-template-rows 0.25s ease;
   }
 
   .sidebar-submenu.open {
@@ -335,37 +424,60 @@
 
   .sidebar-submenu-inner {
     overflow: hidden;
+    position: relative;
+    margin-left: 19px;
+    padding-left: 10px;
+    border-left: 1px solid var(--sidebar-tree-line);
   }
 
   .sidebar-submenu a {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 12px 9px 44px;
-    color: var(--sidebar-muted);
+    gap: 9px;
+    padding: 7px 10px;
+    color: var(--text-sub-item);
     text-decoration: none;
     font-size: 13px;
-    border-radius: 10px;
-    transition: .2s ease;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .sidebar-submenu a svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-sub-item);
+    flex-shrink: 0;
+    transition: color 0.15s ease;
   }
 
   .sidebar-submenu a:hover {
-    color: var(--sidebar-accent-strong);
-    background: var(--sidebar-surface);
-    transform: translateX(2px);
+    color: var(--text-hover);
+    background: var(--item-hover-bg);
+  }
+
+  .sidebar-submenu a:hover svg {
+    color: var(--text-hover);
   }
 
   .sidebar-submenu a.active {
-    color: var(--sidebar-accent-strong);
+    color: var(--text-hover);
     font-weight: 600;
-    background: var(--sidebar-surface);
+    background: var(--item-active-bg);
+    border: 1px solid var(--item-active-border);
+    box-shadow: var(--item-active-shadow);
+  }
+
+  .sidebar-submenu a.active svg {
+    color: var(--accent-solid);
   }
 
   /* Divider */
   .sidebar-nav-divider {
     height: 1px;
     background: var(--sidebar-divider);
-    margin: 10px 8px;
+    margin: 8px 6px;
   }
 
   .premium-card {

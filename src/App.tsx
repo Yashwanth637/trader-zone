@@ -112,7 +112,7 @@ const AppLayout: React.FC = () => {
           isTerminal
             ? 'p-0 h-[calc(100vh-4rem)] overflow-hidden flex flex-col'
             : 'p-4 md:p-6'
-        } ${collapsed ? 'md:ml-16' : 'md:ml-64'}`}
+        } ${collapsed ? 'md:ml-16' : 'md:ml-[268px]'}`}
       >
         <ErrorBoundary fallbackTitle="View Loading Error">
           <Routes>
