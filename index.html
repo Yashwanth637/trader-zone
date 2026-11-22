@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Immediate theme initialization to prevent flash
+      (function() {
+        var savedTheme = localStorage.getItem('tz_theme');
+        if (savedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="./logo.png" />
+    <link rel="apple-touch-icon" href="./logo.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    
+    <!-- macOS and iOS PWA / Add to Dock compatibility -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trader Zone" />
+    <meta name="application-name" content="Trader Zone" />
+    <meta name="theme-color" content="#000000" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Trader Zone - The AI-Powered Trading Journal</title>
+    <meta name="description" content="AI-powered trading journal to track, analyze, and improve your trading performance. Built for serious traders." />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="./assets/index-D21VtWbf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DNhO_4jF.css">
+  </head>
+  <body class="bg-background text-foreground min-h-screen antialiased selection:bg-primary selection:text-white overflow-x-hidden transition-colors duration-200">
+    <div id="root"></div>
+    <script>
+      // In development (localhost), unregister service workers to avoid stale Vite module caching
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          });
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) caches.delete(name);
+            });
+          }
+        }
+      } else if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('Trader Zone ServiceWorker registered:', reg.scope);
+          }).catch(function(err) {
+            console.log('Trader Zone ServiceWorker registration failed:', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
